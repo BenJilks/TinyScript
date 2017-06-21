@@ -1,0 +1,85 @@
+
+/* C */
+int Fib(int i) {
+	if (i > 3) {
+		return Fib(i - 1) + Fib(i - 2);
+	}
+	return 1;
+}
+
+/* Python */
+def Fib(i):
+	if i > 3:
+		return Fib(i - 1) + Fib(i - 2);
+	return 1;
+
+/* TinyScript */
+function Fib(int i) < int {
+	if i > 3 {
+		return Fib(i - 1) + Fib(i - 2);
+	}
+	return 1;
+}
+
+/* Declaring varibles */
+declare int x;
+declare int x, y, z; 
+declare int x = 3;
+declare int x = 0, y = 1, z = 2;
+<declare> ::= declare <type> <name> ( = <expression>)? (, <name> ( = <expression>)?)*;
+
+x = 3;
+x, y, z = 3;
+<assing> ::= <var> (, <name>)* = <expression>;
+
+if true {}
+<ifstatement> ::= if <condition> <block>
+
+while true {}
+<whileloop> ::= while <condition> <block>
+
+for int x = 0 to 3 {}
+<forloop> ::= for <type> <name> = <expression> to <expression> <block>
+
+function Test() < int {}
+function Test(int arg) < int {}
+function Test(int arg1, int arg2) < int {}
+function Test(int arg1, arg2) < int {}
+<function> ::= function <name> (<declare> (, <declare>)*) < <type> <block>
+
+include "test";
+include "test", "test2", "test3";
+<include> ::= include <file> (, <file>)*;
+
+declare array X = [3, 7, 3] < int;
+declare array X = ['t', 'e', 's', 't'] < char;
+declare array X = "test";
+<array> ::= ([<expression> (, <expression>)*] < <type>) | <string>
+
+delete Test
+delete Test, Test2
+<delete> ::= delete <name> (, <name>)*
+
+<declare> ::= declare <type> <name> ( = <expression>)? (, <name> ( = <expression>)?)*;
+<assing> ::= <var> (, <name>)* = <expression>;
+<ifstatement> ::= if <condition> <block>
+<whileloop> ::= while <condition> <block>
+<forloop> ::= for <type> <name> = <expression> to <expression> <block>
+<delete> ::= delete <name> (, <name>)*
+<block> ::= (<declare> | <assing> | <ifstatement> | <whileloop> | <forloop> | <function> | <delete>)*
+
+<include> ::= include <file> (, <file>)*;
+<function> ::= function <name> (<declare> '(', <declare>')'*) < <type> <block>
+<dec-block> ::= (<declare> | <function>)*
+<program> ::= (<include>)* program <name> { <dec-block> }
+
+<pointer> ::= new (<number> | <array> | <string>)
+<array> ::= [<expression> (, <expression>)*] | [..<number>]
+
+<bool-expression> ::= <bool-factor> (<andop> <bool-factor>)*
+<bool-factor> ::= <identifier> | <bool> | <relation>
+<relation> ::= <expression> (<relop> <expression>)*
+
+<value-expression> ::= <term> (<addop> <term>)*
+<term> ::= <factor> (<mulop> <factor>)*
+<factor> ::= <identifier> | <number> | (<expression>)
