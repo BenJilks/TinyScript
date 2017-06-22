@@ -37,6 +37,7 @@ void RunScript(Program program)
 	int is_program_end = 0;
 	while(pc < program.size && !is_program_end)
 	{
+		//printf("%i) %s\n", pc, bytecode_names[rom[pc]]);
 		switch(rom[pc++])
 		{
 			/* Stack */
@@ -86,7 +87,7 @@ void RunScript(Program program)
 	}
 	
 	/* Debug print the output */
-	printf("Fib(%i) = %i\n", 
+	printf("%i, %i\n", 
 		   *(int*)(ram + (STACK_SIZE + FRAME_SIZE)), 
 		   *(int*)(ram + (STACK_SIZE + FRAME_SIZE + 4)));
 }

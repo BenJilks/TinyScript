@@ -36,6 +36,24 @@ void ParseIf()
 	free(label);
 }
 
+/* Parse a while loop */
+void ParseWhile()
+{
+	Match("while", TOKEN_WHILE);
+	char* start = GenerateLabel();
+	char* end = GenerateLabel();
+
+	Emit(start);
+	ParseExpression();
+	WriteLineVar("jumpifnot %s", end);
+	ParseBlock();
+	WriteLineVar("jump %s", start);
+	Emit(end);
+
+	free(start);
+	free(end);
+}
+
 /* Parse a single statement */
 void ParseStatement()
 {
@@ -44,6 +62,7 @@ void ParseStatement()
 		case TOKEN_IDENTIFIER: ParseAssign(); break;
 		case TOKEN_RETURN: ParseReturn(); break;
 		case TOKEN_IF: ParseIf(); break;
+		case TOKEN_WHILE: ParseWhile(); break;
 		default:
 		{
 			char msg[80];
