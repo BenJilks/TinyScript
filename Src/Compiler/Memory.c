@@ -31,6 +31,14 @@ int TypeSize(int type)
 	return 0;
 }
 
+/* Handles an unkown type error */
+void UnkownType(char* type)
+{
+	char msg[80];
+	sprintf(msg, "Unkown type name '%s'", type);
+	Abort(msg);
+}
+
 /* Allocates a new location in static memory */
 int Allocate(int size)
 {
@@ -52,6 +60,9 @@ Symbol* CreateGlobalVariable(char* name, char* type)
 	symbol->data_type = GetTypeID(type);
 	symbol->location = Allocate(TypeSize(symbol->data_type));
 	RegisterSymbol(symbol);
+	
+	if (symbol->data_type == -1)
+		UnkownType(type);
 	return symbol;
 }
 
@@ -64,6 +75,8 @@ Symbol* CreateLocalVariable(char* name, char* type)
 	RegisterSymbol(symbol);
 
 	local_pointer += TypeSize(symbol->data_type);
+	if (symbol->data_type == -1)
+		UnkownType(type);
 	return symbol;
 }
 
@@ -73,6 +86,9 @@ void CreateFunction(char* name, char* type)
 	Symbol* symbol = CreateSymbol(name, SYMBOL_FUNCTION);
 	symbol->data_type = GetTypeID(type);
 	RegisterSymbol(symbol);
+	
+	if (symbol->data_type == -1)
+		UnkownType(type);
 }
 
 /* Calls a functions */
@@ -109,8 +125,8 @@ void UnknownSymbolError(char* symbol)
 }
 
 /* Loads a variable from memory */
-void ParseLoad()
-{
+int ParseLoad()
+{	
 	/* Get the variable name */
 	Token name = look;
 	Match("Name", TOKEN_IDENTIFIER);
@@ -124,31 +140,51 @@ void ParseLoad()
 	if (symbol->type == SYMBOL_FUNCTION)
 	{
 		ParseCall(symbol);
-		return;
+		return symbol->data_type;
 	}
 
 	/* Otherwise load the variable to the stack */
+	char* type_string = symbol->data_type == DT_CHAR ? "c" : "";
 	if (symbol->type == SYMBOL_LOCAL_VARIABLE)
 	{
-		WriteLineVar("fget %i", symbol->location);
-		return;
+		WriteLineVar("fget%s %i", type_string, symbol->location);
+		return symbol->data_type;
 	}
-	WriteLineVar("get %i", symbol->location);
+	WriteLineVar("get%s %i", type_string, symbol->location);
+	return symbol->data_type;
+}
+
+/* TYPE_CHECK_ID */
+#define TCI(ltype, rtype) (rtype) * DT_SIZE + (ltype)
+
+/* Makes shore that the data being set is of the correct type */
+void CorrectTypeing(int ltype, int rtype)
+{
+	switch(TCI(ltype, rtype))
+	{
+		case TCI(DT_INT, DT_FLOAT):
+		case TCI(DT_CHAR, DT_FLOAT):
+			WriteLine("ftoi");
+			break;
+	}
 }
 
 /* Stores a variable to memory */
-void ParseStore(char* name)
+int ParseStore(char* name, int type)
 {
 	/* Get the symbol */
 	Symbol* symbol = FindSymbol(name);
 	if (symbol == NULL)
 		UnknownSymbolError(name);
-
+	CorrectTypeing(symbol->data_type, type);
+	
 	/* Store the variable from the stack to memory */
+	char* type_string = symbol->data_type == DT_CHAR ? "c" : "";
 	if (symbol->type == SYMBOL_LOCAL_VARIABLE)
 	{
-		WriteLineVar("fset %i", symbol->location);
-		return;
+		WriteLineVar("fset%s %i", type_string, symbol->location);
+		return symbol->data_type;
 	}
-	WriteLineVar("set %i", symbol->location);
+	WriteLineVar("set%s %i", type_string, symbol->location);
+	return symbol->data_type;
 }

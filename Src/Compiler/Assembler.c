@@ -69,6 +69,8 @@ Program Assemble(char* source, int source_length)
 
 		/* Write the instruction to the program */
 		int bytecode = GetBytecode(instruction);
+		if (bytecode == -1)
+			printf("Assemly Error: Could not find bytecode '%s'\n", instruction);
 		AppendProgram(&program, bytecode);
 
 		/* Read the arguments */

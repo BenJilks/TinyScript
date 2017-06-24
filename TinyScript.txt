@@ -108,8 +108,12 @@ STACK
 push <value> - Push a value to the stack
 set <addr> - Set a value at the address to the value at the top of the stack, then pop
 get <addr> - Push the value at the address to the top of the stack
+setc <addr> - Sets a char value (or size 1)
+getc <addr> - Gets a char value
 fset <addr> ::= set fp + <addr>
 fget <addr> ::= get fp + <addr>
+fsetc <addr> ::= setc fp + <addr>
+fgetc <addr> ::= getc fp + <addr>
 
 MEMORY
 cpy <addr> <addr> <size> - Copy <size> amount of memory from one address to anouther
@@ -127,18 +131,28 @@ finc <value> ::= inc fp <value>
 fdec <value> ::= dec fp <value>
 
 MATHS - Pop the top two values of the stack, peform and operation and add the resualt
-add = "+"
-sub = "-"
-mul = "*"
-div = "/"
+add  = "+"
+addf = add (float)
+sub  = "-"
+subf = sub (float)
+mul  = "*"
+mulf = mul (float)
+div  = "/"
+divf = div (float)
 
 CONDITIONAL
-eql   = "=="
-neql  = "!="
-more  = ">"
-less  = "<"
-emore = ">="
-eless = "<="
+eql    = "=="
+eqlf   = eql (float)
+neql   = "!="
+neqlf  = neql (float)
+more   = ">"
+moref  = more (float)
+less   = "<"
+lessf  = less (float)
+emore  = ">="
+emoref = emore (float)
+eless  = "<="
+elessf = eless (float)
 
 PROGRAM FLOW
 jump <addr> - Set 'pc' to <addr>
@@ -147,8 +161,8 @@ call <function> - Calls a function
 return - Returns from a function
 
 
-push set get fset fget
+push set get setc getc fset fget fsetc fgetc
 cpy scpyto scpyfrom sfcpyto sfcpyfrom inc dec sinc sdec
-add sub mul div
-eql neql more less emore eless
+add addf sub subf mul mulf div divf
+eql eqlf neql neqlf more moref less lessf emore emoref eless elessf
 jump jumpifnot call return

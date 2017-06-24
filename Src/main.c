@@ -9,7 +9,7 @@ int main()
 
 	/* Compile the code */
 	ParseProgramBody();
-	printf("%s\n", GetOutput());
+	printf("\n%s\n", GetOutput());
 	
 	/* Assemble and run the code */
 	Program program = Assemble(GetOutput(), GetOutputSize());

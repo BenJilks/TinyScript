@@ -1,13 +1,11 @@
 
-function Fib(int i) < int {
-	if i > 3 
-		return Fib(i - 1) + Fib(i - 2);
-	return 1;
-}
+declare float X; /* STACK_SIZE + FRAME_SIZE */ 
+declare int Y;   /* STACK_SIZE + FRAME_SIZE + 4 */
 
-declare int X, /* STACK_SIZE + FRAME_SIZE */ 
-	    Y; /* STACK_SIZE + FRAME_SIZE + 4 */
 function Main() < int {
-	X = 30;
-	Y = Fib(X);
+	declare float test;
+	
+	test = 2 + 6.2;
+	X = test;
+	Y = test;
 }

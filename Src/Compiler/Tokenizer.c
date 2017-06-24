@@ -148,6 +148,28 @@ int IsNumber(char buffer[80], int buffer_size)
 	return 1;
 }
 
+/* Returns if the token is a float */
+int IsFloat(char buffer[80], int buffer_size)
+{
+	int i;
+
+	/* A number cannot contains zero chars, to return false */
+	if (buffer_size == 0) return 0;
+	
+	int point_count = 0;
+	for (i = 0; i < buffer_size; i++)
+	{
+		char c = buffer[i];
+		if ((c == 'f' || c == 'F') && i == buffer_size - 1) return 1;
+		if (!IsNumeric(c) && c != '.') return 0;
+		if (c == '.') point_count++;
+	}
+	
+	if (point_count != 1)
+		return 0;
+	return 1;
+}
+
 /* Returns if the token is a condition */
 int IsCondition(char buffer[80], int buffer_size)
 {
@@ -225,6 +247,7 @@ Token NextToken()
 	/* Identify the token inside the buffer */
 	if (IsCondition(buffer, buffer_pointer)) token_id = TOKEN_BOOL;
 	else if (CheckIdentifier(buffer, buffer_pointer)) token_id = TOKEN_IDENTIFIER;
+	else if (IsFloat(buffer, buffer_pointer)) token_id = TOKEN_FLOAT;	
 	else if (IsNumber(buffer, buffer_pointer)) token_id = TOKEN_NUMBER;	
 	if (token_id != TOKEN_NULL) return CreateToken(buffer, buffer_pointer, token_id);
 

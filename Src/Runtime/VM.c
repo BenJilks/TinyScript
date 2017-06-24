@@ -15,9 +15,12 @@
 
 /* Define helper functions */
 #define CPYINT(to, i) { int value = i; memcpy(ram + (to), (void*)&value, 4); }
+#define CPYFLOAT(to, f) { float value = f; memcpy(ram + (to), (void*)&value, 4); }
 #define POPINT(i) sp -= 4; memcpy((void*)&i, ram + sp, 4);
+#define POPFLOAT(f) { int i; sp -= 4; memcpy((void*)&i, ram + sp, 4); (f) = *(float*)&i; }
 #define VALUE rom[pc++] 
 #define OPERATION(op) { int l, r; POPINT(r); POPINT(l); CPYINT(sp, l op r); sp += 4; }
+#define OPERATION_FLOAT(op) { float l, r; POPFLOAT(r); POPFLOAT(l); CPYFLOAT(sp, l op r); sp += 4; }
 
 /* Runs a compiled program */
 void RunScript(Program program)
@@ -37,7 +40,7 @@ void RunScript(Program program)
 	int is_program_end = 0;
 	while(pc < program.size && !is_program_end)
 	{
-		//printf("%i) %s\n", pc, bytecode_names[rom[pc]]);
+		//printf("%i) %i(%s)\n", pc, rom[pc], bytecode_names[rom[pc]]);
 		switch(rom[pc++])
 		{
 			/* Stack */
@@ -45,9 +48,13 @@ void RunScript(Program program)
 			case BC_PUSHPC: { CPYINT(sp, pc); sp += 4; } break;
 			case BC_SET: { sp -= 4; memcpy(ram + VALUE, ram + sp, 4); } break;
 			case BC_GET: { memcpy(ram + sp, ram + VALUE, 4); sp += 4; } break;
+			case BC_SETC: { sp -= 4; memcpy(ram + VALUE, ram + sp, 1); } break;
+			case BC_GETC: { memset(ram + sp, 0, 4); memcpy(ram + sp, ram + VALUE, 1); sp += 4; } break;
 			case BC_FSET: { sp -= 4; memcpy(ram + (fp + VALUE), ram + sp, 4); } break;
 			case BC_FGET: { memcpy(ram + sp, ram + (fp + VALUE), 4); sp += 4; } break;
-
+			case BC_FSETC: { sp -= 4; memcpy(ram + (fp + VALUE), ram + sp, 1); } break;
+			case BC_FGETC: { memset(ram + sp, 0, 4); memcpy(ram + sp, ram + (fp + VALUE), 1); sp += 4; } break;
+			
 			/* Memory */
 			case BC_CPY: { memcpy(ram + VALUE, ram + VALUE, VALUE); } break;
 			case BC_SCPYTO: { memcpy(ram + sp, ram + VALUE, VALUE); } break;
@@ -65,6 +72,7 @@ void RunScript(Program program)
 			
 			/* Maths */
 			case BC_ADD: { OPERATION(+); } break;
+			case BC_ADDF: { OPERATION_FLOAT(+); } break;
 			case BC_SUB: { OPERATION(-); } break;
 			case BC_MUL: { OPERATION(*); } break;
 			case BC_DIV: { OPERATION(/); } break;
@@ -83,11 +91,18 @@ void RunScript(Program program)
 			case BC_CALL: { CPYINT(sp, pc); sp += 4; pc = ram[pc]; } break;
 			case BC_RETURN: { int addr; POPINT(addr); pc = addr; CPYINT(sp, 0); sp += 4; } break;
 			case BC_IRETURN: { int i, addr; POPINT(i); POPINT(addr); pc = addr; CPYINT(sp, i); sp += 4; } break;
+			
+			/* Typeing */
+			case BC_ITOF_LEFT: { int i; memcpy((void*)&i, ram + (sp-4), 4); float f = i; memcpy(ram + (sp-4), (void*)&f, 4); } break;
+			case BC_ITOF_RIGHT: { int i; memcpy((void*)&i, ram + (sp-8), 4); float f = i; memcpy(ram + (sp-8), (void*)&f, 4); } break;
+			case BC_FTOI: { float f; memcpy((void*)&f, ram + (sp-4), 4); int i = (int)f; memcpy(ram + (sp-4), (void*)&i, 4); } break;
 		}
+		//usleep(1000*1000);
+		//DUMP_RAM(ram);
 	}
 	
 	/* Debug print the output */
-	printf("%i, %i\n", 
-		   *(int*)(ram + (STACK_SIZE + FRAME_SIZE)), 
+	printf("%.6g, %i\n", 
+		   *(float*)(ram + (STACK_SIZE + FRAME_SIZE)), 
 		   *(int*)(ram + (STACK_SIZE + FRAME_SIZE + 4)));
 }

@@ -94,11 +94,11 @@ Symbol* CreateGlobalVariable(char* name, char* type);
 Symbol* CreateLocalVariable(char* name, char* type);
 void CreateFunction(char* name, char* type);
 void ParseCall(Symbol* symbol);
-void ParseLoad();
-void ParseStore(char* name);
+int ParseLoad();
+int ParseStore(char* name, int type);
 
 /* Expression parsing unit */
-void ParseExpression();
+int ParseExpression();
 
 /* Declaration block parsing unit */
 void ParseProgramBody();

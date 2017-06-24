@@ -1,6 +1,25 @@
 #include "TinyScript.h"
 #include <stdlib.h>
 
+/* Parse a local variable delare statement */
+void ParseDeclare()
+{
+	Match("declare", TOKEN_DECLARE);
+	Token type = look;
+	Match("Type", TOKEN_IDENTIFIER);
+	
+	while (look.id != TOKEN_LINE_END)
+	{
+		Token name = look;
+		Match("Name", TOKEN_IDENTIFIER);
+		CreateLocalVariable(name.data, type.data);
+		
+		if (look.id == TOKEN_LIST)
+			Match(",", TOKEN_LIST);
+	}
+	Match(";", TOKEN_LINE_END);
+}
+
 /* Parse an assign statement */
 void ParseAssign()
 {
@@ -8,8 +27,8 @@ void ParseAssign()
 	Match("Name", TOKEN_IDENTIFIER);
 	Match("=", TOKEN_ASSIGN);
 
-	ParseExpression();
-	ParseStore(name.data);
+	int type = ParseExpression();
+	ParseStore(name.data, type);
 	Match(";", TOKEN_LINE_END);
 }
 
@@ -59,6 +78,7 @@ void ParseStatement()
 {
 	switch(look.id)
 	{
+		case TOKEN_DECLARE: ParseDeclare(); break;
 		case TOKEN_IDENTIFIER: ParseAssign(); break;
 		case TOKEN_RETURN: ParseReturn(); break;
 		case TOKEN_IF: ParseIf(); break;
