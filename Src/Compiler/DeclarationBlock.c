@@ -22,10 +22,10 @@ void ParseGlobalDeclare()
 }
 
 /* Generate the code of the start of a function */
-void FunctionHeader(char* name)
+void FunctionHeader(char* name, char* type)
 {
 	WriteLineVar("%s:", name);
-	StartStackFrame();
+	StartStackFrame(type);
 }
 
 /* Reads the paramitor list */
@@ -67,23 +67,20 @@ void ParseFunction()
 {
 	/* Init function header data */
 	Match("function", TOKEN_FUNCTION);
+	Token type = look;
+	Match("Type", TOKEN_IDENTIFIER);
 	Token name = look;
 	Match("Name", TOKEN_IDENTIFIER);
-	FunctionHeader(name.data);
+	FunctionHeader(name.data, type.data);
 
 	/* Read parameter list */
 	Symbol* params[80];
 	int param_size = 0;
 	ReadParams(params, &param_size);
 	InitStackFrame(params, param_size);
-	
-	/* Read type data */
-	Match("<", TOKEN_LESS);
-	Token type = look;
-	Match("Type", TOKEN_IDENTIFIER);
-	CreateFunction(name.data, type.data);
 
 	/* Parse the function code */
+	CreateFunction(name.data, type.data);
 	ParseBlock();
 	
 	/* Add defualt return statement */

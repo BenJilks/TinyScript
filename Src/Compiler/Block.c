@@ -35,8 +35,19 @@ void ParseAssign()
 /* Parse a return statement */
 void ParseReturn()
 {
+	/* Check for void return */
 	Match("return", TOKEN_RETURN);
-	ParseExpression();
+	int return_type = GetReturnType();
+	if (return_type == DT_VOID)
+	{
+		WriteLine("return");
+		Match(";", TOKEN_LINE_END);
+		return;
+	}
+	
+	/* Otherwise return a value */
+	int type = ParseExpression();
+	CorrectTypeing(return_type, type);
 	WriteLine("ireturn");
 	Match(";", TOKEN_LINE_END);
 }

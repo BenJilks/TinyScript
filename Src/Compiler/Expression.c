@@ -49,6 +49,8 @@ int ParseFactor()
 	if (look.id == TOKEN_IDENTIFIER)
 	{
 		int type = ParseLoad();
+		if (type == DT_VOID)
+			Abort("Cannot assign to type 'void'");
 		return type;
 	}
 

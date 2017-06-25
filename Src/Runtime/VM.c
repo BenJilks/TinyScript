@@ -89,7 +89,7 @@ void RunScript(Program program)
 			case BC_JUMP: { pc = rom[pc]; } break;
 			case BC_JUMPIFNOT: { pc++; int c; POPINT(c); if(!c) pc = rom[pc - 1]; } break;
 			case BC_CALL: { CPYINT(sp, pc); sp += 4; pc = ram[pc]; } break;
-			case BC_RETURN: { int addr; POPINT(addr); pc = addr; CPYINT(sp, 0); sp += 4; } break;
+			case BC_RETURN: { int addr; POPINT(addr); pc = addr; } break;
 			case BC_IRETURN: { int i, addr; POPINT(i); POPINT(addr); pc = addr; CPYINT(sp, i); sp += 4; } break;
 			
 			/* Typeing */

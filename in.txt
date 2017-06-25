@@ -1,11 +1,11 @@
 
-declare float X; /* STACK_SIZE + FRAME_SIZE */ 
+declare float X; /* STACK_SIZE + FRAME_SIZE */
 declare int Y;   /* STACK_SIZE + FRAME_SIZE + 4 */
 
-function Main() < int {
-	declare float test;
+function void Test() {
 	
-	test = 2 + 6.2;
-	X = test;
-	Y = test;
+}
+
+function int Main() {
+	X = Test();
 }

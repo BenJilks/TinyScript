@@ -40,7 +40,8 @@ int GetOutputSize();
 #define DT_INT   0
 #define DT_FLOAT 1
 #define DT_CHAR  2
-#define DT_SIZE  3
+#define DT_VOID  3
+#define DT_SIZE  4
 
 /* Symbol table unit */
 typedef struct Symbol
@@ -89,13 +90,15 @@ static void Match(char* expect, int id)
 }
 
 /* Memory unit */
-void StartStackFrame();
+void StartStackFrame(char* type);
 Symbol* CreateGlobalVariable(char* name, char* type);
 Symbol* CreateLocalVariable(char* name, char* type);
 void CreateFunction(char* name, char* type);
 void ParseCall(Symbol* symbol);
 int ParseLoad();
 int ParseStore(char* name, int type);
+void CorrectTypeing(int aim, int type);
+int GetReturnType();
 
 /* Expression parsing unit */
 int ParseExpression();

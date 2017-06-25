@@ -6,11 +6,12 @@
 /* Define static memory pointer */
 int memory_pointer = STACK_SIZE + FRAME_SIZE;
 int local_pointer = 0;
+int return_type = -1;
 
 /* Converts a string type into a type ID */
 int GetTypeID(char* name)
 {
-	static char* data_type_names[] = {"int", "float", "char"};
+	static char* data_type_names[] = {"int", "float", "char", "void"};
 
 	int i;
 	for (i = 0; i < DT_SIZE; i++)
@@ -27,6 +28,7 @@ int TypeSize(int type)
 		case DT_INT: return 4;
 		case DT_FLOAT: return 4;
 		case DT_CHAR: return 1;
+		case DT_VOID: return 0;
 	}
 	return 0;
 }
@@ -48,9 +50,10 @@ int Allocate(int size)
 }
 
 /* Sets up data for a new stack frame */
-void StartStackFrame()
+void StartStackFrame(char* type)
 {
 	local_pointer = 0;
+	return_type = GetTypeID(type);
 }
 
 /* Creates, allocates and registers a new global variable */
@@ -158,13 +161,21 @@ int ParseLoad()
 #define TCI(ltype, rtype) (rtype) * DT_SIZE + (ltype)
 
 /* Makes shore that the data being set is of the correct type */
-void CorrectTypeing(int ltype, int rtype)
+void CorrectTypeing(int aim, int type)
 {
-	switch(TCI(ltype, rtype))
+	if (aim == DT_VOID)
+		Abort("Cannot assign void type a value");
+	
+	switch(TCI(aim, type))
 	{
 		case TCI(DT_INT, DT_FLOAT):
 		case TCI(DT_CHAR, DT_FLOAT):
 			WriteLine("ftoi");
+			break;
+		
+		case TCI(DT_FLOAT, DT_INT):
+		case TCI(DT_FLOAT, DT_CHAR):
+			WriteLine("itofleft");
 			break;
 	}
 }
@@ -187,4 +198,10 @@ int ParseStore(char* name, int type)
 	}
 	WriteLineVar("set%s %i", type_string, symbol->location);
 	return symbol->data_type;
+}
+
+/* Gets the current return type */
+int GetReturnType()
+{
+	return return_type;
 }
