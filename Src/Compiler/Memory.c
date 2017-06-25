@@ -84,14 +84,41 @@ Symbol* CreateLocalVariable(char* name, char* type)
 }
 
 /* Creates a new function */
-void CreateFunction(char* name, char* type)
+void CreateFunction(char* name, char* type, Symbol* params[80], int param_size)
 {
+	int i;
 	Symbol* symbol = CreateSymbol(name, SYMBOL_FUNCTION);
 	symbol->data_type = GetTypeID(type);
+	symbol->param_size = param_size;
+	for (i = 0; i < param_size; i++)
+		symbol->params[i] = params[i]->data_type;
 	RegisterSymbol(symbol);
 	
 	if (symbol->data_type == -1)
 		UnkownType(type);
+}
+
+/* Parse the arguments of a function call */
+void ParseArguments(Symbol* symbol)
+{
+	int index = 0;
+	Match("(", TOKEN_OPEN_ARG);
+	while (look.id != TOKEN_CLOSE_ARG)
+	{
+		int type = ParseExpression();
+		if (look.id == TOKEN_LIST)
+			Match(",", TOKEN_LIST);
+		
+		/* Check argument */
+		if (index >= symbol->param_size)
+			Abort("Too many arguments in function call");
+		CorrectTypeing(symbol->params[index], type);
+		index++;
+	}
+	Match(")", TOKEN_CLOSE_ARG);
+	
+	if (index < symbol->param_size)
+		Abort("Too few arguments in function call");
 }
 
 /* Calls a functions */
@@ -102,21 +129,16 @@ void ParseCall(Symbol* symbol)
 	WriteLineVar("push %s", label);
 	
 	/* Parse the arguments and call the function */
-	Match("(", TOKEN_OPEN_ARG);
-	while (look.id != TOKEN_CLOSE_ARG)
-	{
-		ParseExpression();
-		if (look.id == TOKEN_LIST)
-			Match(",", TOKEN_LIST);
-	}
-	Match(")", TOKEN_CLOSE_ARG);
-	WriteLineVar("finc %i", local_pointer);
+	ParseArguments(symbol);
+	if (local_pointer > 0)
+		WriteLineVar("finc %i", local_pointer);
 	WriteLineVar("jump %s", symbol->name);
 	Emit(label);
 	free(label);
 	
 	/* Clean the stack frame */
-	WriteLineVar("fdec %i", local_pointer);
+	if (local_pointer > 0)
+		WriteLineVar("fdec %i", local_pointer);
 }
 
 /* Loads a variable from memory */

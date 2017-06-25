@@ -54,6 +54,8 @@ typedef struct Symbol
 	/* Register data */
 	int data_type;
 	int location;
+	int params[80];
+	int param_size;
 } Symbol;
 Symbol* CreateSymbol(char* name, int type);
 Symbol* FindSymbol(char* name);
@@ -94,7 +96,7 @@ static void Match(char* expect, int id)
 void StartStackFrame(char* type);
 Symbol* CreateGlobalVariable(char* name, char* type);
 Symbol* CreateLocalVariable(char* name, char* type);
-void CreateFunction(char* name, char* type);
+void CreateFunction(char* name, char* type, Symbol* params[80], int param_size);
 void ParseCall(Symbol* symbol);
 int ParseLoad();
 int ParseStore(char* name, int type);

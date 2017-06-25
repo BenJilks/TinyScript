@@ -80,7 +80,7 @@ void ParseFunction()
 	InitStackFrame(params, param_size);
 
 	/* Parse the function code */
-	CreateFunction(name.data, type.data);
+	CreateFunction(name.data, type.data, params, param_size);
 	ParseBlock();
 	
 	/* Add defualt return statement */
@@ -90,7 +90,7 @@ void ParseFunction()
 /* Parse a program body */
 void ParseProgramBody()
 {
-	while (look.id != TOKEN_NULL && !IsFileEnd())
+	while (look.id != TOKEN_NULL)
 	{
 		switch(look.id)
 		{

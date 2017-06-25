@@ -35,7 +35,7 @@ int IsLetter(char c)
 /* Skips over white space */
 void SkipWhiteSpace()
 {
-	while (IsWhiteSpace(ReadChar()))
+	while (IsWhiteSpace(ReadChar()) && !IsFileEnd())
 		continue;
 	FileBack();
 }
@@ -231,13 +231,14 @@ Token NextToken()
 
 	char buffer[80];
 	int buffer_pointer = 0;
-	while (!IsSingleCharToken(c) && !IsWhiteSpace(c) && !IsFileEnd())
+	while (!IsSingleCharToken(c) && !IsWhiteSpace(c))
 	{
 		buffer[buffer_pointer++] = c;
 		c = ReadChar();
+        if (IsFileEnd())
+            break;
 	}
-	FileBack();
-	SkipWhiteSpace();
+    FileBack();
 
 	/* Check for keywords */
 	token_id = IsKeyword(buffer, buffer_pointer);
