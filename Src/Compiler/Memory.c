@@ -119,14 +119,6 @@ void ParseCall(Symbol* symbol)
 	WriteLineVar("fdec %i", local_pointer);
 }
 
-/* Reports on an unknown symbol error */
-void UnknownSymbolError(char* symbol)
-{
-	char msg[80];
-	sprintf(msg, "The symbol '%s' has not been defined", symbol);
-	Abort(msg);
-}
-
 /* Loads a variable from memory */
 int ParseLoad()
 {	
@@ -164,7 +156,7 @@ int ParseLoad()
 void CorrectTypeing(int aim, int type)
 {
 	if (aim == DT_VOID)
-		Abort("Cannot assign void type a value");
+		Abort("Cannot assign 'void' type a value");
 	
 	switch(TCI(aim, type))
 	{

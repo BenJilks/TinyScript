@@ -6,6 +6,7 @@
 /* Error handling unit */
 void Error(char* msg);
 void Abort(char* msg);
+void UnknownSymbolError(char* symbol);
 
 /* IO unit */
 void InitIO(char* in);

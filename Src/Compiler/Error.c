@@ -15,3 +15,11 @@ void Abort(char* msg)
 	CloseIO();
 	exit(0);
 }
+
+/* Reports on an unknown symbol error */
+void UnknownSymbolError(char* symbol)
+{
+	char msg[80];
+	sprintf(msg, "The symbol '%s' has not been defined", symbol);
+	Abort(msg);
+}

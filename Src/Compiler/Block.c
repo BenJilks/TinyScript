@@ -20,11 +20,32 @@ void ParseDeclare()
 	Match(";", TOKEN_LINE_END);
 }
 
+/* Parse a function call */
+void ParseFunctionCall(Token name)
+{
+	/* Get the symbol */
+	Symbol* symbol = FindSymbol(name.data);
+	if (symbol == NULL)
+		UnknownSymbolError(name.data);
+	
+	ParseCall(symbol);
+	if (symbol->data_type != DT_VOID)
+		WriteLine("sdec 4");
+	Match(";", TOKEN_LINE_END);
+}
+
 /* Parse an assign statement */
 void ParseAssign()
 {
 	Token name = look;
 	Match("Name", TOKEN_IDENTIFIER);
+	
+	/* Test for function call */
+	if (look.id == TOKEN_OPEN_ARG)
+	{
+		ParseFunctionCall(name);
+		return;
+	}
 	Match("=", TOKEN_ASSIGN);
 
 	int type = ParseExpression();
