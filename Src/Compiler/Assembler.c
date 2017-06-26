@@ -53,6 +53,14 @@ Program Assemble(char* source, int source_length)
 		sscanf(source + source_pointer, "%s", instruction);
 		source_pointer += strlen(instruction) + 1;
 
+		/* Check for comments */
+		if (instruction[0] == ';')
+		{
+			while (source[source_pointer] != '\n')
+				source_pointer++;
+			continue;
+		}
+		
 		/* If the instruction is a macro definition */
 		if (instruction[strlen(instruction) - 1] == ':')
 		{

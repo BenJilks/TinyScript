@@ -53,13 +53,11 @@ void ReadParams(Symbol** params, int* size)
 /* Generate stack to stack frame copying code */
 void InitStackFrame(Symbol* params[80], int size)
 {
-	int i;
+	int i, data_size = 0;
 	for (i = size - 1; i >= 0; i--)
-	{
-		Symbol* var = params[i];
-		WriteLineVar("sdec %i", 4);
-		WriteLineVar("sfcpyfrom %i %i", var->location, 4);
-	}
+		data_size += 4;//params[i]->data_type;
+	
+	WriteLineVar("cpyargs %i", data_size);
 }
 
 /* Parse a function declaration statement */
@@ -77,7 +75,8 @@ void ParseFunction()
 	Symbol* params[80];
 	int param_size = 0;
 	ReadParams(params, &param_size);
-	InitStackFrame(params, param_size);
+	if (param_size > 0)
+		InitStackFrame(params, param_size);
 
 	/* Parse the function code */
 	CreateFunction(name.data, type.data, params, param_size);

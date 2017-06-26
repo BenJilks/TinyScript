@@ -27,50 +27,51 @@
 #define BC_SFCPYFROM  18
 #define BC_FINC       19
 #define BC_FDEC       20
+#define BC_CPYARGS    21
 
 /* Maths */
-#define BC_ADD        21
-#define BC_ADDF       22
-#define BC_SUB        23
-#define BC_SUBF       24
-#define BC_MUL        25
-#define BC_MULF       26
-#define BC_DIV        27
-#define BC_DIVF       28
+#define BC_ADD        22
+#define BC_ADDF       23
+#define BC_SUB        24
+#define BC_SUBF       25
+#define BC_MUL        26
+#define BC_MULF       27
+#define BC_DIV        28
+#define BC_DIVF       29
 
 /* Conditional */
-#define BC_EQL        29
-#define BC_EQLF       30
-#define BC_NEQL       31
-#define BC_NEQLF      32
-#define BC_MORE       33
-#define BC_MOREF      34
-#define BC_LESS       35
-#define BC_LESSF      36
-#define BC_EMORE      37
-#define BC_EMOREF     38
-#define BC_ELESS      39
-#define BC_ELESSF     40
+#define BC_EQL        30
+#define BC_EQLF       31
+#define BC_NEQL       32
+#define BC_NEQLF      33
+#define BC_MORE       34
+#define BC_MOREF      35
+#define BC_LESS       36
+#define BC_LESSF      37
+#define BC_EMORE      38
+#define BC_EMOREF     39
+#define BC_ELESS      40
+#define BC_ELESSF     41
 
 /* Program flow */
-#define BC_JUMP       41
-#define BC_JUMPIFNOT  42
-#define BC_CALL       43
-#define BC_RETURN     44
-#define BC_IRETURN    45
+#define BC_JUMP       42
+#define BC_JUMPIFNOT  43
+#define BC_CALL       44
+#define BC_RETURN     45
+#define BC_IRETURN    46
 
 /* Typeing */
-#define BC_ITOF_LEFT  46
-#define BC_ITOF_RIGHT 47
-#define BC_FTOI       48
+#define BC_ITOF_LEFT  47
+#define BC_ITOF_RIGHT 48
+#define BC_FTOI       49
 
-#define BC_COUNT      49
+#define BC_COUNT      50
 
 static char* bytecode_names[BC_COUNT] = 
 {
 	"push", "pushpc", "set", "get", "setc", "getc", "fset", "fget", "fsetc", "fgetc",
 	"cpy", "scpyto", "scpyfrom", "inc", "dec", "sinc", "sdec",
-	"sfcpyto", "sfcpyfrom", "finc", "fdec",
+	"sfcpyto", "sfcpyfrom", "finc", "fdec", "cpyargs",
 	"add", "addf", "sub", "subf", "mul", "mulf", "div", "divf",
 	"eqaul", "equalf", "neql", "neqlf", "more", "moref", "less", "lessf", "emore", "emoref", "eless", "elessf",
 	"jump", "jumpifnot", "call", "return", "ireturn",
@@ -81,7 +82,7 @@ static int bytecode_sizes[BC_COUNT] =
 {
 	2, 1, 2, 2, 2, 2, 2, 2, 2, 2,
 	4, 3, 3, 3, 3, 2, 2,
-	3, 3, 2, 2,
+	3, 3, 2, 2, 2,
 	1, 1, 1, 1, 1, 1, 1, 1,
 	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 	2, 2, 2, 1, 1,

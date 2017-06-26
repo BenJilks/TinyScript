@@ -124,6 +124,8 @@ void ParseArguments(Symbol* symbol)
 /* Calls a functions */
 void ParseCall(Symbol* symbol)
 {
+	//WriteLineVar("\n; Function call to '%s'", symbol->name);
+	
 	/* Move to the next stack frame */
 	char* label = GenerateLabel();
 	WriteLineVar("push %s", label);
@@ -139,6 +141,7 @@ void ParseCall(Symbol* symbol)
 	/* Clean the stack frame */
 	if (local_pointer > 0)
 		WriteLineVar("fdec %i", local_pointer);
+	//WriteLine("");
 }
 
 /* Loads a variable from memory */

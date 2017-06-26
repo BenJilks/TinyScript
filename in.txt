@@ -2,12 +2,12 @@
 declare float X; /* STACK_SIZE + FRAME_SIZE */
 declare int Y;   /* STACK_SIZE + FRAME_SIZE + 4 */
 
-function void IncY(int amount) {
-	Y = Y + amount;
+function int Fib(int i) {
+	if i > 3
+		return Fib(i - 1) + Fib(i - 2);
+	return 1;
 }
 
 function int Main() {
-	Y = 1;
-	IncY(5);
-	IncY(7);
+	Y = Fib(30);
 }

@@ -69,21 +69,31 @@ void RunScript(Program program)
 			case BC_SFCPYFROM: { memcpy(ram + (rom[pc] + fp), ram + sp, rom[pc+1]); pc += 2; } break;
 			case BC_FINC: { fp += VALUE; } break;
 			case BC_FDEC: { fp -= VALUE; } break;
+			case BC_CPYARGS: { int size = VALUE; sp -= size; memcpy(ram + fp, ram + sp, size); } break;
 			
 			/* Maths */
 			case BC_ADD: { OPERATION(+); } break;
 			case BC_ADDF: { OPERATION_FLOAT(+); } break;
 			case BC_SUB: { OPERATION(-); } break;
+			case BC_SUBF: { OPERATION_FLOAT(-); } break;
 			case BC_MUL: { OPERATION(*); } break;
+			case BC_MULF: { OPERATION_FLOAT(*); } break;
 			case BC_DIV: { OPERATION(/); } break;
+			case BC_DIVF: { OPERATION_FLOAT(/); } break;
 			
 			/* Conditional */
 			case BC_EQL: { OPERATION(==); } break;
+			case BC_EQLF: { OPERATION_FLOAT(==); } break;
 			case BC_NEQL: { OPERATION(!=); } break;
+			case BC_NEQLF: { OPERATION_FLOAT(!=); } break;
 			case BC_MORE: { OPERATION(>); } break;
+			case BC_MOREF: { OPERATION_FLOAT(>); } break;
 			case BC_LESS: { OPERATION(<); } break;
+			case BC_LESSF: { OPERATION_FLOAT(<); } break;
 			case BC_EMORE: { OPERATION(>=); } break;
+			case BC_EMOREF: { OPERATION_FLOAT(>=); } break;
 			case BC_ELESS: { OPERATION(<=); } break;
+			case BC_ELESSF: { OPERATION_FLOAT(<=); } break;
 			
 			/* Program flow */
 			case BC_JUMP: { pc = rom[pc]; } break;
