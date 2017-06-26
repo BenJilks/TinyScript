@@ -2,12 +2,15 @@
 declare float X; /* STACK_SIZE + FRAME_SIZE */
 declare int Y;   /* STACK_SIZE + FRAME_SIZE + 4 */
 
-function int Fib(int i) {
-	if i > 3
-		return Fib(i - 1) + Fib(i - 2);
-	return 1;
+function int TypeTest(char i, int j) {
+	return i + j;
 }
 
 function int Main() {
-	Y = Fib(30);
+	Y = TypeTest(3, 6);
+	
+	if true {
+		declare int test;
+	}
+	test = 3;
 }

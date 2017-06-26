@@ -79,9 +79,11 @@ void ParseIf()
 	Match("if", TOKEN_IF);
 	ParseExpression();
 	
+	StartScope();
 	char* label = GenerateLabel();
 	WriteLineVar("jumpifnot %s", label);
 	ParseBlock();
+	PopScope();
 	
 	Emit(label);
 	free(label);
@@ -94,12 +96,14 @@ void ParseWhile()
 	char* start = GenerateLabel();
 	char* end = GenerateLabel();
 
+	StartScope();
 	Emit(start);
 	ParseExpression();
 	WriteLineVar("jumpifnot %s", end);
 	ParseBlock();
 	WriteLineVar("jump %s", start);
 	Emit(end);
+	PopScope();
 
 	free(start);
 	free(end);

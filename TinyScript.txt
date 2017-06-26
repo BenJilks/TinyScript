@@ -106,6 +106,7 @@ fp ::= a pointer to the start of the current stack frame
 
 STACK
 push <value> - Push a value to the stack
+pushc <value> - Push a char type into the stack
 set <addr> - Set a value at the address to the value at the top of the stack, then pop
 get <addr> - Push the value at the address to the top of the stack
 setc <addr> - Sets a char value (or size 1)
@@ -162,7 +163,7 @@ call <function> - Calls a function
 return - Returns from a function
 
 
-push set get setc getc fset fget fsetc fgetc
+push pushc set get setc getc fset fget fsetc fgetc
 cpy scpyto scpyfrom sfcpyto sfcpyfrom inc dec sinc sdec
 sfcpyto sfcpyfrom finc fdec cpyargs
 add addf sub subf mul mulf div divf

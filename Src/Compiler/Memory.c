@@ -84,18 +84,19 @@ Symbol* CreateLocalVariable(char* name, char* type)
 }
 
 /* Creates a new function */
-void CreateFunction(char* name, char* type, Symbol* params[80], int param_size)
+Symbol* CreateFunction(char* name, char* type, Symbol* params[80], int param_size)
 {
 	int i;
 	Symbol* symbol = CreateSymbol(name, SYMBOL_FUNCTION);
 	symbol->data_type = GetTypeID(type);
 	symbol->param_size = param_size;
 	for (i = 0; i < param_size; i++)
-		symbol->params[i] = params[i]->data_type;
+		symbol->params[i] = params[i];
 	RegisterSymbol(symbol);
 	
 	if (symbol->data_type == -1)
 		UnkownType(type);
+	return symbol;
 }
 
 /* Parse the arguments of a function call */
@@ -105,15 +106,19 @@ void ParseArguments(Symbol* symbol)
 	Match("(", TOKEN_OPEN_ARG);
 	while (look.id != TOKEN_CLOSE_ARG)
 	{
+		Symbol* param = symbol->params[index];
 		int type = ParseExpression();
-		if (look.id == TOKEN_LIST)
-			Match(",", TOKEN_LIST);
+		if (param->data_type == DT_CHAR) 
+			WriteLine("sdec 3");
 		
 		/* Check argument */
 		if (index >= symbol->param_size)
 			Abort("Too many arguments in function call");
-		CorrectTypeing(symbol->params[index], type);
+		CorrectTypeing(param->data_type, type);
 		index++;
+		
+		if (look.id == TOKEN_LIST)
+			Match(",", TOKEN_LIST);
 	}
 	Match(")", TOKEN_CLOSE_ARG);
 	

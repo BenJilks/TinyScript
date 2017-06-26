@@ -45,6 +45,7 @@ void RunScript(Program program)
 		{
 			/* Stack */
 			case BC_PUSH: { CPYINT(sp, VALUE); sp += 4; } break;
+			case BC_PUSHC: { memcpy(ram + sp, rom + (pc++), 1); sp += 1; } break;
 			case BC_PUSHPC: { CPYINT(sp, pc); sp += 4; } break;
 			case BC_SET: { sp -= 4; memcpy(ram + VALUE, ram + sp, 4); } break;
 			case BC_GET: { memcpy(ram + sp, ram + VALUE, 4); sp += 4; } break;

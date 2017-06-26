@@ -55,7 +55,7 @@ void InitStackFrame(Symbol* params[80], int size)
 {
 	int i, data_size = 0;
 	for (i = size - 1; i >= 0; i--)
-		data_size += 4;//params[i]->data_type;
+		data_size += TypeSize(params[i]->data_type);
 	
 	WriteLineVar("cpyargs %i", data_size);
 }
@@ -74,13 +74,17 @@ void ParseFunction()
 	/* Read parameter list */
 	Symbol* params[80];
 	int param_size = 0;
+	StartScope();
 	ReadParams(params, &param_size);
-	if (param_size > 0)
-		InitStackFrame(params, param_size);
 
 	/* Parse the function code */
-	CreateFunction(name.data, type.data, params, param_size);
+	Symbol* func = CreateFunction(name.data, type.data, params, param_size);
+	
+	if (param_size > 0)
+		InitStackFrame(params, param_size);
 	ParseBlock();
+	PopScope();
+	RegisterSymbol(func);
 	
 	/* Add defualt return statement */
 	WriteLine("return");
