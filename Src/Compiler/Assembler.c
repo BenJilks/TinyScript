@@ -5,6 +5,21 @@
 #include <string.h>
 #include <ctype.h>
 
+/* Returns the location of a function by its name */
+Function GetFunction(Program program, char* name)
+{
+	/* Find function in the program */
+	int i;
+	for (i = 0; i < program.function_size; i++)
+		if (!strcmp(program.functions[i].name, name))
+			return program.functions[i];
+	
+	/* Return NULL function */
+	Function func;
+	func.location = -1;
+	return func;
+}
+
 void AppendProgram(Program* program, int bytecode)
 {
 	program->bytecode[program->size++] = bytecode;
@@ -69,9 +84,12 @@ Program Assemble(char* source, int source_length)
 			macro_data[macro_size] = program.size;
 			macro_size++;
 
-			/* TEMP: define program starting point */
-			if (!strcmp(instruction, "Main:"))
-				program.start_pos = program.size;
+			/* Create a function with this location */
+			Function func;
+			memcpy(func.name, instruction, strlen(instruction) - 1);
+			func.name[strlen(instruction) - 1] = '\0';
+			func.location = program.size;
+			program.functions[program.function_size++] = func;
 			continue;
 		}
 

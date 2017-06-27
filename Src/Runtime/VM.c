@@ -1,10 +1,21 @@
 #include "VM.h"
 #include "TinyScript.h"
 #include "Bytecode.h"
-#include "Config.h"
 #include <stdlib.h>
 #include <memory.h>
 #include <stdlib.h>
+
+/* Argument creation functions */
+Arguments EmptyArguments()
+{
+	Arguments args;
+	args.size = 0;
+	return args;
+}
+#define PARSE_ARGUMENT(args, arg, data_size) memcpy(args->data + args->size, &arg, data_size); args->size += data_size;
+void ParseInt(Arguments* args, int i) { PARSE_ARGUMENT(args, i, 4); }
+void ParseFloat(Arguments* args, float f) { PARSE_ARGUMENT(args, f, 4); }
+void ParseChar(Arguments* args, char c) { PARSE_ARGUMENT(args, c, 1); }
 
 #define DUMP_RAM(ram) \
 { \
@@ -22,25 +33,39 @@
 #define OPERATION(op) { int l, r; POPINT(r); POPINT(l); CPYINT(sp, l op r); sp += 4; }
 #define OPERATION_FLOAT(op) { float l, r; POPFLOAT(r); POPFLOAT(l); CPYFLOAT(sp, l op r); sp += 4; }
 
-/* Runs a compiled program */
-void RunScript(Program program)
+/* Calls a function within a compiled script */
+CPUState CallFunction(Program program, char* func_name, Arguments arguments)
 {
 	/* Define storage type */
 	int rom[PROGRAM_SIZE];
 	char ram[RAM_SIZE];
-	int pc = program.start_pos, sp = 0, fp = STACK_SIZE;
+	int pc = 0, sp = 0, fp = STACK_SIZE;
+	
+	/* Set the program starting point */
+	Function func = GetFunction(program, func_name);
+	pc = func.location;
+	if (func.location == -1)
+	{
+		printf("Runtime Error: Could not find function with name '%s'\n", func_name);
+		CPUState state;
+		state.is_error_state = 1;
+		return state;
+	}
 
 	/* Load data to RAM */
 	memcpy(rom, program.bytecode, PROGRAM_SIZE * sizeof(int));
 	memset(ram, 0, RAM_SIZE);
 	CPYINT(sp, program.size);
 	sp += 4;
+	
+	/* Parse the arguments */
+	memcpy(ram + sp, arguments.data, arguments.size);
+	sp += arguments.size;
 
 	/* Interpret the program */
 	int is_program_end = 0;
 	while(pc < program.size && !is_program_end)
 	{
-		//printf("%i) %i(%s)\n", pc, rom[pc], bytecode_names[rom[pc]]);
 		switch(rom[pc++])
 		{
 			/* Stack */
@@ -108,12 +133,25 @@ void RunScript(Program program)
 			case BC_ITOF_RIGHT: { int i; memcpy((void*)&i, ram + (sp-8), 4); float f = i; memcpy(ram + (sp-8), (void*)&f, 4); } break;
 			case BC_FTOI: { float f; memcpy((void*)&f, ram + (sp-4), 4); int i = (int)f; memcpy(ram + (sp-4), (void*)&i, 4); } break;
 		}
-		//usleep(1000*1000);
-		//DUMP_RAM(ram);
 	}
 	
-	/* Debug print the output */
-	printf("%.6g, %i\n", 
-		   *(float*)(ram + (STACK_SIZE + FRAME_SIZE)), 
-		   *(int*)(ram + (STACK_SIZE + FRAME_SIZE + 4)));
+	/* Return the ending state */
+	CPUState state;
+	memcpy(state.ram, ram, RAM_SIZE);
+	state.pc = pc;
+	state.sp = sp;
+	state.fp = fp;
+	state.is_error_state = 0;
+	return state;
 }
+
+/* Runs a compiled program from the default starting point */
+CPUState RunScript(Program program)
+{
+	return CallFunction(program, "Main", EmptyArguments());
+}
+
+/* Gets the returning value from the final state */
+int GetReturnInt(CPUState state) { return *(int*)(state.ram + (state.sp - 4)); }
+float GetReturnFloat(CPUState state) { return *(float*)(state.ram + (state.sp - 4)); }
+char GetReturnChar(CPUState state) { return (char)GetReturnInt(state); }
