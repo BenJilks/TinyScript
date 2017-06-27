@@ -1,4 +1,6 @@
 #include "TinyScript.h"
+#include <stdlib.h>
+#include <memory.h>
 
 /* Parse a global declare statement */
 void ParseGlobalDeclare()
@@ -80,11 +82,17 @@ void ParseFunction()
 	/* Parse the function code */
 	Symbol* func = CreateFunction(name.data, type.data, params, param_size);
 	
+	/* Make a copy of the function */
+	Symbol* funccpy = (Symbol*)malloc(sizeof(Symbol));
+	memcpy(funccpy, func, sizeof(Symbol));
+	
 	if (param_size > 0)
 		InitStackFrame(params, param_size);
 	ParseBlock();
 	PopScope();
-	RegisterSymbol(func);
+	
+	/* Reregister the function for later use */
+	RegisterSymbol(funccpy);
 	
 	/* Add defualt return statement */
 	WriteLine("return");

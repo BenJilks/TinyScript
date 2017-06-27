@@ -91,7 +91,7 @@ Symbol* CreateFunction(char* name, char* type, Symbol* params[80], int param_siz
 	symbol->data_type = GetTypeID(type);
 	symbol->param_size = param_size;
 	for (i = 0; i < param_size; i++)
-		symbol->params[i] = params[i];
+		symbol->params[i] = params[i]->data_type;
 	RegisterSymbol(symbol);
 	
 	if (symbol->data_type == -1)
@@ -106,15 +106,15 @@ void ParseArguments(Symbol* symbol)
 	Match("(", TOKEN_OPEN_ARG);
 	while (look.id != TOKEN_CLOSE_ARG)
 	{
-		Symbol* param = symbol->params[index];
+		int param_type = symbol->params[index];
 		int type = ParseExpression();
-		if (param->data_type == DT_CHAR) 
+		if (param_type == DT_CHAR) 
 			WriteLine("sdec 3");
 		
 		/* Check argument */
 		if (index >= symbol->param_size)
 			Abort("Too many arguments in function call");
-		CorrectTypeing(param->data_type, type);
+		CorrectTypeing(param_type, type);
 		index++;
 		
 		if (look.id == TOKEN_LIST)

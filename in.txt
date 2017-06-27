@@ -8,9 +8,4 @@ function int TypeTest(char i, int j) {
 
 function int Main() {
 	Y = TypeTest(3, 6);
-	
-	if true {
-		declare int test;
-	}
-	test = 3;
 }

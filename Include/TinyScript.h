@@ -54,7 +54,7 @@ typedef struct Symbol
 	/* Register data */
 	int data_type;
 	int location;
-	struct Symbol* params[80];
+	int params[80];
 	int param_size;
 } Symbol;
 Symbol* CreateSymbol(char* name, int type);
