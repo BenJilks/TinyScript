@@ -1,3 +1,6 @@
 
-function int f(int x)
-	return (2 * x) + 1;
+declare int x;
+func Main() {
+	x = DebugFunc(6);
+	DebugFunc(x);
+}

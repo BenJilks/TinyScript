@@ -1,4 +1,5 @@
 #include "TinyScript.h"
+#include "RuntimeLib.h"
 #include <stdlib.h>
 
 /* Parse a local variable delare statement */
@@ -23,33 +24,50 @@ void ParseDeclare()
 /* Parse a function call */
 void ParseFunctionCall(Token name)
 {
-	/* Get the symbol */
-	Symbol* symbol = FindSymbol(name.data);
-	if (symbol == NULL)
-		UnknownSymbolError(name.data);
+	int cfunc = Lib_GetFunctionIdByName(name.data);
+	int data_size = 0;
+	if (cfunc != -1)
+	{
+		/* Call C function */
+		int type = CallCFunction(cfunc);
+		data_size = TypeSize(type);
+	}
+	else
+	{
+		/* Call bytecode function */
+		Symbol* symbol = FindSymbol(name.data);
+		if (symbol == NULL)
+			UnknownSymbolError(name.data);
+		
+		ParseCall(symbol);
+		if (symbol->data_type != DT_VOID)
+			WriteLine("sdec 4");
+		data_size = TypeSize(symbol->data_type);
+	}
 	
-	ParseCall(symbol);
-	if (symbol->data_type != DT_VOID)
-		WriteLine("sdec 4");
-	Match(";", TOKEN_LINE_END);
+	/* Pop the returning value */
+	if (data_size > 0)
+		WriteLineVar("sdec %i", data_size);
 }
 
 /* Parse an assign statement */
-void ParseAssign()
+void ParseAssignOrCall()
 {
 	Token name = look;
 	Match("Name", TOKEN_IDENTIFIER);
 	
-	/* Test for function call */
 	if (look.id == TOKEN_OPEN_ARG)
 	{
+		/* Parse function call */
 		ParseFunctionCall(name);
-		return;
 	}
-	Match("=", TOKEN_ASSIGN);
-
-	int type = ParseExpression();
-	ParseStore(name.data, type);
+	else
+	{
+		/* Parse assign statement */
+		Match("=", TOKEN_ASSIGN);
+		int type = ParseExpression();
+		ParseStore(name.data, type);
+	}
 	Match(";", TOKEN_LINE_END);
 }
 
@@ -115,7 +133,7 @@ void ParseStatement()
 	switch(look.id)
 	{
 		case TOKEN_DECLARE: ParseDeclare(); break;
-		case TOKEN_IDENTIFIER: ParseAssign(); break;
+		case TOKEN_IDENTIFIER: ParseAssignOrCall(); break;
 		case TOKEN_RETURN: ParseReturn(); break;
 		case TOKEN_IF: ParseIf(); break;
 		case TOKEN_WHILE: ParseWhile(); break;

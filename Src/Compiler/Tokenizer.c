@@ -102,7 +102,7 @@ int IsKeyword(char buffer[80], int buffer_size)
 	else if (!strcmp(buffer, "while")) return TOKEN_WHILE;
 	else if (!strcmp(buffer, "include")) return TOKEN_INCLUDE;
 	else if (!strcmp(buffer, "program")) return TOKEN_PROGRAM;
-	else if (!strcmp(buffer, "function")) return TOKEN_FUNCTION;
+	else if (!strcmp(buffer, "func")) return TOKEN_FUNCTION;
 	else if (!strcmp(buffer, "new")) return TOKEN_NEW;
 	else if (!strcmp(buffer, "return")) return TOKEN_RETURN;
 	return TOKEN_NULL;

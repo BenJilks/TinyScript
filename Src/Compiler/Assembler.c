@@ -50,6 +50,7 @@ Program Assemble(char* source, int source_length)
 {
 	Program program;
 	program.size = 0;
+	program.function_size = 0;
 
 	/* Define macro data */
 	char macro[80][80];
@@ -65,8 +66,10 @@ Program Assemble(char* source, int source_length)
 	while (source_pointer < source_length)
 	{
 		char instruction[80];
+		int instruction_size = 0;
 		sscanf(source + source_pointer, "%s", instruction);
-		source_pointer += strlen(instruction) + 1;
+		instruction_size = strlen(instruction);
+		source_pointer += instruction_size + 1;
 
 		/* Check for comments */
 		if (instruction[0] == ';')
@@ -77,19 +80,18 @@ Program Assemble(char* source, int source_length)
 		}
 		
 		/* If the instruction is a macro definition */
-		if (instruction[strlen(instruction) - 1] == ':')
+		if (instruction[instruction_size - 1] == ':')
 		{
-			memcpy(macro[macro_size], instruction, strlen(instruction) - 1);
-			macro[macro_size][strlen(instruction) - 1] = '\0';
+			memcpy(macro[macro_size], instruction, instruction_size - 1);
+			macro[macro_size][instruction_size - 1] = '\0';
 			macro_data[macro_size] = program.size;
-			macro_size++;
 
 			/* Create a function with this location */
 			Function func;
-			memcpy(func.name, instruction, strlen(instruction) - 1);
-			func.name[strlen(instruction) - 1] = '\0';
+			memcpy(func.name, macro[macro_size], strlen(macro[macro_size]) + 1);
 			func.location = program.size;
 			program.functions[program.function_size++] = func;
+			macro_size++;
 			continue;
 		}
 

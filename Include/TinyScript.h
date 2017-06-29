@@ -65,12 +65,16 @@ void PopScope();
 char* GenerateLabel();
 void Emit(char* label);
 
+/* Library unit */
+void RegisterLibrary();
+
 /* Tokenizer unit */
 typedef struct Token
 {
 	char data[80];
 	int id;
 } Token;
+Token CreateToken(char* data, int data_size, int id);
 Token NextToken();
 
 /* General parser data */
@@ -94,11 +98,13 @@ static void Match(char* expect, int id)
 
 /* Memory unit */
 int TypeSize(int type);
-void StartStackFrame(char* type);
+void StartStackFrame();
+void SetReturnType(char* type);
 Symbol* CreateGlobalVariable(char* name, char* type);
 Symbol* CreateLocalVariable(char* name, char* type);
 Symbol* CreateFunction(char* name, char* type, Symbol* params[80], int param_size);
-void ParseCall(Symbol* symbol);
+int ParseCall(Symbol* symbol);
+int CallCFunction(int cfunction);
 int ParseLoad();
 int ParseStore(char* name, int type);
 void CorrectTypeing(int aim, int type);

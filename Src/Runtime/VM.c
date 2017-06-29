@@ -1,6 +1,7 @@
 #include "VM.h"
 #include "TinyScript.h"
 #include "Bytecode.h"
+#include "RuntimeLib.h"
 #include <stdlib.h>
 #include <memory.h>
 #include <stdlib.h>
@@ -29,7 +30,7 @@ void ParseChar(Arguments* args, char c) { PARSE_ARGUMENT(args, c, 1); }
 #define CPYFLOAT(to, f) { float value = f; memcpy(ram + (to), (void*)&value, 4); }
 #define POPINT(i) sp -= 4; memcpy((void*)&i, ram + sp, 4);
 #define POPFLOAT(f) { int i; sp -= 4; memcpy((void*)&i, ram + sp, 4); (f) = *(float*)&i; }
-#define VALUE rom[pc++] 
+#define VALUE rom[pc++]
 #define OPERATION(op) { int l, r; POPINT(r); POPINT(l); CPYINT(sp, l op r); sp += 4; }
 #define OPERATION_FLOAT(op) { float l, r; POPFLOAT(r); POPFLOAT(l); CPYFLOAT(sp, l op r); sp += 4; }
 
@@ -125,6 +126,7 @@ CPUState CallFunction(Program program, char* func_name, Arguments arguments)
 			case BC_JUMP: { pc = rom[pc]; } break;
 			case BC_JUMPIFNOT: { pc++; int c; POPINT(c); if(!c) pc = rom[pc - 1]; } break;
 			case BC_CALL: { CPYINT(sp, pc); sp += 4; pc = ram[pc]; } break;
+			case BC_CCALL: { Lib_GetFunction(VALUE)(ram, &sp, &fp); } break;
 			case BC_RETURN: { int addr; POPINT(addr); pc = addr; } break;
 			case BC_IRETURN: { int i, addr; POPINT(i); POPINT(addr); pc = addr; CPYINT(sp, i); sp += 4; } break;
 			

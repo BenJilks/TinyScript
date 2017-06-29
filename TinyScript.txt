@@ -3,7 +3,7 @@
 <dec-block> ::= (<import> | <variable-dec> | <function-dec> | <class>)*
 <import> ::= import <file> (, <file>)*
 <variable-dec> ::= declare <type> <name> (, <name>)*
-<function-dec> ::= function <type> <name> '(' <params> (, <params>)* ')' <block>
+<function-dec> ::= func (<type>)? <name> '(' <params> (, <params>)* ')' <block>
 <class> ::= class <name> '{' (<variable-dec> | <method>)* '}'
 <method> ::= method <name> '(' <params> (, <params>)* ')' (< <type>) <block>
 

@@ -1,4 +1,5 @@
 #include "TinyScript.h"
+#include "RuntimeLib.h"
 #include "Config.h"
 #include <string.h>
 #include <stdlib.h>
@@ -50,11 +51,8 @@ int Allocate(int size)
 }
 
 /* Sets up data for a new stack frame */
-void StartStackFrame(char* type)
-{
-	local_pointer = 0;
-	return_type = GetTypeID(type);
-}
+void StartStackFrame() { local_pointer = 0; }
+void SetReturnType(char* type) { return_type = GetTypeID(type); }
 
 /* Creates, allocates and registers a new global variable */
 Symbol* CreateGlobalVariable(char* name, char* type)
@@ -127,10 +125,8 @@ void ParseArguments(Symbol* symbol)
 }
 
 /* Calls a functions */
-void ParseCall(Symbol* symbol)
+int ParseCall(Symbol* symbol)
 {
-	//WriteLineVar("\n; Function call to '%s'", symbol->name);
-	
 	/* Move to the next stack frame */
 	char* label = GenerateLabel();
 	WriteLineVar("push %s", label);
@@ -146,7 +142,25 @@ void ParseCall(Symbol* symbol)
 	/* Clean the stack frame */
 	if (local_pointer > 0)
 		WriteLineVar("fdec %i", local_pointer);
-	//WriteLine("");
+	return symbol->data_type;
+}
+
+/* Calls a cfunction */
+int CallCFunction(int cfunction)
+{
+	/* Parse arguments */
+	Match("(", TOKEN_OPEN_ARG);
+	while (look.id != TOKEN_CLOSE_ARG)
+	{
+		ParseExpression();
+		if (look.id == TOKEN_LIST)
+			Match(",", TOKEN_LIST);
+	}
+	Match(")", TOKEN_CLOSE_ARG);
+	
+	/* Call the function */
+	WriteLineVar("ccall %i", cfunction);
+	return Lib_GetReturn(cfunction);
 }
 
 /* Loads a variable from memory */
@@ -155,6 +169,9 @@ int ParseLoad()
 	/* Get the variable name */
 	Token name = look;
 	Match("Name", TOKEN_IDENTIFIER);
+	int cfunction = Lib_GetFunctionIdByName(name.data);
+	if (cfunction != -1)
+		return CallCFunction(cfunction);
 
 	/* Get the symbol */
 	Symbol* symbol = FindSymbol(name.data);

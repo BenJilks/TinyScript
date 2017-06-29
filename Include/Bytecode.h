@@ -58,15 +58,16 @@
 #define BC_JUMP       43
 #define BC_JUMPIFNOT  44
 #define BC_CALL       45
-#define BC_RETURN     46
-#define BC_IRETURN    47
+#define BC_CCALL      46
+#define BC_RETURN     47
+#define BC_IRETURN    48
 
 /* Typeing */
-#define BC_ITOF_LEFT  48
-#define BC_ITOF_RIGHT 49
-#define BC_FTOI       50
+#define BC_ITOF_LEFT  49
+#define BC_ITOF_RIGHT 50
+#define BC_FTOI       51
 
-#define BC_COUNT      51
+#define BC_COUNT      52
 
 static char* bytecode_names[BC_COUNT] = 
 {
@@ -75,7 +76,7 @@ static char* bytecode_names[BC_COUNT] =
 	"sfcpyto", "sfcpyfrom", "finc", "fdec", "cpyargs",
 	"add", "addf", "sub", "subf", "mul", "mulf", "div", "divf",
 	"eqaul", "equalf", "neql", "neqlf", "more", "moref", "less", "lessf", "emore", "emoref", "eless", "elessf",
-	"jump", "jumpifnot", "call", "return", "ireturn",
+	"jump", "jumpifnot", "call", "ccall", "return", "ireturn",
 	"itofleft", "itofright", "ftoi"
 };
 
@@ -86,7 +87,7 @@ static int bytecode_sizes[BC_COUNT] =
 	3, 3, 2, 2, 2,
 	1, 1, 1, 1, 1, 1, 1, 1,
 	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-	2, 2, 2, 1, 1,
+	2, 2, 2, 2, 1, 1,
 	1, 1, 1
 };
 
