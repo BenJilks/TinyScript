@@ -47,26 +47,31 @@ void WriteLine(char* line)
 /* Read a char from the input file */
 char ReadChar()
 {
-	if (IsFileEnd())
-		return '\0';
-
-	char c = in_file[in_file_pointer++];
-	if (c == '\n')
-		line_count++;
-	return c;
+	if (in_file_pointer < in_file_length)
+	{
+		if (IsFileEnd())
+			return '\0';
+		
+		char c = in_file[in_file_pointer++];
+		if (c == '\n')
+			line_count++;
+		return c;
+	}
 }
 
 /* Reverses the file pointer back one char */
 void FileBack()
 {
-	/* Update line count */
-	char c = in_file[in_file_pointer - 1];
-	if (c == '\n' || c == '\r')
-		line_count--;
+	if (in_file_pointer > 0)
+	{
+		/* Update line count */
+		char c = in_file[in_file_pointer - 1];
+		if (c == '\n' || c == '\r')
+			line_count--;
 	
-	/* Move the counter back one */
-	if (!IsFileEnd())
+		/* Move the counter back one */
 		in_file_pointer--;
+	}
 }
 
 /* Returns if the end of the input 

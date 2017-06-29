@@ -40,8 +40,6 @@ void ParseFunctionCall(Token name)
 			UnknownSymbolError(name.data);
 		
 		ParseCall(symbol);
-		if (symbol->data_type != DT_VOID)
-			WriteLine("sdec 4");
 		data_size = TypeSize(symbol->data_type);
 	}
 	

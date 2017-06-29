@@ -252,12 +252,11 @@ Token NextToken()
 	else if (IsNumber(buffer, buffer_pointer)) token_id = TOKEN_NUMBER;	
 	if (token_id != TOKEN_NULL) return CreateToken(buffer, buffer_pointer, token_id);
 
-	if (!IsFileEnd())
+	if (!IsFileEnd() && buffer_pointer != 0)
 	{
 		char msg[80];
-
 		buffer[buffer_pointer] = '\0';
-		sprintf(msg, "Could not recognize token '%s'", buffer);
+		sprintf(msg, "Could not recognize token '%s' %i", buffer, buffer_pointer);
 		Abort(msg);
 	}
 

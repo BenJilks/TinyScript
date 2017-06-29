@@ -71,12 +71,13 @@ Program ReadBin(char* file_path)
 	Program program;
 	
 	int i, func_size = BinFile_ReadInt();
+	program.function_size = func_size;
 	for (i = 0; i < func_size; i++)
 	{
 		Function func;
 		BinFile_ReadString(func.name);
 		func.location = BinFile_ReadInt();
-		program.functions[program.function_size++] = func;
+		program.functions[i] = func;
 	}
 	
 	program.size = BinFile_ReadInt();

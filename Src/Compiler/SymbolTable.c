@@ -19,6 +19,15 @@ Symbol* CreateSymbol(char* name, int type)
 	return symbol;
 }
 
+/* Frees all the data in the symbol table */
+void WipeTableClean()
+{
+	int i;
+	for (i = 0; i < table_pointer; i++)
+		free(table[i]);
+	table_pointer = 0;
+}
+
 /* Find a symbol in the symbol table */
 Symbol* FindSymbol(char* name)
 {

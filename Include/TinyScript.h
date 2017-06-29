@@ -58,6 +58,7 @@ typedef struct Symbol
 	int param_size;
 } Symbol;
 Symbol* CreateSymbol(char* name, int type);
+void WipeTableClean();
 Symbol* FindSymbol(char* name);
 void StartScope();
 void RegisterSymbol(Symbol* symbol);

@@ -1,6 +1,10 @@
 
-declare int x;
+func Fib(int i) < int {
+	if i > 3
+		return Fib(i - 1) + Fib(i - 2);
+	return 1;
+}
+
 func Main() {
-	x = DebugFunc(6);
-	DebugFunc(x);
+	PrintInt(Fib(30));
 }

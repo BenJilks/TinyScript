@@ -108,6 +108,7 @@ void ParseFunction()
 /* Parse a program body */
 void ParseProgramBody()
 {
+	StartScope();
 	while (look.id != TOKEN_NULL)
 	{
 		switch(look.id)
@@ -123,4 +124,5 @@ void ParseProgramBody()
 			}
 		}
 	}
+	PopScope();
 }

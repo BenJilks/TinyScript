@@ -12,6 +12,7 @@ void Error(char* msg)
 void Abort(char* msg)
 {
 	Error(msg);
+	WipeTableClean();
 	CloseIO();
 	exit(0);
 }
