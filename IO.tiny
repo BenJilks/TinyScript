@@ -1,0 +1,20 @@
+
+syscall Print
+syscall Println
+syscall Int
+syscall Float
+syscall AsString
+
+sysclass String
+{
+	syscall Length
+	syscall At
+	syscall Append
+}
+
+sysclass File
+{
+	syscall File
+	syscall ReadAll
+	syscall Close
+}

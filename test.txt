@@ -1,0 +1,4 @@
+include "IO.tiny"
+
+func Main()
+	Println("Hello, World!")
