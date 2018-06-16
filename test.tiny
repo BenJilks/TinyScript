@@ -1,4 +1,11 @@
 include "IO.tiny"
 
+func Fib(i)
+{
+	if i > 2
+		ret Fib(i - 1) + Fib(i - 2)
+	ret 1
+}
+
 func Main()
-	Println("Hello, World!")
+	Println(Fib(30))

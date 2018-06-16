@@ -3,7 +3,7 @@ CXX = g++
 COMPILER_SRC_PATH = Compiler/Src
 VM_SRC_PATH = VM/Src
 BUILD_PATH = Build
-BIN_NAME = TinySrcipt
+BIN_NAME = TinyScript
 
 COMPILER_SOURCES = $(shell find $(COMPILER_SRC_PATH) -name '*.cpp' | sort -k 1nr | cut -f2-)
 COMPILER_OBJECTS = $(COMPILER_SOURCES:$(COMPILER_SRC_PATH)/%.cpp=$(BUILD_PATH)/%.o)
@@ -46,7 +46,7 @@ $(BUILD_PATH)/%.o: $(COMPILER_SRC_PATH)/%.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -MP -MMD -c $< -o $@
 
 $(BUILD_PATH)/%.o: $(VM_SRC_PATH)/%.c
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -MP -MMD -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -O3 -MP -MMD -c $< -o $@
 
 $(BUILD_PATH)/%.o: %.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -MP -MMD -c $< -o $@

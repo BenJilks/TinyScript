@@ -455,10 +455,10 @@ void Exec(char *data, int length)
 
 #if LOG_STACK
 		int i;
-		LOG("Stack: ");
+		printf("Stack: ");
 		for (i = 0; i < sp; i++)
-			LOG("%x, ", stack[i].p);
-		LOG("\n");
+			printf("%i, ", stack[i].i);
+		printf("\n");
 #endif
 	}
 
