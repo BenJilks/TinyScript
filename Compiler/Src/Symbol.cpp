@@ -84,3 +84,17 @@ Class *SymbolTable::FindClass(string name)
     return NULL;
 }
 
+void SymbolTable::CleanUp()
+{
+    for (Symbol *symb : locals)
+        delete symb;
+    
+    for (Symbol *symb : args)
+        delete symb;
+    
+    for (Function *func : functions)
+        delete func;
+    
+    for (Class *c : classes)
+        delete c;
+}

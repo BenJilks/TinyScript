@@ -5,12 +5,13 @@
 class Compiler
 {
 public:
-    Compiler();
+    Compiler() {}
     
     bool Compile(string file_path);
     void DumpCode(string file_path);
     vector<char> GetDump();
-    
+
+    ~Compiler();
 private:
     void CompileInclude(Tokenizer *tk);
     void CompileFunc(Tokenizer *tk);

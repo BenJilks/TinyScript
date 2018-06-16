@@ -4,8 +4,6 @@
 #include <iostream>
 #include <algorithm>
 
-Compiler::Compiler() {}
-
 bool Compiler::Compile(string file_path)
 {
     Tokenizer tk(file_path);
@@ -141,4 +139,10 @@ void Compiler::CompileSysClass(Tokenizer *tk)
     }
     tk->Match("}", TkType::CloseBlock);
     table.AddClass(c);
+}
+
+Compiler::~Compiler()
+{
+    // Free symbol data
+    table.CleanUp();
 }

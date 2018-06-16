@@ -32,6 +32,8 @@ public:
     Function *FindFunction(string name);
     Class *FindClass(string name);
 
+    void CleanUp();
+
 private:
     vector<Symbol*> locals;
     vector<Symbol*> args;
