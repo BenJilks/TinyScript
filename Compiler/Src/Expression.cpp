@@ -235,8 +235,9 @@ bool Expression::IsPathFunc(vector<ExpressionPath> path)
 // Allocate a new object and push it onto stack
 void Expression::CompileNewObject(Class *c, Node *node)
 {
+    int class_id = table->FindClassLocation(c);
     node->code.push_back((char)ByteCode::MALLOC);
-    node->code.push_back((char)c->Size());
+    node->code.push_back((char)class_id);
 
     // Find a method named the same as the class
     Function *init = c->FindMethod(c->Name());

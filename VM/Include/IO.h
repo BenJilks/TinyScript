@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-void AsString(Object obj, char *str)
+void AsString(Object obj, char *str, Object *stack, int *sp)
 {
 	switch(obj.type->prim)
 	{
@@ -12,20 +12,26 @@ void AsString(Object obj, char *str)
 		case CHAR: sprintf(str, "%c", obj.c); break;
 		case BOOL: strcpy(str, obj.c ? "true" : "false"); break;
 		case STRING: strcpy(str, (char*)obj.p); break;
+		case OBJECT:
+			if (obj.type->operator_to_string != -1)
+			{
+				stack[(*sp)++] = obj;
+				CallFunc(obj.type->operator_to_string);
+				strcpy(str, (char*)stack[(*sp)-1].p);
+				*sp -= 2;
+				break;
+			}
+			sprintf(str, "<%s at 0x%x>", obj.type->name, obj.p); 
+			break;
 	}
 }
 
 void Print(Object *stack, int *sp, Object *pointers, int *pointer_count)
 {
 	Object obj = stack[(*sp)-1];
-	switch(obj.type->prim)
-	{
-		case INT: printf("%i", obj.i); break;
-		case FLOAT: printf("%.6g", obj.f); break;
-		case CHAR: printf("%c", obj.c); break;
-		case BOOL: printf(obj.c ? "true" : "false"); break;
-		case STRING: printf((char*)obj.p); break;
-	}
+	char str[80];
+	AsString(obj, str, stack, sp);
+	printf("%s", str);
 
 	stack[(*sp)++] = (Object){PrimType(INT), 0};
 }
@@ -92,7 +98,7 @@ void String(Object *stack, int *sp, Object *pointers, int *pointer_count)
 
 	out.type = PrimType(STRING);
 	out.p = malloc(1024);
-	AsString(in, (char*)out.p);
+	AsString(in, (char*)out.p, stack, sp);
 	out.p = realloc(out.p, strlen((char*)out.p) + 1);
 	stack[(*sp)++] = out;
 	pointers[(*pointer_count)++] = out;
@@ -126,7 +132,7 @@ void String_Append(Object *stack, int *sp, Object *pointers, int *pointer_count)
 {
 	char *dest = (char*)stack[(*sp)-2].p;
 	char src[80];
-	AsString(stack[(*sp)-1], src);
+	AsString(stack[(*sp)-1], src, stack, sp);
 
 	int dest_len = strlen(dest);
 	int src_len = strlen(src);

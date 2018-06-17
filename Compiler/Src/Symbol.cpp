@@ -53,6 +53,14 @@ int SymbolTable::FindLocation(string name)
     return numeric_limits<int>::max();
 }
 
+int SymbolTable::FindClassLocation(Class *c)
+{
+    int index = find(classes.begin(), classes.end(), c) - classes.begin();
+    if (index != classes.size())
+        return index;
+    return -1;
+}
+
 // Finds a symbol by its name
 Symbol *SymbolTable::FindSymbol(string name)
 {

@@ -20,6 +20,6 @@ int main(int argc, char **argv)
     if (code.size() > 0)
     {
         RegisterIO();
-        Exec(&code[0], code.size());
+        LoadProgram(&code[0], code.size());
     }
 }

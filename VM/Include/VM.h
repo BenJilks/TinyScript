@@ -19,6 +19,12 @@ typedef struct Type
 	char name[MAX_NAME_LENGTH];
 	Primitive prim;
 	int size;
+
+	int operator_add;
+	int operator_subtract;
+	int operator_multiply;
+	int operator_divide;
+	int operator_to_string;
 } Type;
 
 
@@ -36,7 +42,8 @@ typedef struct Object
 
 typedef void (*SysFunc)(Object *stack, int *sp, Object *pointers, int *pointer_count);
 void RegisterFunc(char *name, SysFunc func);
-void Exec(char *data, int length);
+void LoadProgram(char *program_data, int program_length);
+void CallFunc(int func);
 void ExecFile(char *file_path);
 Type *PrimType(int prim);
 

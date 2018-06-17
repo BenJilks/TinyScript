@@ -5,8 +5,8 @@ class Obj
 	
 	func Obj(name, size)
 	{
-		this.name = name
-		this.size = size
+		self.name = name
+		self.size = size
 	}
 }
 

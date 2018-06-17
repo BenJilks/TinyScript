@@ -13,6 +13,9 @@ public:
 
     ~Compiler();
 private:
+    void DumpSysCalls(vector<char> &out_code);
+    void DumpTypes(vector<char> &out_code);
+
     void CompileInclude(Tokenizer *tk);
     void CompileFunc(Tokenizer *tk);
     void CompileSysCall(Tokenizer *tk);

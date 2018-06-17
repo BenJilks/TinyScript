@@ -32,11 +32,56 @@ void Compiler::DumpCode(string file_path)
 }
 
 template<typename T>
-static void PushData(T data, vector<char>& code)
+static void PushData(T data, vector<char> &code)
 {
     char *bytes = (char*)&data;
     code.insert(code.end(), bytes, 
         bytes + sizeof(T));
+}
+
+static void DumpString(string str, vector<char> &out_code)
+{
+    char length = str.length();
+    out_code.push_back(length);
+    out_code.insert(out_code.end(), 
+        str.begin(), str.end());
+}
+
+void Compiler::DumpSysCalls(vector<char> &out_code)
+{
+    char count = syscalls.size();
+    out_code.push_back(count);
+
+    for (string syscall : syscalls)
+        DumpString(syscall, out_code);
+}
+
+static void DumpOperator(Class *c, string name, vector<char> &out_code)
+{
+    Function *func = c->FindMethod(name);
+    if (func == NULL)
+        PushData(-1, out_code);
+    else
+        PushData(func->Location(), out_code);
+}
+
+void Compiler::DumpTypes(vector<char> &out_code)
+{
+    char count = table.Classes().size();
+    out_code.push_back(count);
+
+    // Push class data:
+    // string: name, int: size
+    for (Class *c : table.Classes())
+    {
+        DumpString(c->Name(), out_code);
+        PushData(c->Size(), out_code);
+        DumpOperator(c, "operator_add", out_code);
+        DumpOperator(c, "operator_subtract", out_code);
+        DumpOperator(c, "operator_multiply", out_code);
+        DumpOperator(c, "operator_divide", out_code);
+        DumpOperator(c, "operator_to_string", out_code);
+    }
 }
 
 vector<char> Compiler::GetDump()
@@ -48,17 +93,10 @@ vector<char> Compiler::GetDump()
         cout << "Error: No 'Main' function found" << endl;
         return out_code;
     }
-    PushData(func->Location(), out_code);
 
-    char count = syscalls.size();
-    out_code.push_back(count);
-    for (string syscall : syscalls)
-    {
-        char length = syscall.length();
-        out_code.push_back(length);
-        out_code.insert(out_code.end(), 
-            syscall.begin(), syscall.end());
-    }
+    PushData(func->Location(), out_code);
+    DumpSysCalls(out_code);
+    DumpTypes(out_code);
     
     out_code.insert(out_code.end(), code.begin(), code.end());
     return out_code;

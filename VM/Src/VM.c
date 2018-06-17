@@ -43,6 +43,23 @@ typedef enum ByteCode
 	ASSIGN_ATTR
 } ByteCode;
 
+typedef struct SysCall
+{
+	char name[80];
+	SysFunc func;
+} SysCall;
+
+SysCall sys_calls[80];
+int sys_call_size = 0;
+
+void RegisterFunc(char *name, SysFunc func)
+{
+	SysCall call;
+	strcpy(call.name, name);
+	call.func = func;
+	sys_calls[sys_call_size++] = call;
+}
+
 Type t_int = {"int", INT, 4};
 Type t_float = {"float", FLOAT, 4};
 Type t_string = {"string", STRING, 8};
@@ -62,11 +79,100 @@ Type *PrimType(int prim)
 	return NULL;
 }
 
+char *data;
+int length;
+
+int header_size;
+SysFunc sys_funcs[80];
+Type types[80];
+
+int pc, sp, bp, fp;
+int stack_frame[STACK_SIZE];
+Object stack[STACK_SIZE];
+
+Object pointers[STACK_SIZE];
+int pointer_count;
+
+void LoadString(char *str)
+{
+	int length = data[header_size];
+	memcpy(str, data + header_size + 1, length);
+	str[length] = '\0';
+	header_size += length + 1;
+}
+
+int LoadInt()
+{
+	int i = *(int*)(data + header_size);
+	header_size += 4;
+	return i;
+}
+
+void LoadSysCalls()
+{
+	int i, j;
+	int syscall_length = data[header_size++];
+	for (i = 0; i < syscall_length; i++)
+	{
+		char syscall[80];
+		LoadString(syscall);
+		LOG("System function: '%s'\n", syscall);
+
+		for (j = 0; j < sys_call_size; j++)
+		{
+			if (!strcmp(syscall, sys_calls[j].name))
+			{
+				sys_funcs[i] = sys_calls[j].func;
+				break;
+			}
+		}
+	}
+}
+
+void LoadDataTypes()
+{
+	int i;
+	int type_length = data[header_size++];
+	for (i = 0; i < type_length; i++)
+	{
+		Type type;
+		LoadString(type.name);
+		type.size = LoadInt();
+		type.operator_add = LoadInt();
+		type.operator_subtract = LoadInt();
+		type.operator_multiply = LoadInt();
+		type.operator_divide = LoadInt();
+		type.operator_to_string = LoadInt();
+		type.prim = OBJECT;
+		types[i] = type;
+
+		LOG("Loaded type '%s' %i\n", type.name, type.operator_add);
+	}
+}
+
+void LoadProgram(char *program_data, int program_length)
+{
+	data = program_data;
+	length = program_length;
+	pc = 0;
+	sp = 0;
+	bp = 0;
+	fp = 0;
+	pointer_count = 0;
+
+	int main_func = (*((int*)data));
+	header_size = 4;
+
+	LoadSysCalls();
+	LoadDataTypes();
+	CallFunc(main_func);
+}
+
 #define ERROR(...) \
 	printf(__VA_ARGS__); \
 	exit(0)
 
-#define OP_FUNC(name, op) \
+#define OP_FUNC(name, op, overload) \
 	Object name(Object left, Object right) \
 	{ \
 		Object obj; \
@@ -78,7 +184,7 @@ Type *PrimType(int prim)
 					case INT: obj.type = &t_int; obj.i = left.i op right.i; break; \
 					case FLOAT: obj.type = &t_float; obj.f = left.i op right.f; break; \
 					case CHAR: obj.type = &t_int; obj.i = left.i op right.c; break; \
-					default: ERROR("Invalid operation"); break; \
+					default: ERROR("Invalid operation\n"); break; \
 				} \
 				break; \
 			case FLOAT: \
@@ -87,7 +193,7 @@ Type *PrimType(int prim)
 					case INT: obj.type = &t_float; obj.f = left.f op right.i; break; \
 					case FLOAT: obj.type = &t_float; obj.f = left.f op right.f; break; \
 					case CHAR: obj.type = &t_float; obj.f = left.f op right.c; break; \
-					default: ERROR("Invalid operation"); break; \
+					default: ERROR("Invalid operation\n"); break; \
 				} \
 				break; \
 			case CHAR: \
@@ -96,11 +202,21 @@ Type *PrimType(int prim)
 					case INT: obj.type = &t_int; obj.i = left.c op right.i; break; \
 					case FLOAT: obj.type = &t_float; obj.f = left.c op right.f; break; \
 					case CHAR: obj.type = &t_char; obj.c = left.c op right.c; break; \
-					default: ERROR("Invalid operation"); break; \
+					default: ERROR("Invalid operation\n"); break; \
 				} \
 				break; \
 			case BOOL: \
-				ERROR("Invalid operation"); \
+				ERROR("Invalid operation\n"); \
+				break; \
+			case OBJECT: \
+				if (left.type->overload != -1) \
+				{ \
+					sp++; \
+					CallFunc(left.type->overload); \
+					sp -= 2; \
+					return stack[sp+1]; \
+				} \
+				ERROR("Invalid operation\n"); \
 				break; \
 		} \
 		return obj; \
@@ -118,7 +234,7 @@ Type *PrimType(int prim)
 					case INT: obj.type = &t_bool; obj.i = left.i op right.i; break; \
 					case FLOAT: obj.type = &t_bool; obj.i = left.i op right.f; break; \
 					case CHAR: obj.type = &t_bool; obj.i = left.i op right.c; break; \
-					default: ERROR("Invalid operation"); break; \
+					default: ERROR("Invalid operation\n"); break; \
 				} \
 				break; \
 			case FLOAT: \
@@ -127,7 +243,7 @@ Type *PrimType(int prim)
 					case INT: obj.type = &t_bool; obj.i = left.f op right.i; break; \
 					case FLOAT: obj.type = &t_bool; obj.i = left.f op right.f; break; \
 					case CHAR: obj.type = &t_bool; obj.i = left.f op right.c; break; \
-					default: ERROR("Invalid operation"); break; \
+					default: ERROR("Invalid operation\n"); break; \
 				} \
 				break; \
 			case CHAR: \
@@ -136,11 +252,11 @@ Type *PrimType(int prim)
 					case INT: obj.type = &t_bool; obj.i = left.c op right.i; break; \
 					case FLOAT: obj.type = &t_bool; obj.i = left.c op right.f; break; \
 					case CHAR: obj.type = &t_bool; obj.i = left.c op right.c; break; \
-					default: ERROR("Invalid operation"); break; \
+					default: ERROR("Invalid operation\n"); break; \
 				} \
 				break; \
 			case BOOL: \
-				ERROR("Invalid operation"); \
+				ERROR("Invalid operation\n"); \
 				break; \
 		} \
 		return obj; \
@@ -157,7 +273,7 @@ Object Equals(Object left, Object right)
 				case INT: obj.type = &t_bool; obj.i = left.i == right.i; break;
 				case FLOAT: obj.type = &t_bool; obj.i = left.i == right.f; break;
 				case CHAR: obj.type = &t_bool; obj.i = left.i == right.c; break;
-				default: ERROR("Invalid operation"); break;
+				default: ERROR("Invalid operation\n"); break;
 			}
 			break;
 		case FLOAT:
@@ -166,7 +282,7 @@ Object Equals(Object left, Object right)
 				case INT: obj.type = &t_bool; obj.i = left.f == right.i; break;
 				case FLOAT: obj.type = &t_bool; obj.i = left.f == right.f; break;
 				case CHAR: obj.type = &t_bool; obj.i = left.f == right.c; break;
-				default: ERROR("Invalid operation"); break;
+				default: ERROR("Invalid operation\n"); break;
 			}
 			break;
 		case CHAR:
@@ -175,31 +291,31 @@ Object Equals(Object left, Object right)
 				case INT: obj.type = &t_bool; obj.i = left.c == right.i; break;
 				case FLOAT: obj.type = &t_bool; obj.i = left.c == right.f; break;
 				case CHAR: obj.type = &t_bool; obj.i = left.c == right.c; break;
-				default: ERROR("Invalid operation"); break;
+				default: ERROR("Invalid operation\n"); break;
 			}
 			break;
 		case BOOL:
 			switch(right.type->prim)
 			{
 				case BOOL: obj.type = &t_bool; obj.i = left.c == right.c; break;
-				default: ERROR("Invalid operation"); break;
+				default: ERROR("Invalid operation\n"); break;
 			}
 			break;
 		case STRING:
 			switch(right.type->prim)
 			{
 				case STRING: obj.type = &t_bool; obj.i = !strcmp((char*)left.p, (char*)right.p); break;
-				default: ERROR("Invalid operation"); break;
+				default: ERROR("Invalid operation\n"); break;
 			}
 			break;
 	}
 	return obj;
 }
 
-OP_FUNC(Add, +);
-OP_FUNC(Sub, -);
-OP_FUNC(Mul, *);
-OP_FUNC(Div, /);
+OP_FUNC(Add, +, operator_add);
+OP_FUNC(Sub, -, operator_subtract);
+OP_FUNC(Mul, *, operator_multiply);
+OP_FUNC(Div, /, operator_divide);
 COMPARE_FUNC(GreaterThan, >);
 COMPARE_FUNC(LessThan, <);
 
@@ -208,47 +324,6 @@ COMPARE_FUNC(LessThan, <);
 		LOG("%s operation\n", #op); \
 		stack[(--sp)-1] = op(stack[sp-2], stack[sp-1]); \
 		break; \
-
-typedef struct SysCall
-{
-	char name[80];
-	SysFunc func;
-} SysCall;
-
-SysCall sys_calls[80];
-int sys_call_size = 0;
-
-void RegisterFunc(char *name, SysFunc func)
-{
-	SysCall call;
-	strcpy(call.name, name);
-	call.func = func;
-	sys_calls[sys_call_size++] = call;
-}
-
-void LoadSysCalls(SysFunc *sys_funcs, char *data, int *header_size)
-{
-	int i, j;
-	int syscall_length = data[(*header_size)++];
-	for (i = 0; i < syscall_length; i++)
-	{
-		int length = data[*header_size];
-		char syscall[80];
-		memcpy(syscall, data + (*header_size) + 1, length);
-		syscall[length] = '\0';
-		LOG("System function: '%s'\n", syscall);
-
-		for (j = 0; j < sys_call_size; j++)
-		{
-			if (!strcmp(syscall, sys_calls[j].name))
-			{
-				sys_funcs[i] = sys_calls[j].func;
-				break;
-			}
-		}
-		*header_size += length + 1;
-	}
-}
 
 void CleanUp(Object *pointers, int *pointer_count, Object *stack, int sp)
 {
@@ -276,22 +351,13 @@ void CleanUp(Object *pointers, int *pointer_count, Object *stack, int sp)
 	}
 }
 
-void Exec(char *data, int length)
+void CallFunc(int func)
 {
-	int header_size = 4;
-	SysFunc sys_funcs[80];
-	LoadSysCalls(sys_funcs, data, &header_size);
+	int recursion_depth = 1;
+	stack_frame[fp++] = pc;
+	pc = func + header_size;
 
-	int pc = 0, sp = 0, bp = 0, fp = 0;
-	int stack_frame[STACK_SIZE];
-	Object stack[STACK_SIZE];
-
-	Object pointers[STACK_SIZE];
-	int pointer_count = 0;
-
-	pc = (*((int*)data)) + header_size;
-	stack_frame[fp++] = length;
-	while (pc < length)
+	while (recursion_depth > 0 && pc < length)
 	{
 		char bytecode = data[pc++];
 		LOG("#%i (%x): ", pc-header_size-1, bytecode);
@@ -383,6 +449,7 @@ void Exec(char *data, int length)
 				LOG("Call function at %i\n", *((int*)(data + pc)));
 				stack_frame[fp++] = pc+4;
 				pc = *((int*)(data + pc)) + header_size;
+				recursion_depth++;
 				break;
 
 			case CALL_SYS:
@@ -411,6 +478,7 @@ void Exec(char *data, int length)
 				LOG("Return from function call to %i\n", stack_frame[fp-2]);
 				bp = stack_frame[--fp];
 				pc = stack_frame[--fp];
+				recursion_depth--;
 				break;
 
 			case INC_LOC:
@@ -427,10 +495,10 @@ void Exec(char *data, int length)
 
 			case MALLOC:
 			{
-				LOG("Malloc of size %i\n", data[pc]);
+				LOG("Malloc new '%s' object\n", types[data[pc]].name);
 				Object obj;
-				obj.type = &t_int;
-				obj.p = malloc(sizeof(Object) * data[pc++]);
+				obj.type = &types[data[pc++]];
+				obj.p = malloc(sizeof(Object) * obj.type->size);
 
 				int i;
 				for (i = 0; i < data[pc-1]; i++)
@@ -461,8 +529,6 @@ void Exec(char *data, int length)
 		printf("\n");
 #endif
 	}
-
-	sp = 0;
 	CleanUp(pointers, &pointer_count, stack, sp);
 }
 
@@ -477,6 +543,6 @@ void ExecFile(char *file_path)
 	fread(data, sizeof(char), length, file);
 	fclose(file);
 
-	Exec(data, length);
+	LoadProgram(data, length);
 	free(data);
 }
