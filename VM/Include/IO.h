@@ -1,30 +1,11 @@
+#ifndef IO_H
+#define IO_H
+
 #include "VM.h"
+#include "String.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-void AsString(Object obj, char *str, Object *stack, int *sp)
-{
-	switch(obj.type->prim)
-	{
-		case INT: sprintf(str, "%i", obj.i); break;
-		case FLOAT: sprintf(str, "%.6g", obj.f); break;
-		case CHAR: sprintf(str, "%c", obj.c); break;
-		case BOOL: strcpy(str, obj.c ? "true" : "false"); break;
-		case STRING: strcpy(str, (char*)obj.p); break;
-		case OBJECT:
-			if (obj.type->operator_to_string != -1)
-			{
-				stack[(*sp)++] = obj;
-				CallFunc(obj.type->operator_to_string);
-				strcpy(str, (char*)stack[(*sp)-1].p);
-				*sp -= 2;
-				break;
-			}
-			sprintf(str, "<%s at 0x%x>", obj.type->name, obj.p); 
-			break;
-	}
-}
 
 void Print(Object *stack, int *sp, Object *pointers, int *pointer_count)
 {
@@ -47,8 +28,10 @@ void Input(Object *stack, int *sp, Object *pointers, int *pointer_count)
 	printf("%s", (char*)stack[(*sp)-1].p);
 
 	char *buffer = (char*)malloc(1024);
-	scanf("%[^\n]s", buffer);
-	buffer = (char*)realloc(buffer, strlen(buffer) + 1);
+	size_t size = 1024;
+	getline(&buffer, &size, stdin);
+	buffer = (char*)realloc(buffer, size + 1);
+	buffer[size] = '\0';
 
 	Object obj;
 	obj.type = PrimType(STRING);
@@ -202,3 +185,4 @@ void RegisterIO()
 	RegisterFunc((char*)"File:Close", File_Close);
 }
 
+#endif // IO_H

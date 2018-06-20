@@ -45,10 +45,11 @@ private:
     Class *GetNodeType(ExpressionPath node);
     vector<char> GenFirstPath(ExpressionPath first);
 
-    void CompileParentheses(Node *node);
-    Node *CompileExpression();
+    Node *CompileParentheses();
     Node *CompileTerm();
     Node *CompileFactor();
+    Node *CompileExpression();
+    void CleanNodes(Node *node);
     
     void CompileNewObject(Class *c, Node *node);
     void CompileName(Node *node);

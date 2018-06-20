@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "VM.h"
+#include "String.h"
 
 #define DEBUG 0
 #define LOG_STACK 0
@@ -146,7 +147,7 @@ void LoadDataTypes()
 		type.prim = OBJECT;
 		types[i] = type;
 
-		LOG("Loaded type '%s' %i\n", type.name, type.operator_add);
+		LOG("Loaded type '%s'\n", type.name);
 	}
 }
 
@@ -172,7 +173,7 @@ void LoadProgram(char *program_data, int program_length)
 	printf(__VA_ARGS__); \
 	exit(0)
 
-#define OP_FUNC(name, op, overload) \
+#define OP_FUNC(name, op, overload, str_func) \
 	Object name(Object left, Object right) \
 	{ \
 		Object obj; \
@@ -218,6 +219,11 @@ void LoadProgram(char *program_data, int program_length)
 				} \
 				ERROR("Invalid operation\n"); \
 				break; \
+			case STRING: \
+				sp++; \
+				str_func(stack, &sp); \
+				sp -= 1; \
+				return stack[sp-1]; \
 		} \
 		return obj; \
 	}
@@ -312,10 +318,10 @@ Object Equals(Object left, Object right)
 	return obj;
 }
 
-OP_FUNC(Add, +, operator_add);
-OP_FUNC(Sub, -, operator_subtract);
-OP_FUNC(Mul, *, operator_multiply);
-OP_FUNC(Div, /, operator_divide);
+OP_FUNC(Add, +, operator_add, StringAdd);
+OP_FUNC(Sub, -, operator_subtract, StringError);
+OP_FUNC(Mul, *, operator_multiply, StringMultiply);
+OP_FUNC(Div, /, operator_divide, StringError);
 COMPARE_FUNC(GreaterThan, >);
 COMPARE_FUNC(LessThan, <);
 

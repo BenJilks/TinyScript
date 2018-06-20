@@ -1,6 +1,7 @@
 
 syscall Print
 syscall Println
+syscall Input
 syscall Int
 syscall Float
 syscall AsString

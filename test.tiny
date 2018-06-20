@@ -1,42 +1,9 @@
 include "IO.tiny"
 
-class Vec2
-{
-	x y
-
-	func Vec2(self : Vec2, x, y)
-	{
-		self.x = x
-		self.y = y
-	}
-
-	func operator_to_string(self : Vec2)
-	{
-		str : String = AsString(self.x)
-		str.Append(", ")
-		str.Append(self.y)
-		ret str
-	}
-
-	func operator_add(self : Vec2, other : Vec2)
-		ret Vec2(self.x + other.x, self.y + other.y)
-
-	func operator_subtract(self : Vec2, other : Vec2)
-		ret Vec2(self.x - other.x, self.y - other.y)
-
-	func operator_multiply(self : Vec2, other : Vec2)
-		ret Vec2(self.x * other.x, self.y * other.y)
-
-	func operator_divide(self : Vec2, other : Vec2)
-		ret Vec2(self.x / other.x, self.y / other.y)
-}
-
 func Main()
 {
-	p0 : Vec2 = Vec2(1.0, 4.0)
-	p1 : Vec2 = Vec2(4.0, 7.0)
-	Println(p0 + p1)
-	Println(p0 - p1)
-	Println(p0 * p1)
-	Println(p0 / p1)
+	x = Float(Input("Enter first number: "))
+	y = Float(Input("Enter second number: "))
+	Println("sum of " + x + " and " + y + 
+		" is " + (x + y))
 }

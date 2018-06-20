@@ -285,18 +285,20 @@ void Expression::CompileConst(Node *node)
 
 // Compile an expression inside an expression, enclosed in parentheses
 // ... + (a + b) + ... 
-void Expression::CompileParentheses(Node *node)
+Node *Expression::CompileParentheses()
 {
     tk->Match("(", TkType::OpenArg);
     Node *inside = CompileExpression();
-    memcpy(node, inside, sizeof(Node));
-    free(inside);
     tk->Match(")", TkType::CloseArg);
+    return inside;
 }
 
 // Compile a new value in an expression
 Node *Expression::CompileTerm()
 {
+    if (tk->LookType() == TkType::OpenArg)
+        return CompileParentheses();
+
     Node *node = new Node();
     node->left = NULL;
     node->right = NULL;
@@ -308,7 +310,6 @@ Node *Expression::CompileTerm()
         case TkType::Float: CompileConst(node); break;
         case TkType::Bool: CompileConst(node); break;
         case TkType::String: CompileConst(node); break;
-        case TkType::OpenArg: CompileParentheses(node); break;
         default: tk->Error("Token '" + tk->LookData() + "' is not a value"); break;
     }
     return node;
@@ -407,8 +408,20 @@ vector<char> Expression::GenCode(Node *node)
     return code;
 }
 
+void Expression::CleanNodes(Node *node)
+{
+    if (node->left != NULL)
+        CleanNodes(node->left);
+    if (node->right != NULL)
+        CleanNodes(node->right);
+    delete node;
+}
+
 vector<char> Expression::Compile()
 {
     Node *node = CompileExpression();
-    return GenCode(node);
+    vector<char> code = GenCode(node);
+
+    CleanNodes(node);
+    return code;
 }
