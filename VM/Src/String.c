@@ -8,17 +8,17 @@ void AsString(Object obj, char *str, Object *stack, int *sp)
 		case FLOAT: sprintf(str, "%.6g", obj.f); break;
 		case CHAR: sprintf(str, "%c", obj.c); break;
 		case BOOL: strcpy(str, obj.c ? "true" : "false"); break;
-		case STRING: strcpy(str, (char*)obj.p); break;
+		case STRING: strcpy(str, obj.p->str); break;
 		case OBJECT:
 			if (obj.type->operator_to_string != -1)
 			{
 				stack[(*sp)++] = obj;
 				CallFunc(obj.type->operator_to_string);
-				strcpy(str, (char*)stack[(*sp)-1].p);
+				strcpy(str, stack[(*sp)-1].p->str);
 				*sp -= 2;
 				break;
 			}
-			sprintf(str, "<%s at 0x%x>", obj.type->name, obj.p); 
+			sprintf(str, "<%s at 0x%x>", obj.type->name, obj.p->v); 
 			break;
 	}
 }
@@ -30,11 +30,10 @@ void StringAdd(Object *stack, int *sp)
     char right_str[80];
     AsString(right, right_str, stack, sp);
 
-    int left_len = strlen((char*)left.p);
+    int left_len = strlen(left.p->str);
     int right_len = strlen(right_str);
-    left.p = realloc(left.p, left_len + right_len + 1);
-    memcpy((char*)left.p + left_len, right_str, right_len + 1);
-	stack[(*sp)-2] = left;
+    left.p->v = realloc(left.p->v, left_len + right_len + 1);
+    memcpy(left.p->str + left_len, right_str, right_len + 1);
 }
 
 void StringMultiply(Object *stack, int *sp)
@@ -48,14 +47,13 @@ void StringMultiply(Object *stack, int *sp)
 		return;
 	}
 
-	int left_len = strlen((char*)left.p);
-	left.p = realloc(left.p, left_len * right.i + 1);
+	int left_len = strlen(left.p->str);
+	left.p->v = realloc(left.p->v, left_len * right.i + 1);
 	
 	int i;
 	for (i = 1; i < right.i; i++)
-		memcpy((char*)left.p + (i * left_len), left.p, left_len);
-	((char*)left.p)[left_len * right.i] = '\0';
-	stack[(*sp)-2] = left;
+		memcpy(left.p->str + (i * left_len), left.p->v, left_len);
+	left.p->str[left_len * right.i] = '\0';
 }
 
 void StringError(Object *stack, int *sp)

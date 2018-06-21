@@ -7,25 +7,26 @@
 #include <stdlib.h>
 #include <string.h>
 
-void Print(Object *stack, int *sp, Object *pointers, int *pointer_count)
+void Print(Object *stack, int *sp, Pointer *pointers, int *pointer_count)
 {
 	Object obj = stack[(*sp)-1];
-	char str[80];
+	char *str = (char*)malloc(1024);
 	AsString(obj, str, stack, sp);
 	printf("%s", str);
+	free(str);
 
 	stack[(*sp)++] = (Object){PrimType(INT), 0};
 }
 
-void Println(Object *stack, int *sp, Object *pointers, int *pointer_count)
+void Println(Object *stack, int *sp, Pointer *pointers, int *pointer_count)
 {
 	Print(stack, sp, pointers, pointer_count);
 	printf("\n");
 }
 
-void Input(Object *stack, int *sp, Object *pointers, int *pointer_count)
+void Input(Object *stack, int *sp, Pointer *pointers, int *pointer_count)
 {
-	printf("%s", (char*)stack[(*sp)-1].p);
+	printf("%s", stack[(*sp)-1].p->str);
 
 	char *buffer = (char*)malloc(1024);
 	size_t size = 1024;
@@ -35,12 +36,11 @@ void Input(Object *stack, int *sp, Object *pointers, int *pointer_count)
 
 	Object obj;
 	obj.type = PrimType(STRING);
-	obj.p = (void*)buffer;
+	obj.p = AllocPointer(buffer);
 	stack[(*sp)++] = obj;
-	pointers[(*pointer_count)++] = obj;
 }
 
-void Int(Object *stack, int *sp, Object *pointers, int *pointer_count)
+void Int(Object *stack, int *sp, Pointer *pointers, int *pointer_count)
 {
 	Object out;
 	Object in = stack[(*sp)-1];
@@ -52,12 +52,12 @@ void Int(Object *stack, int *sp, Object *pointers, int *pointer_count)
 		case FLOAT: out.i = (int)in.f; break;
 		case CHAR: out.i = in.c; break;
 		case BOOL: out.i = in.c; break;
-		case STRING: out.i = atoi((char*)in.p); break;
+		case STRING: out.i = atoi(in.p->str); break;
 	}
 	stack[(*sp)++] = out;
 }
 
-void Float(Object *stack, int *sp, Object *pointers, int *pointer_count)
+void Float(Object *stack, int *sp, Pointer *pointers, int *pointer_count)
 {
 	Object out;
 	Object in = stack[(*sp)-1];
@@ -69,30 +69,30 @@ void Float(Object *stack, int *sp, Object *pointers, int *pointer_count)
 		case FLOAT: out.f = in.f; break;
 		case CHAR: out.f = (float)in.c; break;
 		case BOOL: out.f = (float)in.c; break;
-		case STRING: out.f = atof((char*)in.p); break;
+		case STRING: out.f = atof(in.p->str); break;
 	}
 	stack[(*sp)++] = out;
 }
 
-void String(Object *stack, int *sp, Object *pointers, int *pointer_count)
+void String(Object *stack, int *sp, Pointer *pointers, int *pointer_count)
 {
-	Object out;
 	Object in = stack[(*sp)-1];
+	char *str = (char*)malloc(1024);
+	AsString(in, str, stack, sp);
+	str = (char*)realloc(str, strlen(str) + 1);
 
+	Object out;
 	out.type = PrimType(STRING);
-	out.p = malloc(1024);
-	AsString(in, (char*)out.p, stack, sp);
-	out.p = realloc(out.p, strlen((char*)out.p) + 1);
+	out.p = AllocPointer(str);
 	stack[(*sp)++] = out;
-	pointers[(*pointer_count)++] = out;
 }
 
 // Class String
 
-void String_Length(Object *stack, int *sp, Object *pointers, int *pointer_count)
+void String_Length(Object *stack, int *sp, Pointer *pointers, int *pointer_count)
 {
 	Object str = stack[(*sp)-1];
-	int length = strlen((char*)str.p);
+	int length = strlen(str.p->str);
 
 	Object size_obj;
 	size_obj.type = PrimType(INT);
@@ -100,9 +100,9 @@ void String_Length(Object *stack, int *sp, Object *pointers, int *pointer_count)
 	stack[(*sp)++] = size_obj;
 }
 
-void String_At(Object *stack, int *sp, Object *pointers, int *pointer_count)
+void String_At(Object *stack, int *sp, Pointer *pointers, int *pointer_count)
 {
-	char *str = (char*)stack[(*sp)-2].p;
+	char *str = stack[(*sp)-2].p->str;
 	int index = stack[(*sp)-1].i;
 
 	Object c_obj;
@@ -111,9 +111,9 @@ void String_At(Object *stack, int *sp, Object *pointers, int *pointer_count)
 	stack[(*sp)++] = c_obj;
 }
 
-void String_Append(Object *stack, int *sp, Object *pointers, int *pointer_count)
+void String_Append(Object *stack, int *sp, Pointer *pointers, int *pointer_count)
 {
-	char *dest = (char*)stack[(*sp)-2].p;
+	char *dest = stack[(*sp)-2].p->str;
 	char src[80];
 	AsString(stack[(*sp)-1], src, stack, sp);
 
@@ -123,28 +123,28 @@ void String_Append(Object *stack, int *sp, Object *pointers, int *pointer_count)
 	memcpy(dest + dest_len, src, src_len);
 	dest[dest_len + src_len] = '\0';
 
-	stack[(*sp)-2].p = (void*)dest;
+	stack[(*sp)-2].p->str = dest;
 	stack[(*sp)++] = (Object){PrimType(INT), 0};
 }
 
 // Class File
 
-void File_File(Object *stack, int *sp, Object *pointers, int *pointer_count)
+void File_File(Object *stack, int *sp, Pointer *pointers, int *pointer_count)
 {
-	char *path = (char*)stack[(*sp)-2].p;
-	char *mode = (char*)stack[(*sp)-1].p;
-	Object *file_obj = &stack[(*sp)-3];
+	char *path = (char*)stack[(*sp)-2].p->str;
+	char *mode = (char*)stack[(*sp)-1].p->str;
+	Object file_obj = stack[(*sp)-3];
+	free(file_obj.p->v);
 
 	FILE *file = fopen(path, mode);
-	file_obj->p = realloc(file_obj->p, sizeof(FILE*));
-	memcpy(file_obj->p, &file, sizeof(FILE*));
+	file_obj.p->v = file;
 	stack[(*sp)++] = (Object){PrimType(INT), 0};
 }
 
-void File_ReadAll(Object *stack, int *sp, Object *pointers, int *pointer_count)
+void File_ReadAll(Object *stack, int *sp, Pointer *pointers, int *pointer_count)
 {
 	Object file_obj = stack[(*sp)-1];
-	FILE *file = *(FILE**)file_obj.p;
+	FILE *file = (FILE*)file_obj.p->v;
 
 	fseek(file, 0L, SEEK_END);
 	int length = ftell(file);
@@ -155,15 +155,14 @@ void File_ReadAll(Object *stack, int *sp, Object *pointers, int *pointer_count)
 
 	Object str_obj;
 	str_obj.type = PrimType(STRING);
-	str_obj.p = (void*)data;
+	str_obj.p = AllocPointer(data);
 	stack[(*sp)++] = str_obj;
-	pointers[(*pointer_count)++] = str_obj;
 }
 
-void File_Close(Object *stack, int *sp, Object *pointers, int *pointer_count)
+void File_Close(Object *stack, int *sp, Pointer *pointers, int *pointer_count)
 {
 	Object file_obj = stack[(*sp)-1];
-	int error = fclose(*(FILE**)file_obj.p);
+	int error = fclose((FILE*)file_obj.p->v);
 	stack[(*sp)++] = (Object){PrimType(INT), error};
 }
 

@@ -1,6 +1,7 @@
 #include "Compiler.hpp"
 #include "Class.hpp"
 #include "Function.hpp"
+#include "Bytecode.hpp"
 #include <iostream>
 #include <algorithm>
 
@@ -84,6 +85,19 @@ void Compiler::DumpTypes(vector<char> &out_code)
     }
 }
 
+vector<char> Compiler::Optimize()
+{
+    return code;
+    /*
+    vector<char> out_code;
+    for (int i = 0; i < code.size(); i++)
+    {
+        char c = code[i];
+        out_code.push_back(c);
+    }
+    return out_code;*/
+}
+
 vector<char> Compiler::GetDump()
 {
     vector<char> out_code;
@@ -98,7 +112,9 @@ vector<char> Compiler::GetDump()
     DumpSysCalls(out_code);
     DumpTypes(out_code);
     
-    out_code.insert(out_code.end(), code.begin(), code.end());
+    vector<char> optimized = Optimize();
+    out_code.insert(out_code.end(), 
+        optimized.begin(), optimized.end());
     return out_code;
 }
 

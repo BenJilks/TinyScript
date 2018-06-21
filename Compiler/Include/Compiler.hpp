@@ -15,6 +15,7 @@ public:
 private:
     void DumpSysCalls(vector<char> &out_code);
     void DumpTypes(vector<char> &out_code);
+    vector<char> Optimize();
 
     void CompileInclude(Tokenizer *tk);
     void CompileFunc(Tokenizer *tk);

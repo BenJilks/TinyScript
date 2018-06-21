@@ -19,3 +19,9 @@ sysclass File
 	syscall ReadAll
 	syscall Close
 }
+
+sysclass Array
+{
+	syscall Push
+	syscall Length
+}

@@ -1,9 +1,25 @@
 include "IO.tiny"
 
+class Vec3
+{
+	x y z
+
+	func Vec3(self : Vec3, x, y, z)
+	{
+		self.x = x
+		self.y = y
+		self.z = z
+	}
+
+	func operator_to_string(self : Vec3)
+	{
+		ret "Vec3(x: " + self.x + ", y: " + 
+			self.y + ", z: " + self.z + ")"
+	}
+}
+
 func Main()
 {
-	x = Float(Input("Enter first number: "))
-	y = Float(Input("Enter second number: "))
-	Println("sum of " + x + " and " + y + 
-		" is " + (x + y))
+	vec = Vec3(1, 2, 3)
+	Println(vec)
 }

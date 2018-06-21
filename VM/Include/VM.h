@@ -27,6 +27,17 @@ typedef struct Type
 	int operator_to_string;
 } Type;
 
+struct Object;
+typedef struct Pointer
+{
+	int ref_count;
+	union
+	{
+		void *v;
+		char *str;
+		struct Object *attrs;
+	};
+} Pointer;
 
 typedef struct Object
 {
@@ -36,12 +47,13 @@ typedef struct Object
 		int i;
 		float f;
 		char c;
-		void *p;
+		Pointer *p;
 	};
 } Object;
 
-typedef void (*SysFunc)(Object *stack, int *sp, Object *pointers, int *pointer_count);
+typedef void (*SysFunc)(Object *stack, int *sp, Pointer *pointers, int *pointer_count);
 void RegisterFunc(char *name, SysFunc func);
+Pointer *AllocPointer(void *p);
 void LoadProgram(char *program_data, int program_length);
 void CallFunc(int func);
 void ExecFile(char *file_path);
