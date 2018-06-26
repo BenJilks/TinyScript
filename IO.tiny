@@ -27,5 +27,7 @@ sysclass Array
 	syscall Push
 	syscall Size
 	syscall operator_add
+	syscall operator_multiply
 	syscall operator_get_index
+	syscall operator_set_index
 }

@@ -2,7 +2,7 @@ include "IO.tiny"
 
 func Main()
 {
-	str = "Testing"
-	Println(str * 10)
-	Println(str)
+	size = 20
+	arr = [[[0] * size] * size] * size
+	Println(arr)
 }

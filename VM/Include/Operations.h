@@ -15,7 +15,7 @@ Type t_char = {"char", CHAR, sizeof(char), 1, -1, -1, -1, -1, -1, -1};
 	exit(0)
 
 #define OP_ERROR(left, right, op) \
-    printf("Invalid operation of %s %s %s\n", \
+    printf("Invalid operation of '%s %s %s'\n", \
         left.type->name, #op, right.type->name); \
     exit(0)
 

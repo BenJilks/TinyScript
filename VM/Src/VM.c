@@ -100,11 +100,13 @@ Pointer *AllocPointer(void *p)
 	{
 		if (pointers[i].v == NULL)
 		{
+			LOG("New pointer at index %i (override)\n", i);
 			pointers[i].v = p;
 			return &pointers[i];
 		}
 	}
 
+	LOG("New pointer at index %i\n", pointer_count);
 	pointers[pointer_count].v = p;
 	pointers[pointer_count].ref_count = 0;
 	return &pointers[pointer_count++];
@@ -144,7 +146,7 @@ void LoadSysCalls()
 				break;
 			}
 		}
-		LOG("System function: '%s': %s", syscall, was_found ? "Found" : "Not Found");
+		LOG("System function: '%s': %s\n", syscall, was_found ? "Found" : "Not Found");
 	}
 }
 
@@ -174,15 +176,33 @@ void LoadDataTypes()
 	}
 }
 
+// Scan an object for refrences to a pointer
+void ScanObject(Object obj)
+{
+	int i;
+	if (obj.type->prim == STRING)
+	{
+		obj.p->ref_count++;
+	}
+	else if (obj.type->prim == ARRAY)
+	{
+		obj.p->ref_count++;
+		for (i = 1; i < obj.p->attrs[0].i; i++)
+			ScanObject(obj.p->attrs[i]);
+	}
+	else if (obj.type->prim == OBJECT)
+	{
+		obj.p->ref_count++;
+		for (i = 0; i < obj.type->size; i++)
+			ScanObject(obj.p->attrs[i]);
+	}
+}
+
 void CleanUp()
 {
 	int i;
 	for (i = 0; i < sp; i++)
-	{
-		Object obj = stack[sp];
-		if (obj.type->prim == OBJECT)
-			obj.p->ref_count++;
-	}
+		ScanObject(stack[i]);
 
 	for (i = 0; i < pointer_count; i++)
 	{
@@ -214,9 +234,12 @@ void LoadProgram(char *program_data, int program_length)
 	int main_func = *(int*)data;
 	header_size = 4;
 
+	LOG("Linking program...\n");
 	ResetReg();
 	LoadSysCalls();
 	LoadDataTypes();
+	LOG("Finished linking\n");
+
 	CallFunc(main_func);
 	CleanUp();
 }
@@ -359,6 +382,7 @@ void CallFunc(int func)
 
 			case RETURN:
 				LOG("Return from function call to %i\n", stack_frame[fp-2]);
+				stack[bp] = stack[sp-1];
 				sp = bp + 1;
 				bp = stack_frame[--fp];
 				pc = stack_frame[--fp];
@@ -429,8 +453,12 @@ void CallFunc(int func)
 				{
 					ERROR("Error: No set index operator of type '%s' found\n", obj.type->name);
 				}
-				CallFunc(obj.type->operator_set_index);
-				sp -= 3;
+				if (obj.type->is_sys_type)
+					sys_funcs[obj.type->operator_set_index](stack, &sp);
+				else
+					CallFunc(obj.type->operator_set_index);
+				sp -= 4;
+				break;
 			}
 
 			case MAKE_ARRAY:

@@ -10,7 +10,7 @@
 void Print(Object *stack, int *sp)
 {
 	Object obj = stack[(*sp)-1];
-	char *str = (char*)malloc(1024);
+	char *str = (char*)malloc(1024 * 1024);
 	AsString(obj, str, stack, sp);
 	printf("%s", str);
 	free(str);

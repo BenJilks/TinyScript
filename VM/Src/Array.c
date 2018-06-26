@@ -42,6 +42,31 @@ void Array_Add(Object *stack, int *sp)
     stack[(*sp)++] = new_arr;
 }
 
+void Array_Multiply(Object *stack, int *sp)
+{
+    Object left = stack[(*sp) - 2];
+    Object right = stack[(*sp) - 1];
+    if (right.type != PrimType(INT))
+	{
+		printf("Error: cannot multiply an array by a '%s'\n", 
+			right.type->name);
+		return;
+	}
+    int size = left.p->attrs[0].i;
+    int amount = right.i;
+    int i;
+
+    Object *attrs = (Object*)malloc((size * amount + 1) * sizeof(Object));
+    attrs[0] = (Object){PrimType(INT), size * amount};
+    for (i = 0; i < amount; i++)
+        memcpy(attrs + 1 + (i * size), left.p->attrs + 1, sizeof(Object) * size);
+    
+    Object new_arr;
+    new_arr.type = PrimType(ARRAY);
+    new_arr.p = AllocPointer(attrs);
+    stack[(*sp)++] = new_arr;
+}
+
 void Array_Get_Index(Object *stack, int *sp)
 {
     Object arr = stack[(*sp) - 2];
@@ -50,10 +75,22 @@ void Array_Get_Index(Object *stack, int *sp)
     stack[(*sp)++] = obj;
 }
 
+void Array_Set_Index(Object *stack, int *sp)
+{
+    Object obj = stack[(*sp) - 3];
+    Object arr = stack[(*sp) - 2];
+    Object index = stack[(*sp) - 1];
+    arr.p->attrs[index.i+1] = obj;
+
+    stack[(*sp)++] = (Object){PrimType(INT), 0};
+}
+
 void RegisterArray()
 {
     RegisterFunc((char*)"Array:Push", Array_Push);
     RegisterFunc((char*)"Array:Size", Array_Length);
     RegisterFunc((char*)"Array:operator_add", Array_Add);
+    RegisterFunc((char*)"Array:operator_multiply", Array_Multiply);
     RegisterFunc((char*)"Array:operator_get_index", Array_Get_Index);
+    RegisterFunc((char*)"Array:operator_set_index", Array_Set_Index);
 }

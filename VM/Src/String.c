@@ -10,6 +10,22 @@ void AsString(Object obj, char *str, Object *stack, int *sp)
 		case BOOL: strcpy(str, obj.c ? "true" : "false"); break;
 		case STRING: strcpy(str, obj.p->str); break;
 		case ARRAY:
+		{
+			int size = obj.p->attrs[0].i;
+			int i = 0, curr_p = 1;
+			str[0] = '[';
+			for (i = 0; i < size; i++)
+			{
+				Object attr = obj.p->attrs[i+1];
+				AsString(attr, str + curr_p, stack, sp);
+				if (i < size - 1)
+					strcpy(str + strlen(str), ", ");
+				curr_p = strlen(str);
+			}
+			str[curr_p] = ']';
+			str[curr_p + 1] = '\0';
+			break;
+		}
 		case OBJECT:
 			if (obj.type->operator_to_string != -1)
 			{
