@@ -15,6 +15,7 @@ public:
 
     inline string Name() const { return name; }
     inline int Size() const { return attrs.size(); }
+    inline bool IsSysClass() const { return is_sys_class; }
     inline void AddMethod(Function *func) { methods.push_back(func); }
 
 private:
@@ -22,6 +23,7 @@ private:
     void CompileMethod();
 
     string name;
+    bool is_sys_class;
     vector<Symbol*> attrs;
     vector<Function*> methods;
     vector<char>* code;

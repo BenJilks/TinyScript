@@ -11,6 +11,8 @@ sysclass String
 	syscall Length
 	syscall At
 	syscall Append
+	syscall operator_add
+	syscall operator_multiply
 }
 
 sysclass File
@@ -23,5 +25,7 @@ sysclass File
 sysclass Array
 {
 	syscall Push
-	syscall Length
+	syscall Size
+	syscall operator_add
+	syscall operator_get_index
 }

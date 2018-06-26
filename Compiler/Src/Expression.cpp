@@ -79,6 +79,15 @@ void Expression::ParsePathNode(ExpressionPath& node, Class *pre_type)
         tk->Error("Must state class type for '" + class_name.data + "' in non static var");
     node.c = pre_type;
     node.var = class_name.data;
+    node.type = PathType::Attr;
+}
+
+void Expression::ParsePathIndex(ExpressionPath& node)
+{
+    tk->Match("[", TkType::OpenIndex);
+    node.code = Compile();
+    node.type = PathType::Index;
+    tk->Match("]", TkType::CloseIndex);
 }
 
 // TODO: Explain what this does
@@ -92,12 +101,15 @@ void Expression::ParseFunctionNode(ExpressionPath& node)
         return;
     }
     node.code = CompileCallFunc(func);
-    node.is_func = true;
+    node.type = PathType::Func;
 }
 
 Class *Expression::GetNodeType(ExpressionPath node)
 {
-    if (node.is_func)
+    if (node.c == NULL)
+        return NULL;
+
+    if (node.type == PathType::Func)
     {
         Function *func = node.c->FindMethod(node.var);
         if (func != NULL)
@@ -114,11 +126,12 @@ Class *Expression::GetNodeType(ExpressionPath node)
 ExpressionPath Expression::ParseFirstPath(string var)
 {
     ExpressionPath first = (ExpressionPath){NULL, var};
+    first.type = PathType::Attr;
     if (tk->LookType() == TkType::OpenArg)
     {
         Function *func = table->FindFunction(var);
         first.code = CompileCallFunc(func);
-        first.is_func = true;
+        first.type = PathType::Func;
     }
     return first;
 }
@@ -131,19 +144,24 @@ vector<ExpressionPath> Expression::CompilePath(string var)
 
     Symbol *symb = table->FindSymbol(var);
     Class *pre_type = symb == NULL ? NULL : symb->type;
-    while (tk->LookType() == TkType::Path)
+    while (tk->LookType() == TkType::Path || tk->LookType() == TkType::OpenIndex)
     {
         ExpressionPath node;
-        ParsePathNode(node, pre_type);
-
-        if (node.c != NULL)
+        if (tk->LookType() == TkType::OpenIndex)
         {
-            node.is_func = false;
+            node.c = NULL;
+            ParsePathIndex(node);
+        }
+        else
+        {
+            ParsePathNode(node, pre_type);
+
             if (tk->LookType() == TkType::OpenArg)
                 ParseFunctionNode(node);
-            path.push_back(node);
-            pre_type = GetNodeType(node);
         }
+
+        path.push_back(node);
+        pre_type = GetNodeType(node);
     }
 
     return path;
@@ -151,19 +169,41 @@ vector<ExpressionPath> Expression::CompilePath(string var)
 
 vector<char> Expression::GenFirstPath(ExpressionPath first)
 {
+    if (first.type == PathType::Func)
+        return first.code;
+    
     vector<char> code;
-    if (first.is_func)
-    {
-        AppendTo(code, first.code);
-    }
-    else
-    {
-        int location = table->FindLocation(first.var);
-        code.push_back((char)ByteCode::PUSH_LOC);
-        code.push_back((char)location);
-    }
-
+    int location = table->FindLocation(first.var);
+    code.push_back((char)ByteCode::PUSH_LOC);
+    code.push_back((char)location);
+    
     return code;
+}
+
+void Expression::GenPushAttr(vector<char> &code, ExpressionPath node)
+{
+    // Push the attrubute of last object on stack
+    code.push_back((char)ByteCode::PUSH_ATTR);
+
+    int index = node.c->IndexOf(node.var);
+    if (index == numeric_limits<int>::max())
+        tk->Error("No attribute '" + node.var + "' in class '" + 
+            node.c->Name() + "' found");
+    code.push_back((char)index);
+}
+
+void Expression::GenPushMethod(vector<char> &code, ExpressionPath node)
+{
+    // Call method, and pop extra 'self' arg
+    AppendTo(code, node.code);
+    code.push_back((char)ByteCode::POP_ARGS);
+    code.push_back((char)1);
+}
+
+void Expression::GenPushIndex(vector<char> &code, ExpressionPath node)
+{
+    AppendTo(code, node.code);
+    code.push_back((char)ByteCode::PUSH_INDEX);
 }
 
 // Push the value of a path to the stack
@@ -173,27 +213,29 @@ vector<char> Expression::GenPushPath(vector<ExpressionPath> path)
     for (int i = 1; i < path.size(); i++)
     {
         ExpressionPath node = path[i];
-        if (node.is_func)
+        switch(node.type)
         {
-            // Call method, and pop extra 'self' arg
-            AppendTo(code, node.code);
-            code.push_back((char)ByteCode::POP_ARGS);
-            code.push_back((char)1);
-        }
-        else
-        {
-            // Push the attrubute of last object on stack
-            code.push_back((char)ByteCode::PUSH_ATTR);
-
-            int index = node.c->IndexOf(node.var);
-            if (index == numeric_limits<int>::max())
-                tk->Error("No attribute '" + node.var + "' in class '" + 
-                    node.c->Name() + "' found");
-            code.push_back((char)index);
+            case PathType::Attr: GenPushAttr(code, node); break;
+            case PathType::Func: GenPushMethod(code, node); break;
+            case PathType::Index: GenPushIndex(code, node); break;
         }
     }
 
     return code;
+}
+
+void Expression::AssignLast(vector<char> &code, ExpressionPath last)
+{
+    if (last.type == PathType::Index)
+    {
+        AppendTo(code, last.code);
+        code.push_back((char)ByteCode::ASSIGN_INDEX);
+    }
+    else
+    {
+        code.push_back((char)ByteCode::ASSIGN_ATTR);
+        code.push_back((char)last.c->IndexOf(last.var));
+    }
 }
 
 // Assing value on stack to the end of the path
@@ -220,8 +262,7 @@ vector<char> Expression::GenAssignPath(vector<ExpressionPath> path)
     code = GenPushPath(path);
 
     // Assign to attribute in last element on stack
-    code.push_back((char)ByteCode::ASSIGN_ATTR);
-    code.push_back((char)last.c->IndexOf(last.var));
+    AssignLast(code, last);
     return code;
 }
 
@@ -229,7 +270,7 @@ vector<char> Expression::GenAssignPath(vector<ExpressionPath> path)
 bool Expression::IsPathFunc(vector<ExpressionPath> path)
 {
     ExpressionPath last = path[path.size() - 1];
-    return last.is_func;
+    return last.type == PathType::Func;
 }
 
 // Allocate a new object and push it onto stack
@@ -283,6 +324,24 @@ void Expression::CompileConst(Node *node)
     node->is_literal = true;
 }
 
+void Expression::CompileArray(Node *node)
+{
+    int size = 0;
+    tk->Match("[", TkType::OpenIndex);
+    while (tk->LookType() != TkType::CloseIndex)
+    {
+        size++;
+        AppendTo(node->code, Compile());
+        if (tk->LookType() != TkType::CloseIndex)
+            tk->Match(",", TkType::Next);
+    }
+    tk->Match("]", TkType::CloseIndex);
+
+    node->is_literal = false;
+    node->code.push_back((char)ByteCode::MAKE_ARRAY);
+    node->code.push_back((char)size);
+}
+
 // Compile an expression inside an expression, enclosed in parentheses
 // ... + (a + b) + ... 
 Node *Expression::CompileParentheses()
@@ -310,6 +369,7 @@ Node *Expression::CompileTerm()
         case TkType::Float: CompileConst(node); break;
         case TkType::Bool: CompileConst(node); break;
         case TkType::String: CompileConst(node); break;
+        case TkType::OpenIndex: CompileArray(node); break;
         default: tk->Error("Token '" + tk->LookData() + "' is not a value"); break;
     }
     return node;

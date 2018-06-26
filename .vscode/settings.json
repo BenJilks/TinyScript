@@ -71,6 +71,8 @@
         "__string": "cpp",
         "__functional_base": "cpp",
         "slist": "cpp",
-        "future": "cpp"
+        "future": "cpp",
+        "variant": "c",
+        "hash_map": "cpp"
     }
 }

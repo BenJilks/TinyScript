@@ -7,6 +7,7 @@ Class::Class(string name, Tokenizer *tk, vector<char>* code, SymbolTable table) 
     name(name), tk(tk), code(code), table(table)
 {
     this->table.AddClass(this);
+    is_sys_class = true;
 }
 
 Symbol *Class::FindAttribute(string name)
@@ -37,6 +38,8 @@ Function *Class::FindMethod(string name)
 
 void Class::Compile()
 {
+    is_sys_class = false;
+    
     tk->Match("{", TkType::OpenBlock);
 	while (tk->LookType() != TkType::CloseBlock)
 	{

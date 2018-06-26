@@ -3,11 +3,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-Type t_int = {"int", INT, 4};
-Type t_float = {"float", FLOAT, 4};
-Type t_string = {"string", STRING, 8};
-Type t_bool = {"bool", BOOL, 1};
-Type t_char = {"char", CHAR, 1};
+Type t_int = {"int", INT, sizeof(int), 1, -1, -1, -1, -1, -1, -1};
+Type t_float = {"float", FLOAT, sizeof(int), 1, -1, -1, -1, -1, -1, -1};
+Type t_string = {"string", STRING, sizeof(void*), 1, -1, -1, -1, -1, -1, -1};
+Type t_array = {"array", ARRAY, sizeof(void*), 1, -1, -1, -1, -1, -1, -1};
+Type t_bool = {"bool", BOOL, sizeof(char), 1, -1, -1, -1, -1, -1, -1};
+Type t_char = {"char", CHAR, sizeof(char), 1, -1, -1, -1, -1, -1, -1};
 
 #define ERROR(...) \
 	printf(__VA_ARGS__); \
@@ -18,7 +19,7 @@ Type t_char = {"char", CHAR, 1};
         left.type->name, #op, right.type->name); \
     exit(0)
 
-#define OP_FUNC(name, op, overload, str_func) \
+#define OP_FUNC(name, op, overload) \
 	Object name(Object left, Object right) \
 	{ \
 		Object obj; \
@@ -55,20 +56,20 @@ Type t_char = {"char", CHAR, 1};
 				OP_ERROR(left, right, op); \
 				break; \
 			case OBJECT: \
+			case STRING: \
+			case ARRAY: \
 				if (left.type->overload != -1) \
 				{ \
 					sp++; \
-					CallFunc(left.type->overload); \
+					if (left.type->is_sys_type) \
+						sys_funcs[left.type->overload](stack, &sp); \
+					else \
+						CallFunc(left.type->overload); \
 					sp -= 2; \
 					return stack[sp+1]; \
 				} \
 				OP_ERROR(left, right, op); \
 				break; \
-			case STRING: \
-				sp++; \
-				str_func(stack, &sp); \
-				sp -= 1; \
-				return stack[sp-1]; \
 		} \
 		return obj; \
 	}

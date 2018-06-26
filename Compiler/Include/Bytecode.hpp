@@ -28,7 +28,10 @@ enum class ByteCode
 	POP_ARGS,
 	MALLOC,
 	PUSH_ATTR,
-	ASSIGN_ATTR
+	PUSH_INDEX,
+	ASSIGN_ATTR,
+	ASSIGN_INDEX,
+	MAKE_ARRAY
 };
 
 enum class Primitive

@@ -77,11 +77,14 @@ void Compiler::DumpTypes(vector<char> &out_code)
     {
         DumpString(c->Name(), out_code);
         PushData(c->Size(), out_code);
+        PushData(c->IsSysClass(), out_code);
         DumpOperator(c, "operator_add", out_code);
         DumpOperator(c, "operator_subtract", out_code);
         DumpOperator(c, "operator_multiply", out_code);
         DumpOperator(c, "operator_divide", out_code);
         DumpOperator(c, "operator_to_string", out_code);
+        DumpOperator(c, "operator_get_index", out_code);
+        DumpOperator(c, "operator_set_index", out_code);
     }
 }
 

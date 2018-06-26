@@ -56,7 +56,10 @@ typedef enum ByteCode
 	POP_ARGS,
 	MALLOC,
 	PUSH_ATTR,
-	ASSIGN_ATTR
+	PUSH_INDEX,
+	ASSIGN_ATTR,
+	ASSIGN_INDEX,
+	MAKE_ARRAY
 } ByteCode;
 
 typedef struct SysCall
@@ -83,6 +86,7 @@ Type *PrimType(int prim)
 		case INT: return &t_int;
 		case FLOAT: return &t_float;
 		case STRING: return &t_string;
+		case ARRAY: return &t_array;
 		case BOOL: return &t_bool;
 		case CHAR: return &t_char;
 	}
@@ -129,16 +133,18 @@ void LoadSysCalls()
 	{
 		char syscall[80];
 		LoadString(syscall);
-		LOG("System function: '%s'\n", syscall);
 
+		int was_found = 0;
 		for (j = 0; j < sys_call_size; j++)
 		{
 			if (!strcmp(syscall, sys_calls[j].name))
 			{
 				sys_funcs[i] = sys_calls[j].func;
+				was_found = 1;
 				break;
 			}
 		}
+		LOG("System function: '%s': %s", syscall, was_found ? "Found" : "Not Found");
 	}
 }
 
@@ -151,14 +157,19 @@ void LoadDataTypes()
 		Type type;
 		LoadString(type.name);
 		type.size = LoadInt();
+		type.is_sys_type = data[header_size++];
 		type.operator_add = LoadInt();
 		type.operator_subtract = LoadInt();
 		type.operator_multiply = LoadInt();
 		type.operator_divide = LoadInt();
 		type.operator_to_string = LoadInt();
+		type.operator_get_index = LoadInt();
+		type.operator_set_index = LoadInt();
 		type.prim = OBJECT;
-		types[i] = type;
 
+		if (!strcmp(type.name, "String")) { type.prim = STRING; t_string = type; }
+		if (!strcmp(type.name, "Array")) { type.prim = ARRAY; t_array = type; }
+		types[i] = type;
 		LOG("Loaded type '%s'\n", type.name);
 	}
 }
@@ -186,29 +197,34 @@ void CleanUp()
 	}
 }
 
-void LoadProgram(char *program_data, int program_length)
+void ResetReg()
 {
-	data = program_data;
-	length = program_length;
 	pc = 0;
 	sp = 0;
 	bp = 0;
 	fp = 0;
 	pointer_count = 0;
+}
+
+void LoadProgram(char *program_data, int program_length)
+{
+	data = program_data;
+	length = program_length;
 
 	int main_func = *(int*)data;
 	header_size = 4;
 
+	ResetReg();
 	LoadSysCalls();
 	LoadDataTypes();
 	CallFunc(main_func);
 	CleanUp();
 }
 
-OP_FUNC(Add, +, operator_add, StringAdd);
-OP_FUNC(Sub, -, operator_subtract, StringError);
-OP_FUNC(Mul, *, operator_multiply, StringMultiply);
-OP_FUNC(Div, /, operator_divide, StringError);
+OP_FUNC(Add, +, operator_add);
+OP_FUNC(Sub, -, operator_subtract);
+OP_FUNC(Mul, *, operator_multiply);
+OP_FUNC(Div, /, operator_divide);
 COMPARE_FUNC(GreaterThan, >);
 COMPARE_FUNC(LessThan, <);
 
@@ -326,7 +342,7 @@ void CallFunc(int func)
 
 				LOG("Call: %i\n", index);
 				SysFunc func = sys_funcs[index];
-				func(stack, &sp, pointers, &pointer_count);
+				func(stack, &sp);
 				break;
 			}
 			
@@ -381,19 +397,61 @@ void CallFunc(int func)
 				LOG("Push attribute at %i\n", data[pc]);
 				stack[sp-1] = stack[sp-1].p->attrs[data[pc++]];
 				break;
+
+			case PUSH_INDEX:
+			{
+				LOG("Push index\n", data[pc]);
+				Object obj = stack[(sp-2)];
+				if (obj.type->operator_get_index == -1)
+				{
+					ERROR("Error: No get index operator of type '%s' found\n", obj.type->name);
+				}
+				if (obj.type->is_sys_type)
+					sys_funcs[obj.type->operator_get_index](stack, &sp);
+				else
+					CallFunc(obj.type->operator_get_index);
+				stack[sp-3] = stack[sp-1];
+				sp -= 2;
+				break;
+			}
 			
 			case ASSIGN_ATTR:
 				LOG("Assign attribute to %i\n", data[pc]);
 				stack[sp-1].p->attrs[data[pc++]] = stack[sp-2];
 				sp -= 2;
 				break;
+			
+			case ASSIGN_INDEX:
+			{
+				LOG("Assign index\n", data[pc]);
+				Object obj = stack[(sp-2)];
+				if (obj.type->operator_set_index == -1)
+				{
+					ERROR("Error: No set index operator of type '%s' found\n", obj.type->name);
+				}
+				CallFunc(obj.type->operator_set_index);
+				sp -= 3;
+			}
+
+			case MAKE_ARRAY:
+			{
+				LOG("Make array of size %i\n", data[pc]);
+				Object *attrs = (Object*)malloc(sizeof(Object) * (data[pc]+1));
+				attrs[0] = (Object){&t_int, data[pc]};
+				memcpy(attrs + 1, stack + sp - data[pc], data[pc] * sizeof(Object));
+				sp -= data[pc++];
+
+				Object obj = (Object){&t_array};
+				obj.p = AllocPointer(attrs);
+				stack[sp++] = obj;
+			}
 		}
 
 #if LOG_STACK
 		int i;
 		printf("Stack: ");
 		for (i = 0; i < sp; i++)
-			printf("%x, ", stack[i].type);
+			printf("%s, ", stack[i].type->name);
 		printf("\n");
 #endif
 	}

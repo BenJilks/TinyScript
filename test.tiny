@@ -1,25 +1,10 @@
 include "IO.tiny"
 
-class Vec3
-{
-	x y z
-
-	func Vec3(self : Vec3, x, y, z)
-	{
-		self.x = x
-		self.y = y
-		self.z = z
-	}
-
-	func operator_to_string(self : Vec3)
-	{
-		ret "Vec3(x: " + self.x + ", y: " + 
-			self.y + ", z: " + self.z + ")"
-	}
-}
-
 func Main()
 {
-	vec = Vec3(1, 2, 3)
-	Println(vec)
+	arr : Array = [21, "lolz", false]
+	arr.Push(15)
+
+	for i = 0 to arr.Size()
+		Println(arr[i])
 }

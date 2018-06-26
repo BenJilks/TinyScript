@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-void Print(Object *stack, int *sp, Pointer *pointers, int *pointer_count)
+void Print(Object *stack, int *sp)
 {
 	Object obj = stack[(*sp)-1];
 	char *str = (char*)malloc(1024);
@@ -18,13 +18,13 @@ void Print(Object *stack, int *sp, Pointer *pointers, int *pointer_count)
 	stack[(*sp)++] = (Object){PrimType(INT), 0};
 }
 
-void Println(Object *stack, int *sp, Pointer *pointers, int *pointer_count)
+void Println(Object *stack, int *sp)
 {
-	Print(stack, sp, pointers, pointer_count);
+	Print(stack, sp);
 	printf("\n");
 }
 
-void Input(Object *stack, int *sp, Pointer *pointers, int *pointer_count)
+void Input(Object *stack, int *sp)
 {
 	printf("%s", stack[(*sp)-1].p->str);
 
@@ -40,7 +40,7 @@ void Input(Object *stack, int *sp, Pointer *pointers, int *pointer_count)
 	stack[(*sp)++] = obj;
 }
 
-void Int(Object *stack, int *sp, Pointer *pointers, int *pointer_count)
+void Int(Object *stack, int *sp)
 {
 	Object out;
 	Object in = stack[(*sp)-1];
@@ -57,7 +57,7 @@ void Int(Object *stack, int *sp, Pointer *pointers, int *pointer_count)
 	stack[(*sp)++] = out;
 }
 
-void Float(Object *stack, int *sp, Pointer *pointers, int *pointer_count)
+void Float(Object *stack, int *sp)
 {
 	Object out;
 	Object in = stack[(*sp)-1];
@@ -74,62 +74,9 @@ void Float(Object *stack, int *sp, Pointer *pointers, int *pointer_count)
 	stack[(*sp)++] = out;
 }
 
-void String(Object *stack, int *sp, Pointer *pointers, int *pointer_count)
-{
-	Object in = stack[(*sp)-1];
-	char *str = (char*)malloc(1024);
-	AsString(in, str, stack, sp);
-	str = (char*)realloc(str, strlen(str) + 1);
-
-	Object out;
-	out.type = PrimType(STRING);
-	out.p = AllocPointer(str);
-	stack[(*sp)++] = out;
-}
-
-// Class String
-
-void String_Length(Object *stack, int *sp, Pointer *pointers, int *pointer_count)
-{
-	Object str = stack[(*sp)-1];
-	int length = strlen(str.p->str);
-
-	Object size_obj;
-	size_obj.type = PrimType(INT);
-	size_obj.i = length;
-	stack[(*sp)++] = size_obj;
-}
-
-void String_At(Object *stack, int *sp, Pointer *pointers, int *pointer_count)
-{
-	char *str = stack[(*sp)-2].p->str;
-	int index = stack[(*sp)-1].i;
-
-	Object c_obj;
-	c_obj.type = PrimType(CHAR);
-	c_obj.c = str[index];
-	stack[(*sp)++] = c_obj;
-}
-
-void String_Append(Object *stack, int *sp, Pointer *pointers, int *pointer_count)
-{
-	char *dest = stack[(*sp)-2].p->str;
-	char src[80];
-	AsString(stack[(*sp)-1], src, stack, sp);
-
-	int dest_len = strlen(dest);
-	int src_len = strlen(src);
-	dest = (char*)realloc(dest, dest_len + src_len + 1);
-	memcpy(dest + dest_len, src, src_len);
-	dest[dest_len + src_len] = '\0';
-
-	stack[(*sp)-2].p->str = dest;
-	stack[(*sp)++] = (Object){PrimType(INT), 0};
-}
-
 // Class File
 
-void File_File(Object *stack, int *sp, Pointer *pointers, int *pointer_count)
+void File_File(Object *stack, int *sp)
 {
 	char *path = (char*)stack[(*sp)-2].p->str;
 	char *mode = (char*)stack[(*sp)-1].p->str;
@@ -141,7 +88,7 @@ void File_File(Object *stack, int *sp, Pointer *pointers, int *pointer_count)
 	stack[(*sp)++] = (Object){PrimType(INT), 0};
 }
 
-void File_ReadAll(Object *stack, int *sp, Pointer *pointers, int *pointer_count)
+void File_ReadAll(Object *stack, int *sp)
 {
 	Object file_obj = stack[(*sp)-1];
 	FILE *file = (FILE*)file_obj.p->v;
@@ -159,7 +106,7 @@ void File_ReadAll(Object *stack, int *sp, Pointer *pointers, int *pointer_count)
 	stack[(*sp)++] = str_obj;
 }
 
-void File_Close(Object *stack, int *sp, Pointer *pointers, int *pointer_count)
+void File_Close(Object *stack, int *sp)
 {
 	Object file_obj = stack[(*sp)-1];
 	int error = fclose((FILE*)file_obj.p->v);
@@ -173,11 +120,6 @@ void RegisterIO()
 	RegisterFunc((char*)"Input", Input);
 	RegisterFunc((char*)"Int", Int);
 	RegisterFunc((char*)"Float", Float);
-	RegisterFunc((char*)"AsString", String);
-
-	RegisterFunc((char*)"String:Length", String_Length);
-	RegisterFunc((char*)"String:At", String_At);
-	RegisterFunc((char*)"String:Append", String_Append);
 
 	RegisterFunc((char*)"File:File", File_File);
 	RegisterFunc((char*)"File:ReadAll", File_ReadAll);

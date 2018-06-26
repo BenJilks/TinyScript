@@ -9,6 +9,7 @@ typedef enum Primitive
 	INT,
 	FLOAT,
 	STRING,
+	ARRAY,
 	BOOL,
 	CHAR,
 	OBJECT
@@ -19,12 +20,15 @@ typedef struct Type
 	char name[MAX_NAME_LENGTH];
 	Primitive prim;
 	int size;
+	char is_sys_type;
 
 	int operator_add;
 	int operator_subtract;
 	int operator_multiply;
 	int operator_divide;
 	int operator_to_string;
+	int operator_get_index;
+	int operator_set_index;
 } Type;
 
 struct Object;
@@ -51,7 +55,7 @@ typedef struct Object
 	};
 } Object;
 
-typedef void (*SysFunc)(Object *stack, int *sp, Pointer *pointers, int *pointer_count);
+typedef void (*SysFunc)(Object *stack, int *sp);
 void RegisterFunc(char *name, SysFunc func);
 Pointer *AllocPointer(void *p);
 void LoadProgram(char *program_data, int program_length);

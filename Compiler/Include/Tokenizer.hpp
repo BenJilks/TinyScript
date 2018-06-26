@@ -14,6 +14,8 @@ enum class TkType
     CloseArg,
     OpenBlock,
     CloseBlock,
+    OpenIndex,
+    CloseIndex,
     Assign,
     Next,
     Path,

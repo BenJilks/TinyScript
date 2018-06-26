@@ -15,12 +15,19 @@ struct Node
     bool is_literal;
 };
 
+enum class PathType
+{
+    Attr,
+    Func,
+    Index
+};
+
 struct ExpressionPath
 {
     Class *c;
     string var;
     vector<char> code;
-    bool is_func;
+    PathType type;
 };
 
 class Expression
@@ -41,9 +48,14 @@ public:
 private:
     ExpressionPath ParseFirstPath(string var);
     void ParsePathNode(ExpressionPath& node, Class *pre_type);
+    void ParsePathIndex(ExpressionPath& node);
     void ParseFunctionNode(ExpressionPath& node);
     Class *GetNodeType(ExpressionPath node);
     vector<char> GenFirstPath(ExpressionPath first);
+    void GenPushAttr(vector<char> &code, ExpressionPath node);
+    void GenPushMethod(vector<char> &code, ExpressionPath node);
+    void GenPushIndex(vector<char> &code, ExpressionPath node);
+    void AssignLast(vector<char> &code, ExpressionPath last);
 
     Node *CompileParentheses();
     Node *CompileTerm();
@@ -54,6 +66,7 @@ private:
     void CompileNewObject(Class *c, Node *node);
     void CompileName(Node *node);
     void CompileConst(Node *node);
+    void CompileArray(Node *node);
     
     vector<char> CompileCallFunc(Function *func);
     vector<char> GenCode(Node *node);

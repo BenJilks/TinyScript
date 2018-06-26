@@ -60,6 +60,8 @@ Token Tokenizer::Next()
             case ')': return Token(c, TkType::CloseArg);
             case '{': return Token(c, TkType::OpenBlock);
             case '}': return Token(c, TkType::CloseBlock);
+            case '[': return Token(c, TkType::OpenIndex);
+            case ']': return Token(c, TkType::CloseIndex);
             case ',': return Token(c, TkType::Next);
             case '+': return Token(c, TkType::Add);
             case '-': return Token(c, TkType::Sub);
