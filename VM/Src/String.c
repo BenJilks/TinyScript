@@ -26,20 +26,29 @@ void AsString(Object obj, char *str, Object *stack, int *sp)
 
 void String_Add(Object *stack, int *sp)
 {
+	// Fetch operation data
     Object left = stack[(*sp)-2];
     Object right = stack[(*sp)-1];
     char right_str[80];
     AsString(right, right_str, stack, sp);
 
+	// Create a new combined string
     int left_len = strlen(left.p->str);
     int right_len = strlen(right_str);
-    left.p->v = realloc(left.p->v, left_len + right_len + 1);
-    memcpy(left.p->str + left_len, right_str, right_len + 1);
-	stack[(*sp)++] = left;
+    char *str = (char*)malloc(left_len + right_len + 1);
+    strcpy(str, left.p->str);
+	strcpy(str + left_len, right.p->str);
+	
+	// Return the new string
+	Object result;
+	result.type = PrimType(STRING);
+	result.p = AllocPointer(str);
+	stack[(*sp)++] = result;
 }
 
 void String_Multiply(Object *stack, int *sp)
 {
+	// Fetch operation data
 	Object left = stack[(*sp)-2];
     Object right = stack[(*sp)-1];
 	if (right.type != PrimType(INT))
@@ -49,14 +58,19 @@ void String_Multiply(Object *stack, int *sp)
 		return;
 	}
 
-	int left_len = strlen(left.p->str);
-	left.p->v = realloc(left.p->v, left_len * right.i + 1);
-	
+	// Create a new string, and fill
 	int i;
-	for (i = 1; i < right.i; i++)
-		memcpy(left.p->str + (i * left_len), left.p->v, left_len);
-	left.p->str[left_len * right.i] = '\0';
-	stack[(*sp)++] = left;
+	int left_len = strlen(left.p->str);
+	char *str = (char*)malloc(left_len * right.i + 1);
+	for (i = 0; i < right.i; i++)
+		strcpy(str + (i * left_len), left.p->str);
+	str[left_len * right.i] = '\0';
+	
+	// Return the new string
+	Object result;
+	result.type = PrimType(STRING);
+	result.p = AllocPointer(str);
+	stack[(*sp)++] = result;
 }
 
 void StringError(Object *stack, int *sp)

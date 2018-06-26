@@ -73,6 +73,7 @@
         "slist": "cpp",
         "future": "cpp",
         "variant": "c",
-        "hash_map": "cpp"
+        "hash_map": "cpp",
+        "typeindex": "c"
     }
 }

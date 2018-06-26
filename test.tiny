@@ -2,9 +2,7 @@ include "IO.tiny"
 
 func Main()
 {
-	arr : Array = [21, "lolz", false]
-	arr.Push(15)
-
-	for i = 0 to arr.Size()
-		Println(arr[i])
+	str = "Testing"
+	Println(str * 10)
+	Println(str)
 }
