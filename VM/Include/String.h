@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-void AsString(Object obj, char *str, Object *stack, int *sp);
+char *AsString(Object obj, Object *stack, int *sp);
 void RegisterString();
 
 #endif // STRING_H

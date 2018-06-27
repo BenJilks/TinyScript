@@ -2,7 +2,8 @@ include "IO.tiny"
 
 func Main()
 {
-	size = 20
-	arr = [[[0] * size] * size] * size
-	Println(arr)
+	str : String = "testing split method of string"
+	words = str.split(" ")
+	Println(words)
 }
+

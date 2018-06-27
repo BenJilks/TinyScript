@@ -1,43 +1,58 @@
 #include "String.h"
 
-void AsString(Object obj, char *str, Object *stack, int *sp)
+char *ArrayAsString(Object obj, char *str, Object *stack, int *sp)
 {
+    int size = obj.p->attrs[0].i;
+    int i = 0, curr_p = 1;
+    str[0] = '[';
+    for (i = 0; i < size; i++)
+    {
+        Object attr = obj.p->attrs[i+1];
+        char *item = AsString(attr, stack, sp);
+        int item_len = strlen(item);
+
+        str = (char*)realloc(str, curr_p + item_len + 4);
+        strcpy(str + curr_p, item);
+        if (i < size - 1)
+            strcpy(str + curr_p + item_len, ", ");
+
+        curr_p = strlen(str);
+        free(item);
+    }
+    str[curr_p] = ']';
+    str[curr_p + 1] = '\0';
+    return str;
+}
+
+char *ObjectAsString(Object obj, char *str, Object *stack, int *sp)
+{
+    if (obj.type->operator_to_string != -1)
+    {
+        stack[(*sp)++] = obj;
+        CallFunc(obj.type->operator_to_string);
+        free(str);
+        str = stack[(*sp)-1].p->str;
+        *sp -= 2;
+        return str;
+    }
+    sprintf(str, "<%s at 0x%x>", obj.type->name, obj.p->v); 
+    return str;
+}
+
+char *AsString(Object obj, Object *stack, int *sp)
+{
+	char *str = (char*)malloc(80);
 	switch(obj.type->prim)
 	{
 		case INT: sprintf(str, "%i", obj.i); break;
 		case FLOAT: sprintf(str, "%.6g", obj.f); break;
 		case CHAR: sprintf(str, "%c", obj.c); break;
 		case BOOL: strcpy(str, obj.c ? "true" : "false"); break;
-		case STRING: strcpy(str, obj.p->str); break;
-		case ARRAY:
-		{
-			int size = obj.p->attrs[0].i;
-			int i = 0, curr_p = 1;
-			str[0] = '[';
-			for (i = 0; i < size; i++)
-			{
-				Object attr = obj.p->attrs[i+1];
-				AsString(attr, str + curr_p, stack, sp);
-				if (i < size - 1)
-					strcpy(str + strlen(str), ", ");
-				curr_p = strlen(str);
-			}
-			str[curr_p] = ']';
-			str[curr_p + 1] = '\0';
-			break;
-		}
-		case OBJECT:
-			if (obj.type->operator_to_string != -1)
-			{
-				stack[(*sp)++] = obj;
-				CallFunc(obj.type->operator_to_string);
-				strcpy(str, stack[(*sp)-1].p->str);
-				*sp -= 2;
-				break;
-			}
-			sprintf(str, "<%s at 0x%x>", obj.type->name, obj.p->v); 
-			break;
+		case STRING: free(str); str = obj.p->str; break;
+		case ARRAY: str = ArrayAsString(obj, str, stack, sp); break;
+		case OBJECT: str = ObjectAsString(obj, str, stack, sp); break;
 	}
+	return str;
 }
 
 void String_Add(Object *stack, int *sp)
@@ -45,8 +60,7 @@ void String_Add(Object *stack, int *sp)
 	// Fetch operation data
     Object left = stack[(*sp)-2];
     Object right = stack[(*sp)-1];
-    char right_str[80];
-    AsString(right, right_str, stack, sp);
+    char *right_str = AsString(right, stack, sp);
 
 	// Create a new combined string
     int left_len = strlen(left.p->str);
@@ -54,6 +68,7 @@ void String_Add(Object *stack, int *sp)
     char *str = (char*)malloc(left_len + right_len + 1);
     strcpy(str, left.p->str);
 	strcpy(str + left_len, right.p->str);
+	free(right_str);
 	
 	// Return the new string
 	Object result;
@@ -97,9 +112,7 @@ void StringError(Object *stack, int *sp)
 void String(Object *stack, int *sp)
 {
 	Object in = stack[(*sp)-1];
-	char *str = (char*)malloc(1024);
-	AsString(in, str, stack, sp);
-	str = (char*)realloc(str, strlen(str) + 1);
+	char *str = AsString(in, stack, sp);
 
 	Object out;
 	out.type = PrimType(STRING);
@@ -132,14 +145,14 @@ void String_At(Object *stack, int *sp)
 void String_Append(Object *stack, int *sp)
 {
 	char *dest = stack[(*sp)-2].p->str;
-	char src[80];
-	AsString(stack[(*sp)-1], src, stack, sp);
+	char *src = AsString(stack[(*sp)-1], stack, sp);
 
 	int dest_len = strlen(dest);
 	int src_len = strlen(src);
 	dest = (char*)realloc(dest, dest_len + src_len + 1);
 	memcpy(dest + dest_len, src, src_len);
 	dest[dest_len + src_len] = '\0';
+	free(src);
 
 	stack[(*sp)-2].p->str = dest;
 	stack[(*sp)++] = (Object){PrimType(INT), 0};
