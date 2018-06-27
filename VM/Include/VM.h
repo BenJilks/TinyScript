@@ -2,7 +2,7 @@
 #define VM_H
 
 #define MAX_NAME_LENGTH 80
-#define STACK_SIZE 80
+#define STACK_SIZE 1024
 
 typedef enum Primitive
 {

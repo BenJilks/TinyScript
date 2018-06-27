@@ -2,8 +2,9 @@ include "IO.tiny"
 
 func Main()
 {
-	str : String = "testing split method of string"
-	words = str.split(" ")
-	Println(words)
-}
+	obj = "New string"
+	Println(obj)
 
+	obj = "New string"
+	Println(obj)
+}

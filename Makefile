@@ -46,7 +46,7 @@ $(BUILD_PATH)/%.o: $(COMPILER_SRC_PATH)/%.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -MP -MMD -c $< -o $@
 
 $(BUILD_PATH)/%.o: $(VM_SRC_PATH)/%.c
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -O3 -MP -MMD -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -MP -MMD -c $< -o $@
 
 $(BUILD_PATH)/%.o: %.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -MP -MMD -c $< -o $@

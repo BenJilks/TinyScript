@@ -173,10 +173,16 @@ vector<char> Expression::GenFirstPath(ExpressionPath first)
         return first.code;
     
     vector<char> code;
+    if (table->FindSymbol(first.var) == NULL)
+    {
+        tk->Error("No variable named '" + first.var + 
+            "' found in scope");
+        return code;
+    }
+
     int location = table->FindLocation(first.var);
     code.push_back((char)ByteCode::PUSH_LOC);
     code.push_back((char)location);
-    
     return code;
 }
 
@@ -367,6 +373,7 @@ Node *Expression::CompileTerm()
         case TkType::Name: CompileName(node); break;
         case TkType::Int: CompileConst(node); break;
         case TkType::Float: CompileConst(node); break;
+        case TkType::Char: CompileConst(node); break;
         case TkType::Bool: CompileConst(node); break;
         case TkType::String: CompileConst(node); break;
         case TkType::OpenIndex: CompileArray(node); break;
@@ -424,6 +431,11 @@ vector<char> Expression::GenLiteral(Token literal)
             PushData(stof(literal.data), code);
             break;
         
+        case TkType::Char:  
+            code.push_back((char)ByteCode::PUSH_CHAR);
+            code.push_back(literal.data[0]);
+            break;
+
         case TkType::Bool:
             code.push_back((char)ByteCode::PUSH_BOOL);
             code.push_back((char)(literal.data == "true" ? 1 : 0));

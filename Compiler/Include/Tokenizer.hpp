@@ -7,6 +7,7 @@ enum class TkType
     Name = 0,
     Int,
     Float,
+    Char,
     Bool,
     String,
     
@@ -73,6 +74,7 @@ private:
     Token ReadEquals();
     Token ReadName(char c);
     Token ReadNumber(char c);
+    Token ReadChar();
     Token ReadString();
     TkType FindKeywords(string buffer);
     void SkipComment();

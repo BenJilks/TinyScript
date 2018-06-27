@@ -11,6 +11,7 @@ sysclass String
 	syscall Length
 	syscall At
 	syscall Append
+	syscall Split
 	syscall operator_add
 	syscall operator_multiply
 }

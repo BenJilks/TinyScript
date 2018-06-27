@@ -67,7 +67,7 @@ void String_Add(Object *stack, int *sp)
     int right_len = strlen(right_str);
     char *str = (char*)malloc(left_len + right_len + 1);
     strcpy(str, left.p->str);
-	strcpy(str + left_len, right.p->str);
+	strcpy(str + left_len, right_str);
 	free(right_str);
 	
 	// Return the new string
@@ -158,12 +158,51 @@ void String_Append(Object *stack, int *sp)
 	stack[(*sp)++] = (Object){PrimType(INT), 0};
 }
 
+void String_Split(Object *stack, int *sp)
+{
+	Object str_obj = stack[(*sp) - 2];
+	Object c_obj = stack[(*sp) - 1];
+	char *str = str_obj.p->str;
+	char sc = c_obj.c;
+	int str_len = strlen(str);
+
+	Object *attr = (Object*)malloc(sizeof(Object) * 100);
+	int i = 0, bp = 0, count = 1;
+	char buffer[1024];
+	for (i = 0; i < str_len; i++)
+	{
+		char c = str[i];
+		if (c == sc || i == str_len-1)
+		{
+			if (i == str_len-1) buffer[bp++] = c;
+			char *item = (char*)malloc(bp + 1);
+			memcpy(item, buffer, bp);
+			item[bp] = '\0';
+
+			attr[count].type = PrimType(STRING);
+			attr[count].p = AllocPointer(item);
+			count++;
+			bp = 0;
+			continue;
+		}
+		buffer[bp++] = c;
+	}
+	attr[0] = (Object){PrimType(INT), count-1};
+	attr = (Object*)realloc(attr, sizeof(Object) * count);
+
+	Object out;
+	out.type = PrimType(ARRAY);
+	out.p = AllocPointer(attr);
+	stack[(*sp)++] = out;
+}
+
 void RegisterString()
 {
 	RegisterFunc((char*)"AsString", String);
 	RegisterFunc((char*)"String:Length", String_Length);
 	RegisterFunc((char*)"String:At", String_At);
 	RegisterFunc((char*)"String:Append", String_Append);
+	RegisterFunc((char*)"String:Split", String_Split);
 	RegisterFunc((char*)"String:operator_add", String_Add);
 	RegisterFunc((char*)"String:operator_multiply", String_Multiply);
 }

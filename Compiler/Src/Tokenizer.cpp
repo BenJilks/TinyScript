@@ -73,6 +73,7 @@ Token Tokenizer::Next()
             case ':': return Token(c, TkType::Of);
             case '=': return ReadEquals();
             case '"': return ReadString();
+            case '\'': return ReadChar();
             case '#': SkipComment(); break;
         }
         
@@ -134,6 +135,18 @@ char Tokenizer::NextChar()
     // Get the next token from the file and increment 
     // line number if the token is a new line char
     char c = fgetc(file);
+    if (c == '\\')
+    {
+        switch(NextChar())
+        {
+            case 'n': c = '\n'; break;
+            case 'r': c = '\r'; break;
+            case '0': c = '\0'; break;
+            case '\\': c = '\\'; break;
+            default: break;
+        }
+    }
+
     if (c == '\n')
         line_number++;
     return c;
@@ -172,6 +185,13 @@ Token Tokenizer::ReadNumber(char c)
     back_log = c;
     return Token(buffer, point_count > 0 ? 
         TkType::Float : TkType::Int);
+}
+
+Token Tokenizer::ReadChar()
+{
+    char c = NextChar();
+    NextChar(); // Skip closing "'"
+    return Token(c, TkType::Char);
 }
 
 // If the buffer contains a keyword, then return it. Otherwise return name token

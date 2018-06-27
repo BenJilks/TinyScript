@@ -5,13 +5,20 @@
 #include "String.h"
 #include "Operations.h"
 
-#define DEBUG 0
-#define LOG_STACK 0
+#define DEBUG 1
+#define DEBUG_MEM 1
+#define LOG_STACK 1
 
 #if DEBUG
 #define LOG(...) printf(__VA_ARGS__)
 #else
 #define LOG(...)
+#endif
+
+#if DEBUG_MEM
+#define LOG_MEM(...) printf(__VA_ARGS__)
+#else
+#define LOG_MEM(...)
 #endif
 
 char *data;
@@ -100,13 +107,13 @@ Pointer *AllocPointer(void *p)
 	{
 		if (pointers[i].v == NULL)
 		{
-			LOG("New pointer at index %i (override)\n", i);
+			LOG_MEM("New pointer 0x%x (at %i, override)\n", p, i);
 			pointers[i].v = p;
 			return &pointers[i];
 		}
 	}
 
-	LOG("New pointer at index %i\n", pointer_count);
+	LOG_MEM("New pointer 0x%x (at %i)\n", p, pointer_count);
 	pointers[pointer_count].v = p;
 	pointers[pointer_count].ref_count = 0;
 	return &pointers[pointer_count++];
@@ -147,6 +154,12 @@ void LoadSysCalls()
 			}
 		}
 		LOG("System function: '%s': %s\n", syscall, was_found ? "Found" : "Not Found");
+
+		if (!was_found)
+		{
+			printf("Error: No system function named '%s' could be found\n", syscall);
+			exit(0);
+		}
 	}
 }
 
@@ -202,14 +215,15 @@ void CleanUp()
 {
 	int i;
 	for (i = 0; i < sp; i++)
-		ScanObject(stack[i]);
+		if (stack[i].type != NULL)
+			ScanObject(stack[i]);
 
 	for (i = 0; i < pointer_count; i++)
 	{
 		Pointer *p = &pointers[i];
 		if (p->ref_count <= 0 && p->v != NULL)
 		{
-			LOG("Freed pointer 0x%x\n", p->v);
+			LOG_MEM("Freed pointer 0x%x (at %i)\n", p->v, i);
 			free(p->v);
 			p->v = NULL;
 		}
@@ -257,9 +271,26 @@ COMPARE_FUNC(LessThan, <);
 		stack[(--sp)-1] = op(stack[sp-2], stack[sp-1]); \
 		break; \
 
+void PushString()
+{
+	int length = data[pc];
+	char *str = (char*)malloc(length+1);
+	printf("%x\n", str);
+	memcpy(str, data + pc + 1, length);
+	str[length] = '\0';
+	pc += length + 1;
+
+	Object obj;
+	obj.type = &t_string;
+	obj.p = AllocPointer(str);
+	stack[sp++] = obj;
+	LOG("Push string '%s'\n", str);
+}
+
 void CallFunc(int func)
 {
 	int recursion_depth = 1;
+	int cycle = 0;
 	stack_frame[fp++] = pc;
 	pc = func + header_size;
 
@@ -313,14 +344,7 @@ void CallFunc(int func)
 			
 			case PUSH_STRING:
 			{
-				char *str = (char*)malloc(data[pc]+1);
-				memcpy(str, data + pc + 1, data[pc]);
-				str[data[pc]] = '\0';
-				pc += data[pc] + 1;
-
-				stack[sp++] = (Object){&t_string};
-				stack[sp-1].p = AllocPointer(str);
-				LOG("Push string '%s'\n", str);
+				PushString();
 				break;
 			}
 
@@ -473,6 +497,19 @@ void CallFunc(int func)
 				obj.p = AllocPointer(attrs);
 				stack[sp++] = obj;
 			}
+		}
+
+		if (pointer_count > STACK_SIZE)
+		{
+			printf("Error: Out of memory\n");
+			exit(0);
+		}
+
+		cycle++;
+		if (cycle > 0)
+		{
+			CleanUp();
+			cycle = 0;
 		}
 
 #if LOG_STACK
