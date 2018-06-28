@@ -28,7 +28,7 @@ int header_size;
 SysFunc sys_funcs[80];
 Type types[80];
 
-int pc, sp, bp, fp;
+int pc, sp, bp, fp, cycle;
 int stack_frame[STACK_SIZE];
 Object stack[STACK_SIZE];
 
@@ -103,8 +103,67 @@ Type *PrimType(int prim)
 	return NULL;
 }
 
+// Scan an object for refrences to a pointer
+void ScanObject(Object obj)
+{
+	int i;
+	if (obj.type->prim == STRING)
+	{
+		obj.p->ref_count++;
+	}
+	else if (obj.type->prim == ARRAY)
+	{
+		obj.p->ref_count++;
+		for (i = 1; i < obj.p->attrs[0].i; i++)
+			ScanObject(obj.p->attrs[i]);
+	}
+	else if (obj.type->prim == OBJECT)
+	{
+		obj.p->ref_count++;
+		for (i = 0; i < obj.type->size; i++)
+			ScanObject(obj.p->attrs[i]);
+	}
+}
+
+void CleanUp()
+{
+	int i;
+	for (i = 0; i < sp; i++)
+		if (stack[i].type != NULL)
+			ScanObject(stack[i]);
+
+	for (i = 0; i < pointer_count; i++)
+	{
+		Pointer *p = &pointers[i];
+		if (p->ref_count <= 0 && p->v != NULL)
+		{
+			LOG_MEM("Freed pointer 0x%x (at %i)\n", p->v, i);
+			free(p->v);
+			p->v = NULL;
+		}
+		p->ref_count = 0;
+	}
+}
+
+void CheckMemory()
+{
+	if (pointer_count >= STACK_SIZE)
+	{
+		printf("Error: Out of memory\n");
+		exit(0);
+	}
+	
+	if (cycle > 500)
+	{
+		CleanUp();
+		cycle = 0;
+	}
+}
+
 Pointer *AllocPointer(void *p)
 {
+	CheckMemory();
+
 	int i;
 	for (i = 0; i < pointer_count; i++)
 	{
@@ -193,54 +252,13 @@ void LoadDataTypes()
 	}
 }
 
-// Scan an object for refrences to a pointer
-void ScanObject(Object obj)
-{
-	int i;
-	if (obj.type->prim == STRING)
-	{
-		obj.p->ref_count++;
-	}
-	else if (obj.type->prim == ARRAY)
-	{
-		obj.p->ref_count++;
-		for (i = 1; i < obj.p->attrs[0].i; i++)
-			ScanObject(obj.p->attrs[i]);
-	}
-	else if (obj.type->prim == OBJECT)
-	{
-		obj.p->ref_count++;
-		for (i = 0; i < obj.type->size; i++)
-			ScanObject(obj.p->attrs[i]);
-	}
-}
-
-void CleanUp()
-{
-	int i;
-	for (i = 0; i < sp; i++)
-		if (stack[i].type != NULL)
-			ScanObject(stack[i]);
-
-	for (i = 0; i < pointer_count; i++)
-	{
-		Pointer *p = &pointers[i];
-		if (p->ref_count <= 0 && p->v != NULL)
-		{
-			LOG_MEM("Freed pointer 0x%x (at %i)\n", p->v, i);
-			free(p->v);
-			p->v = NULL;
-		}
-		p->ref_count = 0;
-	}
-}
-
 void ResetReg()
 {
 	pc = 0;
 	sp = 0;
 	bp = 0;
 	fp = 0;
+	cycle = 0;
 	pointer_count = 0;
 }
 
@@ -284,12 +302,12 @@ COMPARE_FUNC(LessThan, <);
 void CallFunc(int func)
 {
 	int recursion_depth = 1;
-	int cycle = 0;
 	stack_frame[fp++] = pc;
 	pc = func + header_size;
 
 	while (recursion_depth > 0 && pc < length)
 	{
+		cycle++;
 		char bytecode = data[pc++];
 		LOG("#%i (%x): ", pc-header_size-1, bytecode);
 		switch(bytecode)
@@ -541,19 +559,6 @@ void CallFunc(int func)
 				pc++;
 				break;
 			}
-		}
-
-		if (pointer_count > STACK_SIZE)
-		{
-			printf("Error: Out of memory\n");
-			exit(0);
-		}
-
-		cycle++;
-		if (cycle > 100)
-		{
-			CleanUp();
-			cycle = 0;
 		}
 
 #if LOG_STACK

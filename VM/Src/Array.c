@@ -10,7 +10,7 @@ void Array_Push(Object *stack, int *sp)
     Object obj = stack[(*sp) - 1];
     int size = arr.p->attrs[0].i;
 
-    arr.p->v = realloc(arr.p->v, size * sizeof(Object) + 1);
+    arr.p->v = realloc(arr.p->v, (size + 2) * sizeof(Object));
     arr.p->attrs[size + 1] = obj;
     arr.p->attrs[0].i++;
     stack[(*sp)++] = (Object){PrimType(INT), 0};
