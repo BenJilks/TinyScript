@@ -173,6 +173,30 @@ void Function::CompileIf()
     code[addr] = code.size() - addr;
 }
 
+void Function::CompileIter(vector<ExpressionPath> path)
+{
+    string name = path[0].var;
+    table.AddLocal(name);
+
+    tk->Match("in", TkType::In);
+    AppendTo(code, expression.Compile());
+    code.push_back((char)ByteCode::MAKE_IT);
+    int start = code.size();
+    code.push_back((char)ByteCode::BRANCH_IF_IT);
+    int addr = code.size();
+    code.push_back((char)0);
+    code.push_back((char)ByteCode::IT_NEXT);
+    code.push_back((char)table.FindLocation(name));
+
+    CompileBlock();
+
+    code.push_back((char)ByteCode::BRANCH);
+    code.push_back((char)(start - code.size()));
+    code[addr] = code.size() - addr;
+    code.push_back((char)ByteCode::POP);
+    code.push_back((char)1);
+}
+
 // Repeat a block of code an amount of times
 // := for <var> = <start> to <end> <block>
 void Function::CompileFor()
@@ -182,6 +206,11 @@ void Function::CompileFor()
 
     // Parse and assing staring value
     vector<ExpressionPath> path = expression.CompilePath(var.data);
+    if (tk->LookType() == TkType::In)
+    {
+        CompileIter(path);
+        return;
+    }
     tk->Match("=", TkType::Assign);
     AppendTo(code, expression.Compile());
     AppendTo(code, expression.GenAssignPath(path));

@@ -23,6 +23,7 @@ enum class ByteCode
 	CALL_SYS,
 	RETURN,
 	BRANCH_IF_NOT,
+	BRANCH_IF_IT,
 	BRANCH,
 	INC_LOC,
 	POP_ARGS,
@@ -31,7 +32,9 @@ enum class ByteCode
 	PUSH_INDEX,
 	ASSIGN_ATTR,
 	ASSIGN_INDEX,
-	MAKE_ARRAY
+	MAKE_ARRAY,
+	MAKE_IT,
+	IT_NEXT
 };
 
 enum class Primitive

@@ -1,33 +1,25 @@
 include "IO.tiny"
 
-class it
+class Vec4
 {
-	index : int
-	arr : List
-	curr
+	x y z w
 
-	func it(self : it, arr : List)
+	func Vec4(self : Vec4, x, y, z, w)
 	{
-		self.arr = arr
-		self.index = 0
+		self.x = x
+		self.y = y
+		self.z = z
+		self.w = w
 	}
 
-	func next(self : it)
+	func operator_it(self : Vec4)
 	{
-		if self.index + 1 > self.arr.size()
-			ret false
-		self.curr = self.arr[self.index]
-		self.index = self.index + 1
-		ret true
+		ret [self.x, self.y, self.z, self.w]
 	}
 }
 
 func Main()
 {
-	lines = [1, 2, 3, 4, 5, 6]
-	iter : it = it(lines)
-
-	while iter.next()
-		println(iter.curr)
+	for value in Vec4(1, 2, 3, 4)
+		println(value)
 }
-

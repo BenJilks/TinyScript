@@ -206,6 +206,7 @@ TkType Tokenizer::FindKeywords(string buffer)
     if (buffer == "for") return TkType::For;
     if (buffer == "while") return TkType::While;
     if (buffer == "to") return TkType::To;
+    if (buffer == "in") return TkType::In;
     if (buffer == "class") return TkType::Class;
     if (buffer == "sysclass") return TkType::SysClass;
     if (buffer == "include") return TkType::Include;

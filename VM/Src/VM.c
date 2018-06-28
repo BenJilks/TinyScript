@@ -58,6 +58,7 @@ typedef enum ByteCode
 	CALL_SYS,
 	RETURN,
 	BRANCH_IF_NOT,
+	BRANCH_IF_IT,
 	BRANCH,
 	INC_LOC,
 	POP_ARGS,
@@ -66,7 +67,9 @@ typedef enum ByteCode
 	PUSH_INDEX,
 	ASSIGN_ATTR,
 	ASSIGN_INDEX,
-	MAKE_ARRAY
+	MAKE_ARRAY,
+	MAKE_IT,
+	IT_NEXT
 } ByteCode;
 
 typedef struct SysCall
@@ -180,6 +183,7 @@ void LoadDataTypes()
 		type.operator_to_string = LoadInt();
 		type.operator_get_index = LoadInt();
 		type.operator_set_index = LoadInt();
+		type.operator_it = LoadInt();
 		type.prim = OBJECT;
 
 		if (!strcmp(type.name, "String")) { type.prim = STRING; t_string = type; }
@@ -271,20 +275,11 @@ COMPARE_FUNC(LessThan, <);
 		stack[(--sp)-1] = op(stack[sp-2], stack[sp-1]); \
 		break; \
 
-void PushString()
-{
-	int length = data[pc];
-	char *str = (char*)malloc(length+1);
-	memcpy(str, data + pc + 1, length);
-	str[length] = '\0';
-	pc += length + 1;
-
-	Object obj;
-	obj.type = &t_string;
-	obj.p = AllocPointer(str);
-	stack[sp++] = obj;
-	LOG("Push string '%s'\n", str);
-}
+#define CHECK_OP(obj, operator) \
+	if (obj.type->operator == -1) \
+	{ \
+		ERROR("Error: No %s of type '%s' found\n", #operator, obj.type->name); \
+	}
 
 void CallFunc(int func)
 {
@@ -343,7 +338,17 @@ void CallFunc(int func)
 			
 			case PUSH_STRING:
 			{
-				PushString();
+				int length = data[pc];
+				char *str = (char*)malloc(length+1);
+				memcpy(str, data + pc + 1, length);
+				str[length] = '\0';
+				pc += length + 1;
+
+				Object obj;
+				obj.type = &t_string;
+				obj.p = AllocPointer(str);
+				stack[sp++] = obj;
+				LOG("Push string '%s'\n", str);
 				break;
 			}
 
@@ -449,14 +454,8 @@ void CallFunc(int func)
 			{
 				LOG("Push index\n", data[pc]);
 				Object obj = stack[(sp-2)];
-				if (obj.type->operator_get_index == -1)
-				{
-					ERROR("Error: No get index operator of type '%s' found\n", obj.type->name);
-				}
-				if (obj.type->is_sys_type)
-					sys_funcs[obj.type->operator_get_index](stack, &sp);
-				else
-					CallFunc(obj.type->operator_get_index);
+				CHECK_OP(obj, operator_get_index);
+				CALL_OP(obj, operator_get_index);
 				stack[sp-3] = stack[sp-1];
 				sp -= 2;
 				break;
@@ -472,14 +471,8 @@ void CallFunc(int func)
 			{
 				LOG("Assign index\n", data[pc]);
 				Object obj = stack[(sp-2)];
-				if (obj.type->operator_set_index == -1)
-				{
-					ERROR("Error: No set index operator of type '%s' found\n", obj.type->name);
-				}
-				if (obj.type->is_sys_type)
-					sys_funcs[obj.type->operator_set_index](stack, &sp);
-				else
-					CallFunc(obj.type->operator_set_index);
+				CHECK_OP(obj, operator_set_index);
+				CALL_OP(obj, operator_set_index);
 				sp -= 4;
 				break;
 			}
@@ -495,6 +488,58 @@ void CallFunc(int func)
 				Object obj = (Object){&t_array};
 				obj.p = AllocPointer(attrs);
 				stack[sp++] = obj;
+				break;
+			}
+
+			case MAKE_IT:
+			{
+				LOG("Make a new iterator\n");
+				
+				// Fetch the array object
+				Object arr = stack[sp-1];
+				if (arr.type->prim == OBJECT)
+				{
+					CHECK_OP(arr, operator_it);
+					CALL_OP(arr, operator_it);
+					arr = stack[--sp];
+				}
+				sp--;
+
+				// Create an object with a counter and array
+				Object *attrs = (Object*)malloc(sizeof(Object) * 2);
+				attrs[0] = (Object){&t_int, 0};
+				attrs[1] = arr;
+
+				// Push new object to stack
+				Object it;
+				it.type = &t_array;
+				it.p = AllocPointer(attrs);
+				stack[sp++] = it;
+				break;
+			}
+
+			case IT_NEXT:
+			{
+				LOG("Next in iterator and store in local %i\n", data[pc]);
+				Object it = stack[sp-1];
+
+				int index = it.p->attrs[0].i++;
+				Object next = it.p->attrs[1].p->attrs[index+1];
+				stack[bp+data[pc++]] = next;
+				break;
+			}
+
+			case BRANCH_IF_IT:
+			{
+				LOG("Branch if iterator does not have a next value by %i\n", data[pc]);
+				Object it = stack[sp-1];
+				int index = it.p->attrs[0].i;
+				int size = it.p->attrs[1].p->attrs[0].i;
+
+				if (index >= size)
+					pc += data[pc]-1;
+				pc++;
+				break;
 			}
 		}
 

@@ -28,6 +28,7 @@ private:
 	void CompileAssign();
 	void CompileReturn();
 	void CompileIf();
+	void CompileIter(vector<ExpressionPath> path);
 	void CompileFor();
 	void CompileWhile();
 

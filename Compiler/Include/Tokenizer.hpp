@@ -35,6 +35,7 @@ enum class TkType
     For,
     While,
     To,
+    In,
     Class,
     SysCall,
     SysClass,

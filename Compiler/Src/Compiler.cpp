@@ -85,6 +85,7 @@ void Compiler::DumpTypes(vector<char> &out_code)
         DumpOperator(c, "operator_to_string", out_code);
         DumpOperator(c, "operator_get_index", out_code);
         DumpOperator(c, "operator_set_index", out_code);
+        DumpOperator(c, "operator_it", out_code);
     }
 }
 

@@ -19,6 +19,12 @@ Type t_char = {"char", CHAR, sizeof(char), 1, -1, -1, -1, -1, -1, -1};
         left.type->name, #op, right.type->name); \
     exit(0)
 
+#define CALL_OP(obj, overload) \
+	if (obj.type->is_sys_type) \
+		sys_funcs[obj.type->overload](stack, &sp); \
+	else \
+		CallFunc(obj.type->overload);
+
 #define OP_FUNC(name, op, overload) \
 	Object name(Object left, Object right) \
 	{ \
@@ -61,10 +67,7 @@ Type t_char = {"char", CHAR, sizeof(char), 1, -1, -1, -1, -1, -1, -1};
 				if (left.type->overload != -1) \
 				{ \
 					sp++; \
-					if (left.type->is_sys_type) \
-						sys_funcs[left.type->overload](stack, &sp); \
-					else \
-						CallFunc(left.type->overload); \
+					CALL_OP(left, overload); \
 					sp -= 2; \
 					return stack[sp+1]; \
 				} \

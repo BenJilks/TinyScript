@@ -29,6 +29,7 @@ typedef struct Type
 	int operator_to_string;
 	int operator_get_index;
 	int operator_set_index;
+	int operator_it;
 } Type;
 
 struct Object;

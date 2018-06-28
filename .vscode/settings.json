@@ -74,6 +74,7 @@
         "future": "cpp",
         "variant": "c",
         "hash_map": "cpp",
-        "typeindex": "c"
+        "typeindex": "c",
+        "unordered_map": "c"
     }
 }
