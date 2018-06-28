@@ -20,6 +20,7 @@ sysclass File
 	syscall File
 	syscall read_all
 	syscall close
+	syscall operator_it
 }
 
 sysclass List

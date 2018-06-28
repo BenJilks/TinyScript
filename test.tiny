@@ -1,25 +1,9 @@
 include "IO.tiny"
 
-class Vec4
-{
-	x y z w
-
-	func Vec4(self : Vec4, x, y, z, w)
-	{
-		self.x = x
-		self.y = y
-		self.z = z
-		self.w = w
-	}
-
-	func operator_it(self : Vec4)
-	{
-		ret [self.x, self.y, self.z, self.w]
-	}
-}
-
 func Main()
 {
-	for value in Vec4(1, 2, 3, 4)
-		println(value)
+	file : File = File("test.tiny", "rb")
+	for line in file
+		println(line)
+	file.close()
 }

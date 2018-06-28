@@ -112,6 +112,37 @@ void File_Close(Object *stack, int *sp)
 	stack[(*sp)++] = (Object){PrimType(INT), error};
 }
 
+void File_It(Object *stack, int *sp)
+{
+	Object file_obj = stack[(*sp)-1];
+	FILE *file = (FILE*)file_obj.p->v;
+	Object *attrs = (Object*)malloc(sizeof(Object) * 100);
+	int counter = 1;
+
+	char * line = NULL;
+    size_t len = 0;
+    ssize_t read;
+	while ((read = getline(&line, &len, file)) != -1) 
+	{
+		int size = strlen(line);
+		char *line_str = (char*)malloc(size);
+		memcpy(line_str, line, size-1);
+		line_str[size-1] = '\0';
+
+		Object item;
+		item.type = PrimType(STRING);
+		item.p = AllocPointer(line_str);
+		attrs[counter++] = item;
+	}
+	attrs[0] = (Object){PrimType(INT), counter-1};
+	attrs = (Object*)realloc(attrs, sizeof(Object) * counter);
+
+	Object obj;
+	obj.type = PrimType(ARRAY);
+	obj.p = AllocPointer(attrs);
+	stack[(*sp)++] = obj;
+}
+
 void RegisterIO()
 {
 	RegisterFunc((char*)"print", Print);
@@ -123,6 +154,7 @@ void RegisterIO()
 	RegisterFunc((char*)"File:File", File_File);
 	RegisterFunc((char*)"File:read_all", File_ReadAll);
 	RegisterFunc((char*)"File:close", File_Close);
+	RegisterFunc((char*)"File:operator_it", File_It);
 }
 
 #endif // IO_H
