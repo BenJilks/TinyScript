@@ -1,10 +1,33 @@
 include "IO.tiny"
 
+class it
+{
+	index : int
+	arr : List
+	curr
+
+	func it(self : it, arr : List)
+	{
+		self.arr = arr
+		self.index = 0
+	}
+
+	func next(self : it)
+	{
+		if self.index + 1 > self.arr.size()
+			ret false
+		self.curr = self.arr[self.index]
+		self.index = self.index + 1
+		ret true
+	}
+}
+
 func Main()
 {
-	obj = "New string"
-	Println(obj)
+	lines = [1, 2, 3, 4, 5, 6]
+	iter : it = it(lines)
 
-	obj = "New string"
-	Println(obj)
+	while iter.next()
+		println(iter.curr)
 }
+

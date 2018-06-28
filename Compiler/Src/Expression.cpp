@@ -130,6 +130,11 @@ ExpressionPath Expression::ParseFirstPath(string var)
     if (tk->LookType() == TkType::OpenArg)
     {
         Function *func = table->FindFunction(var);
+	if (func == NULL)
+	{
+		tk->Error("Could not find function named '" + var + "'");
+		return first;
+	}
         first.code = CompileCallFunc(func);
         first.type = PathType::Func;
     }

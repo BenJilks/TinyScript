@@ -87,10 +87,10 @@ void Array_Set_Index(Object *stack, int *sp)
 
 void RegisterArray()
 {
-    RegisterFunc((char*)"Array:Push", Array_Push);
-    RegisterFunc((char*)"Array:Size", Array_Length);
-    RegisterFunc((char*)"Array:operator_add", Array_Add);
-    RegisterFunc((char*)"Array:operator_multiply", Array_Multiply);
-    RegisterFunc((char*)"Array:operator_get_index", Array_Get_Index);
-    RegisterFunc((char*)"Array:operator_set_index", Array_Set_Index);
+    RegisterFunc((char*)"List:push", Array_Push);
+    RegisterFunc((char*)"List:size", Array_Length);
+    RegisterFunc((char*)"List:operator_add", Array_Add);
+    RegisterFunc((char*)"List:operator_multiply", Array_Multiply);
+    RegisterFunc((char*)"List:operator_get_index", Array_Get_Index);
+    RegisterFunc((char*)"List:operator_set_index", Array_Set_Index);
 }

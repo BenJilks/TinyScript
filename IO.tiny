@@ -1,17 +1,16 @@
 
-syscall Print
-syscall Println
-syscall Input
-syscall Int
-syscall Float
-syscall AsString
+syscall print
+syscall println
+syscall input
+syscall int
+syscall float
+syscall as_string
 
 sysclass String
 {
-	syscall Length
-	syscall At
-	syscall Append
-	syscall Split
+	syscall size
+	syscall append
+	syscall split
 	syscall operator_add
 	syscall operator_multiply
 }
@@ -19,14 +18,14 @@ sysclass String
 sysclass File
 {
 	syscall File
-	syscall ReadAll
-	syscall Close
+	syscall read_all
+	syscall close
 }
 
-sysclass Array
+sysclass List
 {
-	syscall Push
-	syscall Size
+	syscall push
+	syscall size
 	syscall operator_add
 	syscall operator_multiply
 	syscall operator_get_index

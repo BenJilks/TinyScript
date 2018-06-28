@@ -30,8 +30,10 @@ char *ObjectAsString(Object obj, char *str, Object *stack, int *sp)
     {
         stack[(*sp)++] = obj;
         CallFunc(obj.type->operator_to_string);
-        free(str);
-        str = stack[(*sp)-1].p->str;
+	Object ret = stack[(*sp)-1];
+	
+        str = (char*)realloc(str, strlen(ret.p->str)+1);
+        strcpy(str, ret.p->str);
         *sp -= 2;
         return str;
     }
@@ -48,7 +50,10 @@ char *AsString(Object obj, Object *stack, int *sp)
 		case FLOAT: sprintf(str, "%.6g", obj.f); break;
 		case CHAR: sprintf(str, "%c", obj.c); break;
 		case BOOL: strcpy(str, obj.c ? "true" : "false"); break;
-		case STRING: free(str); str = obj.p->str; break;
+		case STRING:
+			str = (char*)realloc(str, strlen(obj.p->str)+1);
+			strcpy(str, obj.p->str);
+		       	break;
 		case ARRAY: str = ArrayAsString(obj, str, stack, sp); break;
 		case OBJECT: str = ObjectAsString(obj, str, stack, sp); break;
 	}
@@ -131,17 +136,6 @@ void String_Length(Object *stack, int *sp)
 	stack[(*sp)++] = size_obj;
 }
 
-void String_At(Object *stack, int *sp)
-{
-	char *str = stack[(*sp)-2].p->str;
-	int index = stack[(*sp)-1].i;
-
-	Object c_obj;
-	c_obj.type = PrimType(CHAR);
-	c_obj.c = str[index];
-	stack[(*sp)++] = c_obj;
-}
-
 void String_Append(Object *stack, int *sp)
 {
 	char *dest = stack[(*sp)-2].p->str;
@@ -198,11 +192,10 @@ void String_Split(Object *stack, int *sp)
 
 void RegisterString()
 {
-	RegisterFunc((char*)"AsString", String);
-	RegisterFunc((char*)"String:Length", String_Length);
-	RegisterFunc((char*)"String:At", String_At);
-	RegisterFunc((char*)"String:Append", String_Append);
-	RegisterFunc((char*)"String:Split", String_Split);
+	RegisterFunc((char*)"as_string", String);
+	RegisterFunc((char*)"String:size", String_Length);
+	RegisterFunc((char*)"String:append", String_Append);
+	RegisterFunc((char*)"String:split", String_Split);
 	RegisterFunc((char*)"String:operator_add", String_Add);
 	RegisterFunc((char*)"String:operator_multiply", String_Multiply);
 }

@@ -5,9 +5,9 @@
 #include "String.h"
 #include "Operations.h"
 
-#define DEBUG 1
-#define DEBUG_MEM 1
-#define LOG_STACK 1
+#define DEBUG 0
+#define DEBUG_MEM 0
+#define LOG_STACK 0
 
 #if DEBUG
 #define LOG(...) printf(__VA_ARGS__)
@@ -183,7 +183,7 @@ void LoadDataTypes()
 		type.prim = OBJECT;
 
 		if (!strcmp(type.name, "String")) { type.prim = STRING; t_string = type; }
-		if (!strcmp(type.name, "Array")) { type.prim = ARRAY; t_array = type; }
+		if (!strcmp(type.name, "List")) { type.prim = ARRAY; t_array = type; }
 		types[i] = type;
 		LOG("Loaded type '%s'\n", type.name);
 	}
@@ -275,7 +275,6 @@ void PushString()
 {
 	int length = data[pc];
 	char *str = (char*)malloc(length+1);
-	printf("%x\n", str);
 	memcpy(str, data + pc + 1, length);
 	str[length] = '\0';
 	pc += length + 1;
@@ -506,7 +505,7 @@ void CallFunc(int func)
 		}
 
 		cycle++;
-		if (cycle > 0)
+		if (cycle > 100)
 		{
 			CleanUp();
 			cycle = 0;

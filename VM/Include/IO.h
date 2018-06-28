@@ -114,15 +114,15 @@ void File_Close(Object *stack, int *sp)
 
 void RegisterIO()
 {
-	RegisterFunc((char*)"Print", Print);
-	RegisterFunc((char*)"Println", Println);
-	RegisterFunc((char*)"Input", Input);
-	RegisterFunc((char*)"Int", Int);
-	RegisterFunc((char*)"Float", Float);
+	RegisterFunc((char*)"print", Print);
+	RegisterFunc((char*)"println", Println);
+	RegisterFunc((char*)"input", Input);
+	RegisterFunc((char*)"int", Int);
+	RegisterFunc((char*)"float", Float);
 
 	RegisterFunc((char*)"File:File", File_File);
-	RegisterFunc((char*)"File:ReadAll", File_ReadAll);
-	RegisterFunc((char*)"File:Close", File_Close);
+	RegisterFunc((char*)"File:read_all", File_ReadAll);
+	RegisterFunc((char*)"File:close", File_Close);
 }
 
 #endif // IO_H
