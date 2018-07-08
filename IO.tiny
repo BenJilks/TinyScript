@@ -23,6 +23,14 @@ sysclass File
 	syscall operator_it
 }
 
+sysclass Image
+{
+	syscall Image
+	syscall pixels
+	syscall width
+	syscall height
+}
+
 sysclass List
 {
 	syscall push
@@ -31,4 +39,9 @@ sysclass List
 	syscall operator_multiply
 	syscall operator_get_index
 	syscall operator_set_index
+}
+
+sysclass Function
+{
+	syscall call
 }

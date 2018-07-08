@@ -80,7 +80,6 @@ void File_File(Object *stack, int *sp)
 	char *path = (char*)stack[(*sp)-2].p->str;
 	char *mode = (char*)stack[(*sp)-1].p->str;
 	Object file_obj = stack[(*sp)-3];
-	free(file_obj.p->v);
 
 	FILE *file = fopen(path, mode);
 	file_obj.p->v = file;
@@ -143,6 +142,12 @@ void File_It(Object *stack, int *sp)
 	stack[(*sp)++] = obj;
 }
 
+void Function_Call(Object *stack, int *sp)
+{
+	Object func = stack[(*sp) - 1];
+	CallFunc(func.i);
+}
+
 void RegisterIO()
 {
 	RegisterFunc((char*)"print", Print);
@@ -155,6 +160,8 @@ void RegisterIO()
 	RegisterFunc((char*)"File:read_all", File_ReadAll);
 	RegisterFunc((char*)"File:close", File_Close);
 	RegisterFunc((char*)"File:operator_it", File_It);
+
+	RegisterFunc((char*)"Function:call", Function_Call);
 }
 
 #endif // IO_H

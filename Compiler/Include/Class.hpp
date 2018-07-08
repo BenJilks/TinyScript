@@ -18,6 +18,8 @@ public:
     inline bool IsSysClass() const { return is_sys_class; }
     inline void AddMethod(Function *func) { methods.push_back(func); }
 
+    ~Class();
+
 private:
     void CompileAttr();
     void CompileMethod();

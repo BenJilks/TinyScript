@@ -105,10 +105,10 @@ vector<char> Compiler::Optimize()
 vector<char> Compiler::GetDump()
 {
     vector<char> out_code;
-    Function *func = table.FindFunction("Main");
+    Function *func = table.FindFunction("main");
     if (func == NULL)
     {
-        cout << "Error: No 'Main' function found" << endl;
+        cout << "Error: No 'main' function found" << endl;
         return out_code;
     }
 

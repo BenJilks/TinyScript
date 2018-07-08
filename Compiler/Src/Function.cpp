@@ -2,6 +2,7 @@
 #include "Class.hpp"
 #include "Bytecode.hpp"
 #include <algorithm>
+#include <memory.h>
 
 Function::Function(string name, int location, SymbolTable table, Tokenizer *tk) :
     name(name), location(location), table(table), tk(tk), is_syscall(false)
@@ -103,6 +104,14 @@ static inline void AppendTo(vector<char>& dest, vector<char> src)
     dest.insert(dest.end(), src.begin(), src.end());
 }
 
+template<typename T>
+static void PushData(T data, vector<char>& code)
+{
+    char *bytes = (char*)&data;
+    code.insert(code.end(), bytes, 
+        bytes + sizeof(T));
+}
+
 // Read const type and assing to var
 void Function::AssignConstType(string var)
 {
@@ -184,15 +193,16 @@ void Function::CompileIter(vector<ExpressionPath> path)
     int start = code.size();
     code.push_back((char)ByteCode::BRANCH_IF_IT);
     int addr = code.size();
-    code.push_back((char)0);
+    PushData(0, code);
     code.push_back((char)ByteCode::IT_NEXT);
     code.push_back((char)table.FindLocation(name));
 
     CompileBlock();
 
     code.push_back((char)ByteCode::BRANCH);
-    code.push_back((char)(start - code.size()));
-    code[addr] = code.size() - addr;
+    PushData(start - code.size(), code);
+    int diff = code.size() - addr;
+    memcpy(&code[addr], &diff, sizeof(int));
     code.push_back((char)ByteCode::POP);
     code.push_back((char)1);
 }
@@ -224,7 +234,7 @@ void Function::CompileFor()
     code.push_back((char)ByteCode::LESSTHAN);
     code.push_back((char)ByteCode::BRANCH_IF_NOT);
     int addr = code.size();
-    code.push_back((char)0);
+    PushData(0, code);
 
     CompileBlock();
 
@@ -235,8 +245,9 @@ void Function::CompileFor()
 
     // Jump to start of loop
     code.push_back((char)ByteCode::BRANCH);
-    code.push_back((char)(start - code.size()));
-    code[addr] = code.size() - addr;
+    PushData(start - code.size(), code);
+    int diff = code.size() - addr;
+    memcpy(&code[addr], &diff, sizeof(int));
 }
 
 void Function::CompileWhile()
@@ -250,12 +261,18 @@ void Function::CompileWhile()
     // Branch to end if condition is not met
     code.push_back((char)ByteCode::BRANCH_IF_NOT);
     int addr = code.size();
-    code.push_back((char)0);
+    PushData(0, code);
 
     CompileBlock();
 
     // Jump to start
     code.push_back((char)ByteCode::BRANCH);
-    code.push_back((char)(start - code.size()));
-    code[addr] = code.size() - addr;
+    PushData(start - code.size(), code);
+    int diff = code.size() - addr;
+    memcpy(&code[addr], &diff, sizeof(int));
+}
+
+Function::~Function()
+{
+    table.PopScope();
 }

@@ -91,3 +91,9 @@ void Class::CompileMethod()
     code->insert(code->end(), func_code.begin(), func_code.end());
     methods.push_back(func);
 }
+
+Class::~Class()
+{
+    for (Function *method : methods)
+        delete method;
+}

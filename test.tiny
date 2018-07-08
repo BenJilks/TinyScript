@@ -1,8 +1,6 @@
 include "IO.tiny"
 
-func Main()
+func main()
 {
-	arr : List = []
-	while true
-		arr.push("Testing")
+	
 }

@@ -75,6 +75,7 @@
         "variant": "c",
         "hash_map": "cpp",
         "typeindex": "c",
-        "unordered_map": "c"
+        "unordered_map": "c",
+        "stb_image.h": "c"
     }
 }

@@ -30,11 +30,8 @@ vector<char> Expression::CompileFunction(string name)
     return CompileCallFunc(func);
 }
 
-// Compiles a function call of know origin
-vector<char> Expression::CompileCallFunc(Function *func)
+int Expression::CompileFuncArgs(vector<char> &code)
 {
-    // Push args
-    vector<char> code;
     int arg_length = 0;
     tk->Match("(", TkType::OpenArg);
     while (tk->LookType() != TkType::CloseArg)
@@ -46,6 +43,15 @@ vector<char> Expression::CompileCallFunc(Function *func)
         tk->Match(",", TkType::Next);
     }
     tk->Match(")", TkType::CloseArg);
+    return arg_length;
+}
+
+// Compiles a function call of know origin
+vector<char> Expression::CompileCallFunc(Function *func)
+{
+    // Push args
+    vector<char> code;
+    int arg_length = CompileFuncArgs(code);
 
     // Call function
     if (func->IsSysCall())
@@ -127,14 +133,15 @@ ExpressionPath Expression::ParseFirstPath(string var)
 {
     ExpressionPath first = (ExpressionPath){NULL, var};
     first.type = PathType::Attr;
+
     if (tk->LookType() == TkType::OpenArg)
     {
         Function *func = table->FindFunction(var);
-	if (func == NULL)
-	{
-		tk->Error("Could not find function named '" + var + "'");
-		return first;
-	}
+        if (func == NULL)
+        {
+            tk->Error("Could not find function named '" + var + "'");
+            return first;
+        }
         first.code = CompileCallFunc(func);
         first.type = PathType::Func;
     }
@@ -324,6 +331,15 @@ void Expression::CompileName(Node *node)
         return;
     }
 
+    // If it's a function location
+    if (table->FindFunction(name.data))
+    {
+        Function *func = table->FindFunction(name.data);
+        node->code.push_back((char)ByteCode::PUSH_INT);
+        PushData(func->Location(), node->code);
+        return;
+    }
+
     // Otherwise it's a local
     vector<ExpressionPath> path = CompilePath(name.data);
     AppendTo(node->code, GenPushPath(path));
@@ -387,11 +403,13 @@ Node *Expression::CompileTerm()
     return node;
 }
 
-// Compile the lowest level operations (*, /)
+// Compile the lowest level operations (*, /, ==, >, <)
 Node *Expression::CompileFactor()
 {
     Node *left = CompileTerm();
-    while (tk->LookType() == TkType::Mul || tk->LookType() == TkType::Div)
+    while (tk->LookType() == TkType::Mul || tk->LookType() == TkType::Div || 
+        tk->LookType() == TkType::Equals || tk->LookType() == TkType::GreaterThan || 
+        tk->LookType() == TkType::LessThan)
     {
         Node *node = new Node();
         node->left = left;
@@ -402,13 +420,11 @@ Node *Expression::CompileFactor()
     return left;
 }
 
-// Compile heigher level operations (+, -, ==, >, <)
+// Compile heigher level operations (+, -)
 Node *Expression::CompileExpression()
 {
     Node *left = CompileFactor();
-    while (tk->LookType() == TkType::Add || tk->LookType() == TkType::Sub || 
-        tk->LookType() == TkType::Equals || tk->LookType() == TkType::GreaterThan || 
-        tk->LookType() == TkType::LessThan)
+    while (tk->LookType() == TkType::Add || tk->LookType() == TkType::Sub)
     {
         Node *node = new Node();
         node->left = left;

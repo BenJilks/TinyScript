@@ -8,6 +8,7 @@
 #define DEBUG 0
 #define DEBUG_MEM 0
 #define LOG_STACK 0
+#define MEM_CLEAR_RATE 500
 
 #if DEBUG
 #define LOG(...) printf(__VA_ARGS__)
@@ -32,7 +33,7 @@ int pc, sp, bp, fp, cycle;
 int stack_frame[STACK_SIZE];
 Object stack[STACK_SIZE];
 
-Pointer pointers[STACK_SIZE];
+Pointer *pointers;
 int pointer_count;
 
 typedef enum ByteCode
@@ -145,15 +146,23 @@ void CleanUp()
 	}
 }
 
+void ErrorOut()
+{
+	sp = 0;
+	CleanUp();
+	free(pointers);
+	exit(0);
+}
+
 void CheckMemory()
 {
-	if (pointer_count >= STACK_SIZE)
+	if (pointer_count >= MEM_SIZE - 1)
 	{
 		printf("Error: Out of memory\n");
-		exit(0);
+		ErrorOut();
 	}
 	
-	if (cycle > 500)
+	if (cycle > MEM_CLEAR_RATE)
 	{
 		CleanUp();
 		cycle = 0;
@@ -163,7 +172,6 @@ void CheckMemory()
 Pointer *AllocPointer(void *p)
 {
 	CheckMemory();
-
 	int i;
 	for (i = 0; i < pointer_count; i++)
 	{
@@ -220,7 +228,7 @@ void LoadSysCalls()
 		if (!was_found)
 		{
 			printf("Error: No system function named '%s' could be found\n", syscall);
-			exit(0);
+			ErrorOut();
 		}
 	}
 }
@@ -264,6 +272,7 @@ void ResetReg()
 
 void LoadProgram(char *program_data, int program_length)
 {
+	pointers = (Pointer*)malloc(sizeof(Pointer) * MEM_SIZE);
 	data = program_data;
 	length = program_length;
 
@@ -278,6 +287,7 @@ void LoadProgram(char *program_data, int program_length)
 
 	CallFunc(main_func);
 	CleanUp();
+	free(pointers);
 }
 
 OP_FUNC(Add, +, operator_add);
@@ -416,14 +426,14 @@ void CallFunc(int func)
 			}
 			
 			case BRANCH_IF_NOT:
-				LOG("Branch if not (%s) by %i\n", stack[sp-1].i ? "false" : "true", data[pc]);
-				if (!stack[--sp].i) pc += data[pc]-1;
-				pc++;
+				LOG("Branch if not (%s) by %i\n", stack[sp-1].i ? "false" : "true", *((int*)(data + pc)));
+				if (!stack[--sp].i) pc += (*((int*)(data + pc)))-4;
+				pc += 4;
 				break;
 
 			case BRANCH:
-				LOG("Branch by %i\n", data[pc]);
-				pc += data[pc];
+				LOG("Branch by %i\n", *((int*)(data + pc)));
+				pc += *((int*)(data + pc));
 				break;
 
 			case RETURN:
@@ -442,7 +452,7 @@ void CallFunc(int func)
 					case INT: stack[bp+data[pc]].i += data[pc+1]; break;
 					case FLOAT: stack[bp+data[pc]].f += data[pc+1]; break;
 					case CHAR: stack[bp+data[pc]].c += data[pc+1]; break;
-					default: printf("Error: Invalid inc\n"); exit(-1); break;
+					default: printf("Error: Invalid inc\n"); ErrorOut(); break;
 				}
 				pc += 2;
 				break;
@@ -452,13 +462,15 @@ void CallFunc(int func)
 				LOG("Malloc new '%s' object\n", types[data[pc]].name);
 				Object obj;
 				obj.type = &types[data[pc++]];
-				Object *attrs = (Object*)malloc(sizeof(Object) * obj.type->size);
+				if (obj.type->size > 0)
+				{
+					Object *attrs = (Object*)malloc(sizeof(Object) * obj.type->size);
+					obj.p = AllocPointer(attrs);
 
-				int i;
-				for (i = 0; i < data[pc-1]; i++)
-					attrs[i] = (Object){&t_int, 0};
-
-				obj.p = AllocPointer(attrs);
+					int i;
+					for (i = 0; i < data[pc-1]; i++)
+						attrs[i] = (Object){&t_int, 0};
+				}
 				stack[sp++] = obj;
 				break;
 			}
@@ -549,14 +561,14 @@ void CallFunc(int func)
 
 			case BRANCH_IF_IT:
 			{
-				LOG("Branch if iterator does not have a next value by %i\n", data[pc]);
+				LOG("Branch if iterator does not have a next value by %i\n", *((int*)(data + pc)));
 				Object it = stack[sp-1];
 				int index = it.p->attrs[0].i;
 				int size = it.p->attrs[1].p->attrs[0].i;
 
 				if (index >= size)
-					pc += data[pc]-1;
-				pc++;
+					pc += (*((int*)(data + pc)))-4;
+				pc += 4;
 				break;
 			}
 		}

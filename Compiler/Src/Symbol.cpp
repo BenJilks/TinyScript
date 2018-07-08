@@ -92,14 +92,17 @@ Class *SymbolTable::FindClass(string name)
     return NULL;
 }
 
-void SymbolTable::CleanUp()
+void SymbolTable::PopScope()
 {
     for (Symbol *symb : locals)
         delete symb;
     
     for (Symbol *symb : args)
         delete symb;
-    
+}
+
+void SymbolTable::CleanUp()
+{
     for (Function *func : functions)
         delete func;
     

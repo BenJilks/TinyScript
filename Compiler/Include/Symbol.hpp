@@ -34,6 +34,7 @@ public:
     Function *FindFunction(string name);
     Class *FindClass(string name);
 
+    void PopScope();
     void CleanUp();
 
 private:

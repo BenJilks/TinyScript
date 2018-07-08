@@ -68,6 +68,7 @@ private:
     void CompileConst(Node *node);
     void CompileArray(Node *node);
     
+    int CompileFuncArgs(vector<char> &code);
     vector<char> CompileCallFunc(Function *func);
     vector<char> GenCode(Node *node);
     vector<char> GenLiteral(Token literal);

@@ -20,6 +20,8 @@ public:
     inline string Name() const { return name; }
 	inline bool IsSysCall() const { return is_syscall; }
 	inline Class *StaticType() const { return type; }
+
+	~Function();
     
 private:
 	void AssignConstType(string var);
