@@ -192,7 +192,7 @@ void String_Split(Object *stack, int *sp)
 
 void RegisterString()
 {
-	RegisterFunc((char*)"as_string", String);
+	RegisterFunc((char*)"str", String);
 	RegisterFunc((char*)"String:size", String_Length);
 	RegisterFunc((char*)"String:append", String_Append);
 	RegisterFunc((char*)"String:split", String_Split);

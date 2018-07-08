@@ -2,5 +2,5 @@ include "IO.tiny"
 
 func main()
 {
-	
+	print(str(10) + '\n')
 }
