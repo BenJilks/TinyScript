@@ -16,24 +16,22 @@ class Dog
 
 	func operator_to_string()
 	{
-		ret "A dog named " + name + " that has " + colour + 
-			" fur and weights " + weight + "kg"
+		ret "A dog named " + name + ", that has " + colour + 
+			" fur and weighs " + weight + "kg"
 	}
 }
 
 func main()
 {
 	dogs: List = []
-	running = true
-	while running
+	
+	count = int(input("Enter the number of dogs: "))
+	for i = 0 to count
 	{
 		name = input("Enter name: ")
 		colour = input("Enter colour: ")
 		weight = as_float(input("Enter weight: "))
 		dogs.push(Dog(name, colour, weight))
-
-		if input("Add dog [Y/N]: ") == "N"
-			running = false
 	}
 
 	for dog in dogs
