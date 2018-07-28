@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#define SINGLE (int)fgetc(file)
+#define SINGLE (int)((char)fgetc(file))
 #define INT (SINGLE | (SINGLE << 8) | (SINGLE << 16) | (SINGLE << 24))
 #define FLOAT INT
 #define STRING(str) \
@@ -54,23 +54,27 @@ void Disassemble(const char *file_path)
             case 13: printf("DIV\n"); break;
             case 14: printf("EQUALS\n"); break;
             case 15: printf("GREATERTHAN\n"); break;
-            case 16: printf("LESSTHAN\n"); break;
-            case 17: printf("CALL %i\n", INT); break;
-            case 18: printf("CALL_SYS %i\n", INT); break;
-            case 19: printf("RETURN\n"); break;
-            case 20: printf("BRANCH_IF_NOT %i\n", INT); break;
-            case 21: printf("BRANCH_IF_IT %i\n", INT); break;
-            case 22: printf("BRANCH %i\n", INT); break;
-            case 23: printf("INC_LOC %i %i\n", SINGLE, SINGLE); break;
-            case 24: printf("POP_ARGS %i\n", SINGLE); break;
-            case 25: printf("MALLOC %i\n", SINGLE); break;
-            case 26: printf("PUSH_ATTR %i\n", SINGLE); break;
-            case 27: printf("PUSH_INDEX\n"); break;
-            case 28: printf("ASSIGN_ATTR %i\n", SINGLE); break;
-            case 29: printf("ASSIGN_INDEX\n"); break;
-            case 30: printf("MAKE_ARRAY %i\n", SINGLE); break;
-            case 31: printf("MAKE_IT\n"); break;
-            case 32: printf("IT_NEXT %i\n", SINGLE); break;
+            case 16: printf("GREATERTHANEQUAL"); break;
+            case 17: printf("LESSTHAN\n"); break;
+            case 18: printf("LESSTHANEQUAL"); break;
+            case 19: printf("AND"); break;
+            case 20: printf("OR"); break;
+            case 21: printf("CALL %i\n", INT); break;
+            case 22: printf("CALL_SYS %i\n", INT); break;
+            case 23: printf("RETURN\n"); break;
+            case 24: printf("BRANCH_IF_NOT %i\n", INT); break;
+            case 25: printf("BRANCH_IF_IT %i\n", INT); break;
+            case 26: printf("BRANCH %i\n", INT); break;
+            case 27: printf("INC_LOC %i %i\n", SINGLE, SINGLE); break;
+            case 28: printf("POP_ARGS %i\n", SINGLE); break;
+            case 29: printf("MALLOC %i\n", SINGLE); break;
+            case 30: printf("PUSH_ATTR %i\n", SINGLE); break;
+            case 31: printf("PUSH_INDEX\n"); break;
+            case 32: printf("ASSIGN_ATTR %i\n", SINGLE); break;
+            case 33: printf("ASSIGN_INDEX\n"); break;
+            case 34: printf("MAKE_ARRAY %i\n", SINGLE); break;
+            case 35: printf("MAKE_IT\n"); break;
+            case 36: printf("IT_NEXT %i\n", SINGLE); break;
         }
     }
 }
