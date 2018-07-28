@@ -1,0 +1,41 @@
+#!TinyScript
+include "IO.tiny"
+
+class Dog
+{
+	name: String
+	colour: String
+	weight: float
+
+	func Dog(name, colour, weight)
+	{
+		self.name = name
+		self.colour = colour
+		self.weight = weight
+	}
+
+	func operator_to_string()
+	{
+		ret "A dog named " + name + " that has " + colour + 
+			" fur and weights " + weight + "kg"
+	}
+}
+
+func main()
+{
+	dogs: List = []
+	running = true
+	while running
+	{
+		name = input("Enter name: ")
+		colour = input("Enter colour: ")
+		weight = as_float(input("Enter weight: "))
+		dogs.push(Dog(name, colour, weight))
+
+		if input("Add dog [Y/N]: ") == "N"
+			running = false
+	}
+
+	for dog in dogs
+		println(dog)
+}

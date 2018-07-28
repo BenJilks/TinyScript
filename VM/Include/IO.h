@@ -30,8 +30,9 @@ void Input(Object *stack, int *sp)
 	char *buffer = (char*)malloc(1024);
 	size_t size = 1024;
 	getline(&buffer, &size, stdin);
-	buffer = (char*)realloc(buffer, size + 1);
-	buffer[size] = '\0';
+	int len = strlen(buffer);
+	buffer = (char*)realloc(buffer, len);
+	buffer[len-1] = '\0';
 
 	Object obj;
 	obj.type = PrimType(STRING);
@@ -210,8 +211,8 @@ void RegisterIO()
 	RegisterFunc((char*)"print", Print);
 	RegisterFunc((char*)"println", Println);
 	RegisterFunc((char*)"input", Input);
-	RegisterFunc((char*)"int", Int);
-	RegisterFunc((char*)"float", Float);
+	RegisterFunc((char*)"as_int", Int);
+	RegisterFunc((char*)"as_float", Float);
 	RegisterFunc((char*)"sizeof", SizeOf);
 
 	RegisterFunc((char*)"File:File", File_File);

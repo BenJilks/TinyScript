@@ -23,3 +23,7 @@ Read a file and print its content:
         println(file.read_all())
         file.close()
     }
+
+Example program
+
+    
