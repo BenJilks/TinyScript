@@ -25,9 +25,10 @@ func main()
 {
 	dogs: List = []
 	
-	count = int(input("Enter the number of dogs: "))
+	count = as_int(input("Enter the number of dogs: "))
 	for i = 0 to count
 	{
+		println("\nNew dog: ")
 		name = input("Enter name: ")
 		colour = input("Enter colour: ")
 		weight = as_float(input("Enter weight: "))

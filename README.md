@@ -24,6 +24,3 @@ Read a file and print its content:
         file.close()
     }
 
-Example program
-
-    
