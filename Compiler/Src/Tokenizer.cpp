@@ -67,11 +67,11 @@ Token Tokenizer::Next()
             case '-': return Token(c, TkType::Sub);
             case '*': return Token(c, TkType::Mul);
             case '/': return Token(c, TkType::Div);
-            case '>': return Token(c, TkType::GreaterThan);
-            case '<': return Token(c, TkType::LessThan);
             case '.': return Token(c, TkType::Path);
             case ':': return Token(c, TkType::Of);
-            case '=': return ReadEquals();
+            case '>': return ReadEquals('>', TkType::GreaterThan, TkType::GreaterThanEqual);
+            case '<': return ReadEquals('<', TkType::LessThan, TkType::LessThanEqual);
+            case '=': return ReadEquals('=', TkType::Assign, TkType::Equals);
             case '"': return ReadString();
             case '\'': return ReadChar();
             case '#': SkipComment(); break;
@@ -112,13 +112,18 @@ void Tokenizer::SkipComment()
 }
 
 // Check if the token ends in an extra equals sign
-Token Tokenizer::ReadEquals()
+Token Tokenizer::ReadEquals(char ch, TkType s, TkType d)
 {
     char c = NextChar();
     if (c == '=')
-        return Token("==", TkType::Equals);
+    {
+        string data = "";
+        data += ch;
+        data += "=";
+        return Token(data, d);
+    }
     back_log = c;
-    return Token('=', TkType::Assign);
+    return Token(ch, s);
 }
 
 char Tokenizer::NextChar()
@@ -202,6 +207,7 @@ TkType Tokenizer::FindKeywords(string buffer)
     if (buffer == "true") return TkType::Bool;
     if (buffer == "false") return TkType::Bool;
     if (buffer == "if") return TkType::If;
+    if (buffer == "else") return TkType::Else;
     if (buffer == "syscall") return TkType::SysCall;
     if (buffer == "for") return TkType::For;
     if (buffer == "while") return TkType::While;
@@ -210,6 +216,8 @@ TkType Tokenizer::FindKeywords(string buffer)
     if (buffer == "class") return TkType::Class;
     if (buffer == "sysclass") return TkType::SysClass;
     if (buffer == "include") return TkType::Include;
+    if (buffer == "and") return TkType::And;
+    if (buffer == "or") return TkType::Or;
     return TkType::Name;
 }
 

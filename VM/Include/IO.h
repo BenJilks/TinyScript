@@ -73,23 +73,74 @@ void Float(Object *stack, int *sp)
 	stack[(*sp)++] = out;
 }
 
+int SizeOfObject(Object obj);
+int SizeOfArray(Object arr)
+{
+	int size = 0, i = 0;
+	int len = arr.p->attrs[0].i;
+	for (i = 0; i < len; i++)
+		size += SizeOfObject(arr.p->attrs[i]);
+	return size;
+}
+
+int SizeOfObjectAttrs(Object obj)
+{
+	int size = 0, i = 0;
+	int len = obj.type->size;
+	for (i = 0; i < len; i++)
+		size += SizeOfObject(obj.p->attrs[i]);
+	return size;
+}
+
+int SizeOfObject(Object obj)
+{
+	int size = sizeof(Object);
+
+	Primitive prim = obj.type->prim;
+	switch(prim)
+	{
+		case OBJECT: size += SizeOfObjectAttrs(obj); break;
+		case ARRAY: size += SizeOfArray(obj); break;
+		case STRING: size += strlen(obj.p->str); break;
+	}
+	return size;
+}
+
+void SizeOf(Object *stack, int *sp)
+{
+	Object obj = stack[(*sp)-1];
+	stack[(*sp)++] = (Object){PrimType(INT), SizeOfObject(obj)};
+}
+
 // Class File
 
 void File_File(Object *stack, int *sp)
 {
 	char *path = (char*)stack[(*sp)-2].p->str;
 	char *mode = (char*)stack[(*sp)-1].p->str;
-	Object file_obj = stack[(*sp)-3];
+	Object *file_obj = &stack[(*sp)-3];
 
 	FILE *file = fopen(path, mode);
-	file_obj.p->v = file;
+	file_obj->p = AllocPointer(file);
 	stack[(*sp)++] = (Object){PrimType(INT), 0};
+}
+
+void File_Has_Error(Object *stack, int *sp)
+{
+	Object *file_obj = &stack[(*sp)-1];
+	int has_error = !file_obj->p->v;
+	stack[(*sp)++] = (Object){PrimType(BOOL), has_error};
 }
 
 void File_ReadAll(Object *stack, int *sp)
 {
 	Object file_obj = stack[(*sp)-1];
 	FILE *file = (FILE*)file_obj.p->v;
+	if (!file)
+	{
+		stack[(*sp)++] = (Object){PrimType(INT), 0};
+		return;
+	}
 
 	fseek(file, 0L, SEEK_END);
 	int length = ftell(file);
@@ -107,7 +158,10 @@ void File_ReadAll(Object *stack, int *sp)
 void File_Close(Object *stack, int *sp)
 {
 	Object file_obj = stack[(*sp)-1];
-	int error = fclose((FILE*)file_obj.p->v);
+	FILE *file = (FILE*)file_obj.p->v;
+	int error = 0;
+	if (file)
+		error = fclose(file);
 	stack[(*sp)++] = (Object){PrimType(INT), error};
 }
 
@@ -118,20 +172,23 @@ void File_It(Object *stack, int *sp)
 	Object *attrs = (Object*)malloc(sizeof(Object) * 100);
 	int counter = 1;
 
-	char * line = NULL;
-    size_t len = 0;
-    ssize_t read;
-	while ((read = getline(&line, &len, file)) != -1) 
+	if (file)
 	{
-		int size = strlen(line);
-		char *line_str = (char*)malloc(size);
-		memcpy(line_str, line, size-1);
-		line_str[size-1] = '\0';
+		char * line = NULL;
+		size_t len = 0;
+		ssize_t read;
+		while ((read = getline(&line, &len, file)) != -1) 
+		{
+			int size = strlen(line);
+			char *line_str = (char*)malloc(size);
+			memcpy(line_str, line, size-1);
+			line_str[size-1] = '\0';
 
-		Object item;
-		item.type = PrimType(STRING);
-		item.p = AllocPointer(line_str);
-		attrs[counter++] = item;
+			Object item;
+			item.type = PrimType(STRING);
+			item.p = AllocPointer(line_str);
+			attrs[counter++] = item;
+		}
 	}
 	attrs[0] = (Object){PrimType(INT), counter-1};
 	attrs = (Object*)realloc(attrs, sizeof(Object) * counter);
@@ -155,8 +212,10 @@ void RegisterIO()
 	RegisterFunc((char*)"input", Input);
 	RegisterFunc((char*)"int", Int);
 	RegisterFunc((char*)"float", Float);
+	RegisterFunc((char*)"sizeof", SizeOf);
 
 	RegisterFunc((char*)"File:File", File_File);
+	RegisterFunc((char*)"File:has_error", File_Has_Error);
 	RegisterFunc((char*)"File:read_all", File_ReadAll);
 	RegisterFunc((char*)"File:close", File_Close);
 	RegisterFunc((char*)"File:operator_it", File_It);

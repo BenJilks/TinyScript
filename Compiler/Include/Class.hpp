@@ -1,22 +1,21 @@
 #pragma once
 #include "Tokenizer.hpp"
 #include "Symbol.hpp"
+#include "CodeGen.hpp"
 #include <vector>
 
 class Function;
 class Class
 {
 public:
-    Class(string name, Tokenizer *tk, vector<char>* code, SymbolTable table);
-    Symbol *FindAttribute(string name);
-    Function *FindMethod(string name);
-    int IndexOf(string name);
+    Class(string name, Tokenizer *tk, CodeGen *code, GlobalScope *global);
     void Compile();
+    void CompileSys(vector<string> &syscalls);
 
+    inline Scope *Attrs() const { return attrs; }
     inline string Name() const { return name; }
-    inline int Size() const { return attrs.size(); }
+    inline int Size() const { return attrs->Length(); }
     inline bool IsSysClass() const { return is_sys_class; }
-    inline void AddMethod(Function *func) { methods.push_back(func); }
 
     ~Class();
 
@@ -26,10 +25,9 @@ private:
 
     string name;
     bool is_sys_class;
-    vector<Symbol*> attrs;
-    vector<Function*> methods;
-    vector<char>* code;
-    SymbolTable table;
+    CodeGen *code;
+    Scope *attrs;
+    GlobalScope *global;
     Tokenizer *tk;
 
 };

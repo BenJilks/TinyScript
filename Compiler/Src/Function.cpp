@@ -1,20 +1,29 @@
 #include "Function.hpp"
 #include "Class.hpp"
 #include "Bytecode.hpp"
+#include "Debug.hpp"
 #include <algorithm>
 #include <memory.h>
 
-Function::Function(string name, int location, SymbolTable table, Tokenizer *tk) :
-    name(name), location(location), table(table), tk(tk), is_syscall(false)
+Function::Function(string name, int location, GlobalScope *global, Tokenizer *tk, Scope *attrs) :
+    name(name), location(location), scope(global), tk(tk), is_syscall(false), type(NULL)
 {
-    expression = Expression(&this->table, tk);
-    this->table.AddFunction(this);
+    expression = Expression(&scope, tk, attrs);
+    scope.MakeFunc(name, location, false, NULL);
+}
+
+void Function::AddSelf(SymbolType *type)
+{
+    scope.MakeParameter("self", type);
 }
 
 void Function::Compile()
 {
+    START_SCOPE();
     CompileParams();
     CompileStaticReturn();
+    END_SCOPE();
+
     CompileBlock();
 }
 
@@ -26,9 +35,9 @@ void Function::CompileStaticReturn()
         tk->Match(":", TkType::Of);
         Token type_name = tk->Match("Name", TkType::Name);
 
-        int prim = SymbolTable::GetPrimType(type_name.data);
-        if (prim == (int)Primitive::OBJECT)
-            type = table.FindClass(type_name.data);
+        Symbol *func = scope.FindSymbol(name);
+        GlobalScope *global_scope = scope.Global();
+        type = global_scope->Type(type_name.data);
     }
 }
 
@@ -39,38 +48,39 @@ void Function::CompileParams()
     while (tk->LookType() != TkType::CloseArg)
     {
         Token arg = tk->Match("Name", TkType::Name);
-        table.AddArgument(arg.data);
-        if (tk->LookType() == TkType::Of)
-            AssignConstType(arg.data);
+        SymbolType *type = ParseConstType();
+        scope.MakeParameter(arg.data, type);
+        LOG("Parameter '%s' of type '%s'\n", arg.data.c_str(), 
+            type == NULL ? "none" : type->Name().c_str());
         
         if (tk->LookType() == TkType::CloseArg)
             break;
         tk->Match(",", TkType::Next);
     }
     tk->Match(")", TkType::CloseArg);
+    scope.FinishParams();
 }
 
-vector<char> Function::OutputCode()
+CodeGen Function::OutputCode()
 {
-    vector<char> out_code;
+    CodeGen out_code;
 
     // Allocate stack frame of function size
-    out_code.push_back((char)ByteCode::ALLOC);
-    out_code.push_back((char)table.Length());
-    out_code.insert(out_code.end(), code.begin(), code.end());
+    out_code.Instruction(ByteCode::ALLOC);
+    out_code.Argument((char)scope.Length());
+    out_code.Append(code);
 
     // Add default return statement for (int)0 at end of function
-    out_code.push_back((char)ByteCode::PUSH_INT);
-    out_code.push_back((char)0);
-    out_code.push_back((char)0);
-    out_code.push_back((char)0);
-    out_code.push_back((char)0);
-    out_code.push_back((char)ByteCode::RETURN);
+    out_code.Instruction(ByteCode::PUSH_INT);
+    out_code.Argument((int)0);
+    out_code.Instruction(ByteCode::RETURN);
     return out_code;
 }
 
 void Function::CompileBlock()
 {
+    START_SCOPE();
+
     // If the next token is '{' then read a multi line block
     if (tk->LookType() == TkType::OpenBlock)
     {
@@ -78,11 +88,14 @@ void Function::CompileBlock()
         while (tk->LookType() != TkType::CloseBlock && !tk->HasError())
             CompileStatement();
         tk->Match("}", TkType::CloseBlock);
-        return;
+    }
+    else
+    {
+        // Otherwise, read a single line block
+        CompileStatement();
     }
 
-    // Otherwise, read a single line block
-    CompileStatement();
+    END_SCOPE();
 }
 
 void Function::CompileStatement()
@@ -113,20 +126,16 @@ static void PushData(T data, vector<char>& code)
 }
 
 // Read const type and assing to var
-void Function::AssignConstType(string var)
+SymbolType *Function::ParseConstType()
 {
+    if (tk->LookType() != TkType::Of)
+        return NULL;
+
     tk->Match(":", TkType::Of);
-    Token type = tk->Match("Name", TkType::Name);
-    
-    Symbol *symb = table.FindSymbol(var);
-    symb->is_const = true;
-    symb->is_prim = true;
-    symb->prim_type = SymbolTable::GetPrimType(type.data);
-    if ((Primitive)symb->prim_type == Primitive::OBJECT)
-    {
-        symb->type = table.FindClass(type.data);
-        symb->is_prim = false;
-    }
+    Token type_name = tk->Match("Name", TkType::Name);
+    GlobalScope *global_scope = scope.Global();
+    SymbolType *type = global_scope->Type(type_name.data);
+    return type;
 }
 
 // Compile a variable assign statment or function call
@@ -139,78 +148,80 @@ void Function::CompileAssign()
     if (tk->LookType() == TkType::Of)
     {
         // TODO: Error checking here... and everywhere
-        table.AddLocal(left.data);
-        AssignConstType(left.data);
+        Symbol *symb = scope.MakeLocal(left.data);
+        symb->AssignType(ParseConstType());
     }
 
     // Parse path location and call function if path ends with one
     vector<ExpressionPath> path = expression.CompilePath(left.data);
     if (expression.IsPathFunc(path))
     {
-        AppendTo(code, expression.GenPushPath(path));
-        code.push_back((char)ByteCode::POP);
-        code.push_back((char)1);
+        LOG("Call function '%s'\n", left.data.c_str());
+        code.Append(expression.GenPushPath(path));
+        code.Instruction(ByteCode::POP);
+        code.Argument((char)1);
         return;
     }
     
     // Otherwise, assign value
+    LOG("Assign '%s'\n", left.data.c_str());
     tk->Match("=", TkType::Assign);
-    AppendTo(code, expression.Compile());
-    AppendTo(code, expression.GenAssignPath(path));
+    code.Append(expression.Compile());
+    code.Append(expression.GenAssignPath(path));
 }
 
 // Returns from a function with a value
 // := ret <Value>
 void Function::CompileReturn()
 {
+    LOG("Returning\n");
     tk->Match("ret", TkType::Return);
-    AppendTo(code, expression.Compile());
-    code.push_back((char)ByteCode::RETURN);
+    code.Append(expression.Compile());
+    code.Instruction(ByteCode::RETURN);
 }
 
 // Only execute code if a condition is met
 // := if <condition> <block>
 void Function::CompileIf()
 {
+    LOG("If statement\n");
     tk->Match("if", TkType::If);
-    AppendTo(code, expression.Compile());
+    code.Append(expression.Compile());
     
-    code.push_back((char)ByteCode::BRANCH_IF_NOT);
-    code.push_back((char)0);
-    int addr = code.size()-1;
+    code.Instruction(ByteCode::BRANCH_IF_NOT);
+    int else_l = code.MakeLabel();
     CompileBlock();
-    code[addr] = code.size() - addr;
+    code.SetLabel(else_l);
 }
 
 void Function::CompileIter(vector<ExpressionPath> path)
 {
     string name = path[0].var;
-    table.AddLocal(name);
+    Symbol *iter = scope.MakeLocal(name);
 
     tk->Match("in", TkType::In);
-    AppendTo(code, expression.Compile());
-    code.push_back((char)ByteCode::MAKE_IT);
-    int start = code.size();
-    code.push_back((char)ByteCode::BRANCH_IF_IT);
-    int addr = code.size();
-    PushData(0, code);
-    code.push_back((char)ByteCode::IT_NEXT);
-    code.push_back((char)table.FindLocation(name));
+    code.Append(expression.Compile());
+    code.Instruction(ByteCode::MAKE_IT);
+    int start = code.CurrPC();
+    code.Instruction(ByteCode::BRANCH_IF_IT);
+    int end = code.MakeLabel();
+    code.Instruction(ByteCode::IT_NEXT);
+    code.Argument((char)iter->Location());
 
     CompileBlock();
 
-    code.push_back((char)ByteCode::BRANCH);
-    PushData(start - code.size(), code);
-    int diff = code.size() - addr;
-    memcpy(&code[addr], &diff, sizeof(int));
-    code.push_back((char)ByteCode::POP);
-    code.push_back((char)1);
+    code.Instruction(ByteCode::BRANCH);
+    code.Argument(start - code.CurrPC());
+    code.SetLabel(end);
+    code.Instruction(ByteCode::POP);
+    code.Argument((char)1);
 }
 
 // Repeat a block of code an amount of times
 // := for <var> = <start> to <end> <block>
 void Function::CompileFor()
 {
+    LOG("For loop\n");
     tk->Match("for", TkType::For);
     Token var = tk->Match("Name", TkType::Name);
 
@@ -222,57 +233,50 @@ void Function::CompileFor()
         return;
     }
     tk->Match("=", TkType::Assign);
-    AppendTo(code, expression.Compile());
-    AppendTo(code, expression.GenAssignPath(path));
+    code.Append(expression.Compile());
+    code.Append(expression.GenAssignPath(path));
     tk->Match("to", TkType::To);
+    Symbol *iter = scope.FindSymbol(var.data);
 
     // Test if value is less than end state, and jump to end if not
-    int start = code.size();
-    code.push_back((char)ByteCode::PUSH_LOC);
-    code.push_back((char)table.FindLocation(var.data));
-    AppendTo(code, expression.Compile());
-    code.push_back((char)ByteCode::LESSTHAN);
-    code.push_back((char)ByteCode::BRANCH_IF_NOT);
-    int addr = code.size();
-    PushData(0, code);
+    int start = code.CurrPC();
+    code.Instruction(ByteCode::PUSH_LOC);
+    code.Argument((char)iter->Location());
+    code.Append(expression.Compile());
+    code.Instruction(ByteCode::LESSTHAN);
+    code.Instruction(ByteCode::BRANCH_IF_NOT);
+    int end = code.MakeLabel();
 
     CompileBlock();
 
     // Increment value
-    code.push_back((char)ByteCode::INC_LOC);
-    code.push_back((char)table.FindLocation(var.data));
-    code.push_back((char)1);
+    code.Instruction(ByteCode::INC_LOC);
+    code.Argument((char)iter->Location());
+    code.Argument((char)1);
 
     // Jump to start of loop
-    code.push_back((char)ByteCode::BRANCH);
-    PushData(start - code.size(), code);
-    int diff = code.size() - addr;
-    memcpy(&code[addr], &diff, sizeof(int));
+    code.Instruction(ByteCode::BRANCH);
+    code.Argument(start - code.CurrPC());
+    code.SetLabel(end);
 }
 
 void Function::CompileWhile()
 {
+    LOG("While loop\n");
     tk->Match("while", TkType::While);
     
     // Compile condition
-    int start = code.size();
-    AppendTo(code, expression.Compile());
+    int start = code.CurrPC();
+    code.Append(expression.Compile());
     
     // Branch to end if condition is not met
-    code.push_back((char)ByteCode::BRANCH_IF_NOT);
-    int addr = code.size();
-    PushData(0, code);
+    code.Instruction(ByteCode::BRANCH_IF_NOT);
+    int end = code.MakeLabel();
 
     CompileBlock();
 
     // Jump to start
-    code.push_back((char)ByteCode::BRANCH);
-    PushData(start - code.size(), code);
-    int diff = code.size() - addr;
-    memcpy(&code[addr], &diff, sizeof(int));
-}
-
-Function::~Function()
-{
-    table.PopScope();
+    code.Instruction(ByteCode::BRANCH);
+    code.Argument(start - code.CurrPC());
+    code.SetLabel(end);
 }

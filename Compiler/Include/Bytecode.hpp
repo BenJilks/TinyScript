@@ -18,7 +18,11 @@ enum class ByteCode
 	DIV,
 	EQUALS,
 	GREATERTHAN,
+	GREATERTHANEQUAL,
 	LESSTHAN,
+	LESSTHANEQUAL,
+	AND,
+	OR,
 	CALL,
 	CALL_SYS,
 	RETURN,
@@ -35,14 +39,4 @@ enum class ByteCode
 	MAKE_ARRAY,
 	MAKE_IT,
 	IT_NEXT
-};
-
-enum class Primitive
-{
-	INT,
-	FLOAT,
-	STRING,
-	BOOL,
-	CHAR,
-	OBJECT
 };

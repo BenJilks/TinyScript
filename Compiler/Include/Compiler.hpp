@@ -1,7 +1,9 @@
 #pragma once
 #include "Symbol.hpp"
 #include "Tokenizer.hpp"
+#include "CodeGen.hpp"
 
+class Class;
 class Compiler
 {
 public:
@@ -13,9 +15,9 @@ public:
 
     ~Compiler();
 private:
-    void DumpSysCalls(vector<char> &out_code);
-    void DumpTypes(vector<char> &out_code);
-    vector<char> Optimize();
+    void DumpSysCalls(CodeGen &out_code);
+    void DumpTypes(CodeGen &out_code);
+    CodeGen Optimize();
 
     void CompileInclude(Tokenizer *tk);
     void CompileFunc(Tokenizer *tk);
@@ -23,8 +25,11 @@ private:
     void CompileClass(Tokenizer *tk);
     void CompileSysClass(Tokenizer *tk);
 
-    vector<char> code;
+    CodeGen code;
     vector<string> compiled_files;
     vector<string> syscalls;
-    SymbolTable table;
+
+    vector<Class*> classes;
+    GlobalScope global_scope;
+    Scope *globals;
 };

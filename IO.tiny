@@ -5,6 +5,7 @@ syscall input
 syscall int
 syscall float
 syscall str
+syscall sizeof
 
 sysclass String
 {
@@ -18,6 +19,7 @@ sysclass String
 sysclass File
 {
 	syscall File
+	syscall has_error
 	syscall read_all
 	syscall close
 	syscall operator_it

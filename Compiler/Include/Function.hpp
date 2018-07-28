@@ -4,14 +4,15 @@
 #include "Tokenizer.hpp"
 #include "Symbol.hpp"
 #include "Expression.hpp"
+#include "CodeGen.hpp"
 using namespace std;
 
 class Function
 {
 public:
-	Function(string name, int id) : name(name), location(id), is_syscall(true), type(NULL) {}
-    Function(string name, int location, SymbolTable table, Tokenizer *tk);
-    vector<char> OutputCode();
+    Function(string name, int location, GlobalScope *global, Tokenizer *tk, Scope *attrs);
+    CodeGen OutputCode();
+	void AddSelf(SymbolType *type);
 	void Compile();
     void CompileBlock();
 	void CompileStatement();
@@ -19,12 +20,10 @@ public:
     inline int Location() const { return location; }
     inline string Name() const { return name; }
 	inline bool IsSysCall() const { return is_syscall; }
-	inline Class *StaticType() const { return type; }
-
-	~Function();
+	inline SymbolType *ReturnType() const { return type; }
     
 private:
-	void AssignConstType(string var);
+	SymbolType *ParseConstType();
 	void CompileStaticReturn();
 	void CompileParams();
 	void CompileAssign();
@@ -36,12 +35,12 @@ private:
 
 	string name;
 	int location;
-	Class *type;
+	SymbolType *type;
 
-    vector<char> code;
+    CodeGen code;
 	Tokenizer *tk;
-	SymbolTable table;
 	Expression expression;
 	bool is_syscall;
+	Scope scope;
 
 };

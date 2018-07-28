@@ -44,6 +44,12 @@ char *ObjectAsString(Object obj, char *str, Object *stack, int *sp)
 char *AsString(Object obj, Object *stack, int *sp)
 {
 	char *str = (char*)malloc(80);
+	if (obj.type == NULL)
+	{
+		strcpy(str, "null");
+		return str;
+	}
+
 	switch(obj.type->prim)
 	{
 		case INT: sprintf(str, "%i", obj.i); break;

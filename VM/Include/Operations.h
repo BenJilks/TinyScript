@@ -117,6 +117,33 @@ Type t_char = {"char", CHAR, sizeof(char), 1, -1, -1, -1, -1, -1, -1};
 		return obj; \
 	}
 
+#define LOGIC_FUNC(name, op) \
+	Object name(Object left, Object right) \
+	{ \
+		Object obj; \
+		switch(left.type->prim) \
+		{ \
+			case INT: \
+				OP_ERROR(left, right, op); \
+				break; \
+			case FLOAT: \
+				OP_ERROR(left, right, op); \
+				break; \
+			case CHAR: \
+				OP_ERROR(left, right, op); \
+				break; \
+			case BOOL: \
+				if (right.type->prim != BOOL) \
+				{ \
+					OP_ERROR(left, right, op); \
+					break; \
+				} \
+				obj.type = &t_bool; obj.i = left.c op right.c; \
+				break; \
+		} \
+		return obj; \
+	}
+
 Object Equals(Object left, Object right)
 {
 	Object obj;

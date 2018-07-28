@@ -1,6 +1,37 @@
 include "IO.tiny"
 
+class Display
+{
+	width: int
+	height: int
+	should_close: bool
+
+	func Display(width, height)
+	{
+		self.width = width
+		self.height = height
+		should_close = false
+
+		println("Starting display")
+	}
+
+	func close()
+	{
+		println("Closing Display")
+		should_close = true
+	}
+
+	func operator_to_string()
+		ret "Display of size " + width + "x" + height 
+}
+
 func main()
 {
-	print(str(10) + '\n')
+	display: Display = Display(800, 600)
+	println(display)
+	println("")
+
+	println("Should close: " + display.should_close)
+	display.close()
+	println("Should close: " + display.should_close)
 }

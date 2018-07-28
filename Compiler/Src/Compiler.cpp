@@ -2,12 +2,17 @@
 #include "Class.hpp"
 #include "Function.hpp"
 #include "Bytecode.hpp"
+#include "Debug.hpp"
 #include <iostream>
 #include <algorithm>
 
 bool Compiler::Compile(string file_path)
 {
+    LOG("Compiling file '%s'\n", file_path.c_str());
+    START_SCOPE();
     Tokenizer tk(file_path);
+    globals = global_scope.Globals();
+
     while (tk.LookType() != TkType::EndOfFile && !tk.HasError())
     {
         switch(tk.LookType())
@@ -20,7 +25,9 @@ bool Compiler::Compile(string file_path)
             default: tk.Error("Unexpect token '" + tk.LookData() + "' in global scope"); break;
         }
     }
-
+    
+    END_SCOPE();
+    LOG("Finished compiling '%s'\n", file_path.c_str());
     return tk.HasError();
 }
 
@@ -40,44 +47,36 @@ static void PushData(T data, vector<char> &code)
         bytes + sizeof(T));
 }
 
-static void DumpString(string str, vector<char> &out_code)
-{
-    char length = str.length();
-    out_code.push_back(length);
-    out_code.insert(out_code.end(), 
-        str.begin(), str.end());
-}
-
-void Compiler::DumpSysCalls(vector<char> &out_code)
+void Compiler::DumpSysCalls(CodeGen &out_code)
 {
     char count = syscalls.size();
-    out_code.push_back(count);
+    out_code.Argument((char)count);
 
     for (string syscall : syscalls)
-        DumpString(syscall, out_code);
+        out_code.String(syscall);
 }
 
-static void DumpOperator(Class *c, string name, vector<char> &out_code)
+static void DumpOperator(Class *c, string name, CodeGen &out_code)
 {
-    Function *func = c->FindMethod(name);
+    Symbol *func = c->Attrs()->FindSymbol(name);
     if (func == NULL)
-        PushData(-1, out_code);
+        out_code.Argument(-1);
     else
-        PushData(func->Location(), out_code);
+        out_code.Argument(func->Location());
 }
 
-void Compiler::DumpTypes(vector<char> &out_code)
+void Compiler::DumpTypes(CodeGen &out_code)
 {
-    char count = table.Classes().size();
-    out_code.push_back(count);
+    char count = classes.size();
+    out_code.Argument((char)count);
 
     // Push class data:
     // string: name, int: size
-    for (Class *c : table.Classes())
+    for (Class *c : classes)
     {
-        DumpString(c->Name(), out_code);
-        PushData(c->Size(), out_code);
-        PushData(c->IsSysClass(), out_code);
+        out_code.String(c->Name());
+        out_code.Argument(c->Size());
+        out_code.Argument(c->IsSysClass());
         DumpOperator(c, "operator_add", out_code);
         DumpOperator(c, "operator_subtract", out_code);
         DumpOperator(c, "operator_multiply", out_code);
@@ -89,7 +88,7 @@ void Compiler::DumpTypes(vector<char> &out_code)
     }
 }
 
-vector<char> Compiler::Optimize()
+CodeGen Compiler::Optimize()
 {
     return code;
     /*
@@ -104,22 +103,21 @@ vector<char> Compiler::Optimize()
 
 vector<char> Compiler::GetDump()
 {
-    vector<char> out_code;
-    Function *func = table.FindFunction("main");
+    CodeGen out_code;
+    Symbol *func = globals->FindSymbol("main");
     if (func == NULL)
     {
         cout << "Error: No 'main' function found" << endl;
-        return out_code;
+        return vector<char>();
     }
 
-    PushData(func->Location(), out_code);
+    out_code.Argument(func->Location());
     DumpSysCalls(out_code);
     DumpTypes(out_code);
     
-    vector<char> optimized = Optimize();
-    out_code.insert(out_code.end(), 
-        optimized.begin(), optimized.end());
-    return out_code;
+    CodeGen optimized = Optimize();
+    out_code.Append(optimized);
+    return out_code.GetCode();
 }
 
 // Compiles a new file
@@ -128,6 +126,7 @@ void Compiler::CompileInclude(Tokenizer *tk)
 {
     tk->Match("include", TkType::Include);
     Token file_path = tk->Match("String", TkType::String);
+    LOG("Include for '%s'\n", file_path.data.c_str());
 
     // If the file has already been compiled, then ignore this statement
     if (find(compiled_files.begin(), compiled_files.end(), 
@@ -144,15 +143,16 @@ void Compiler::CompileFunc(Tokenizer *tk)
 {
     tk->Match("func", TkType::Function);
     Token name = tk->Match("Name", TkType::Name);
+    LOG("Function '%s'\n", name.data.c_str());
     
-    Function *func = new Function(name.data, 
-        code.size(), table, tk);
-    func->Compile();
+    Function func(name.data, code.CurrPC(), &global_scope, tk, NULL);
+    func.Compile();
     
     // Append function code to main code, then add function to symbol table
-    vector<char> func_code = func->OutputCode();
-    code.insert(code.end(), func_code.begin(), func_code.end());
-    table.AddFunction(func);
+    CodeGen func_code = func.OutputCode();
+    code.Append(func_code);
+    Symbol *symb = globals->MakeFunc(name.data, func.Location(), false, NULL);
+    symb->AssignType(func.ReturnType());
 }
 
 // Marks a function name as a system call
@@ -161,8 +161,10 @@ void Compiler::CompileSysCall(Tokenizer *tk)
 {
     tk->Match("syscall", TkType::SysCall);
     Token name = tk->Match("Name", TkType::Name);
+    LOG("Syscall '%s'\n", name.data.c_str());
 
-    table.AddFunction(new Function(name.data, syscalls.size()));
+    // new Function(name.data, syscalls.size())
+    globals->MakeFunc(name.data, syscalls.size(), true, NULL);
     syscalls.push_back(name.data);
 }
 
@@ -172,10 +174,12 @@ void Compiler::CompileClass(Tokenizer *tk)
 {
 	tk->Match("class", TkType::Class);
 	Token name = tk->Match("Name", TkType::Name);
+    LOG("Class '%s'\n", name.data.c_str());
 	
-	Class *c = new Class(name.data, tk, &code, table);
+	Class *c = new Class(name.data, tk, &code, &global_scope);
+    global_scope.MakeType(name.data, c->Attrs());
 	c->Compile();
-	table.AddClass(c);
+    classes.push_back(c);
 }
 
 // Marks a class name as a system class
@@ -184,23 +188,16 @@ void Compiler::CompileSysClass(Tokenizer *tk)
 {
     tk->Match("sysclass", TkType::SysClass);
     Token name = tk->Match("Name", TkType::Name);
+    LOG("SysClass '%s'\n", name.data.c_str());
 
-    Class *c = new Class(name.data, tk, &code, table);
-    tk->Match("{", TkType::OpenBlock);
-    while (tk->LookType() != TkType::CloseBlock)
-    {
-        // Match a syscall statement (syscall <Name>) and add it as a method
-        tk->Match("syscall", TkType::SysCall);
-        Token call = tk->Match("Name", TkType::Name);
-        c->AddMethod(new Function(call.data, syscalls.size()));
-        syscalls.push_back(name.data + ":" + call.data);
-    }
-    tk->Match("}", TkType::CloseBlock);
-    table.AddClass(c);
+    Class *c = new Class(name.data, tk, &code, &global_scope);
+    c->CompileSys(syscalls);
+    global_scope.MakeType(name.data, c->Attrs());
+    classes.push_back(c);
 }
 
 Compiler::~Compiler()
 {
-    // Free symbol data
-    table.CleanUp();
+    for (Class *c : classes)
+        delete c;
 }

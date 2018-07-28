@@ -19,25 +19,25 @@ static inline void AppendTo(vector<char>& dest, vector<char> src)
 }
 
 // Compiles a global function call
-vector<char> Expression::CompileFunction(string name)
+CodeGen Expression::CompileFunction(string name)
 {
-    Function *func = table->FindFunction(name);
+    Symbol *func = scope->FindSymbol(name);
     if (func == NULL)
     {
         tk->Error("No function called '" + name + "' found");
-        return vector<char>();
+        return CodeGen();
     }
     return CompileCallFunc(func);
 }
 
-int Expression::CompileFuncArgs(vector<char> &code)
+int Expression::CompileFuncArgs(CodeGen &code)
 {
     int arg_length = 0;
     tk->Match("(", TkType::OpenArg);
     while (tk->LookType() != TkType::CloseArg)
     {
         arg_length++;
-        AppendTo(code, Compile());
+        code.Append(Compile());
         if (tk->LookType() != TkType::Next)
             break;
         tk->Match(",", TkType::Next);
@@ -47,27 +47,27 @@ int Expression::CompileFuncArgs(vector<char> &code)
 }
 
 // Compiles a function call of know origin
-vector<char> Expression::CompileCallFunc(Function *func)
+CodeGen Expression::CompileCallFunc(Symbol *func)
 {
     // Push args
-    vector<char> code;
+    CodeGen code;
     int arg_length = CompileFuncArgs(code);
 
     // Call function
-    if (func->IsSysCall())
-        code.push_back((char)ByteCode::CALL_SYS);
+    if (func->IsSystem())
+        code.Instruction(ByteCode::CALL_SYS);
     else
-        code.push_back((char)ByteCode::CALL);
-    PushData(func->Location(), code);
+        code.Instruction(ByteCode::CALL);
+    code.Argument(func->Location());
 
     // Clean up arguments from stack after function call
-    code.push_back((char)ByteCode::POP_ARGS);
-    code.push_back(arg_length);
+    code.Instruction(ByteCode::POP_ARGS);
+    code.Argument((char)arg_length);
     return code;
 }
 
 // TODO: Explain what this does
-void Expression::ParsePathNode(ExpressionPath& node, Class *pre_type)
+void Expression::ParsePathNode(ExpressionPath& node, SymbolType *pre_type)
 {
     tk->Match(".", TkType::Path);
     Token class_name = tk->Match("Name", TkType::Name);
@@ -76,7 +76,7 @@ void Expression::ParsePathNode(ExpressionPath& node, Class *pre_type)
     {
         tk->Match(":", TkType::Of);
         Token var_name = tk->Match("Name", TkType::Name);
-        node.c = table->FindClass(class_name.data);
+        node.c = global->Type(class_name.data);
         node.var = var_name.data;
         return;
     }
@@ -99,7 +99,7 @@ void Expression::ParsePathIndex(ExpressionPath& node)
 // TODO: Explain what this does
 void Expression::ParseFunctionNode(ExpressionPath& node)
 {
-    Function *func = node.c->FindMethod(node.var);
+    Symbol *func = node.c->Attr(node.var);
     if (func == NULL)
     {
         tk->Error("No method called '" + node.var + "' in '" + 
@@ -110,22 +110,22 @@ void Expression::ParseFunctionNode(ExpressionPath& node)
     node.type = PathType::Func;
 }
 
-Class *Expression::GetNodeType(ExpressionPath node)
+SymbolType *Expression::GetNodeType(ExpressionPath node)
 {
     if (node.c == NULL)
         return NULL;
 
     if (node.type == PathType::Func)
     {
-        Function *func = node.c->FindMethod(node.var);
+        Symbol *func = node.c->Attr(node.var);
         if (func != NULL)
-            return func->StaticType();
+            return func->Type();
         return NULL;
     }
     
-    Symbol *symb = node.c->FindAttribute(node.var);
+    Symbol *symb = node.c->Attr(node.var);
     if (symb != NULL)
-        return symb->type;
+        return symb->Type();
     return NULL;
 }
 
@@ -136,7 +136,7 @@ ExpressionPath Expression::ParseFirstPath(string var)
 
     if (tk->LookType() == TkType::OpenArg)
     {
-        Function *func = table->FindFunction(var);
+        Symbol *func = scope->FindSymbol(var);
         if (func == NULL)
         {
             tk->Error("Could not find function named '" + var + "'");
@@ -154,8 +154,8 @@ vector<ExpressionPath> Expression::CompilePath(string var)
     vector<ExpressionPath> path;
     path.push_back(ParseFirstPath(var));
 
-    Symbol *symb = table->FindSymbol(var);
-    Class *pre_type = symb == NULL ? NULL : symb->type;
+    Symbol *symb = scope->FindSymbol(var);
+    SymbolType *pre_type = symb == NULL ? NULL : symb->Type();
     while (tk->LookType() == TkType::Path || tk->LookType() == TkType::OpenIndex)
     {
         ExpressionPath node;
@@ -179,55 +179,87 @@ vector<ExpressionPath> Expression::CompilePath(string var)
     return path;
 }
 
-vector<char> Expression::GenFirstPath(ExpressionPath first)
+CodeGen Expression::GenSelfAttribute(ExpressionPath first)
 {
-    if (first.type == PathType::Func)
-        return first.code;
-    
-    vector<char> code;
-    if (table->FindSymbol(first.var) == NULL)
+    CodeGen code;
+    Symbol *symb = attrs->FindSymbol(first.var);
+    if (symb == NULL)
     {
         tk->Error("No variable named '" + first.var + 
             "' found in scope");
         return code;
     }
 
-    int location = table->FindLocation(first.var);
-    code.push_back((char)ByteCode::PUSH_LOC);
-    code.push_back((char)location);
+    Symbol *self = scope->FindSymbol("self");
+    code.Instruction(ByteCode::PUSH_LOC);
+    code.Argument((char)self->Location());
+
+    code.Instruction(ByteCode::PUSH_ATTR);
+    code.Argument((char)symb->Location());
     return code;
 }
 
-void Expression::GenPushAttr(vector<char> &code, ExpressionPath node)
+CodeGen Expression::GenFirstPath(ExpressionPath first)
+{
+    if (first.type == PathType::Func)
+        return first.code;
+    
+    CodeGen code;
+    Symbol *symb = scope->FindSymbol(first.var);
+    if (symb == NULL)
+    {
+        if (attrs != NULL)
+            return GenSelfAttribute(first);
+        
+        tk->Error("No variable named '" + first.var + 
+            "' found in scope");
+        return code;
+    }
+
+    int location = symb->Location();
+    code.Instruction(ByteCode::PUSH_LOC);
+    code.Argument((char)location);
+    return code;
+}
+
+void Expression::GenPushAttr(CodeGen &code, ExpressionPath node)
 {
     // Push the attrubute of last object on stack
-    code.push_back((char)ByteCode::PUSH_ATTR);
+    code.Instruction(ByteCode::PUSH_ATTR);
 
-    int index = node.c->IndexOf(node.var);
+    Symbol *symb = node.c->Attr(node.var);
+    if (symb == NULL)
+    {
+        tk->Error("The class '" + node.c->Name() + 
+            "' does not have attribute '" + node.var + "'");
+        return;
+    }
+
+    int index = symb->Location();
     if (index == numeric_limits<int>::max())
         tk->Error("No attribute '" + node.var + "' in class '" + 
             node.c->Name() + "' found");
-    code.push_back((char)index);
+    code.Argument((char)index);
 }
 
-void Expression::GenPushMethod(vector<char> &code, ExpressionPath node)
+void Expression::GenPushMethod(CodeGen &code, ExpressionPath node)
 {
     // Call method, and pop extra 'self' arg
-    AppendTo(code, node.code);
-    code.push_back((char)ByteCode::POP_ARGS);
-    code.push_back((char)1);
+    code.Append(node.code);
+    code.Instruction(ByteCode::POP_ARGS);
+    code.Argument((char)1);
 }
 
-void Expression::GenPushIndex(vector<char> &code, ExpressionPath node)
+void Expression::GenPushIndex(CodeGen &code, ExpressionPath node)
 {
-    AppendTo(code, node.code);
-    code.push_back((char)ByteCode::PUSH_INDEX);
+    code.Append(node.code);
+    code.Instruction(ByteCode::PUSH_INDEX);
 }
 
 // Push the value of a path to the stack
-vector<char> Expression::GenPushPath(vector<ExpressionPath> path)
+CodeGen Expression::GenPushPath(vector<ExpressionPath> path)
 {
-    vector<char> code = GenFirstPath(path[0]);
+    CodeGen code = GenFirstPath(path[0]);
     for (int i = 1; i < path.size(); i++)
     {
         ExpressionPath node = path[i];
@@ -242,36 +274,59 @@ vector<char> Expression::GenPushPath(vector<ExpressionPath> path)
     return code;
 }
 
-void Expression::AssignLast(vector<char> &code, ExpressionPath last)
+void Expression::AssignLast(CodeGen &code, ExpressionPath last)
 {
     if (last.type == PathType::Index)
     {
-        AppendTo(code, last.code);
-        code.push_back((char)ByteCode::ASSIGN_INDEX);
+        code.Append(last.code);
+        code.Instruction(ByteCode::ASSIGN_INDEX);
     }
     else
     {
-        code.push_back((char)ByteCode::ASSIGN_ATTR);
-        code.push_back((char)last.c->IndexOf(last.var));
+        Symbol *symb = last.c->Attr(last.var);
+        // TODO: Error checking
+        code.Instruction(ByteCode::ASSIGN_ATTR);
+        code.Argument((char)symb->Location());
     }
 }
 
-// Assing value on stack to the end of the path
-vector<char> Expression::GenAssignPath(vector<ExpressionPath> path)
+CodeGen Expression::AssignSelfAttribute(Symbol *attr)
 {
-    vector<char> code;
+    CodeGen code;
+    Symbol *self = scope->FindSymbol("self");
+    code.Instruction(ByteCode::PUSH_LOC);
+    code.Argument((char)self->Location());
+
+    code.Instruction(ByteCode::ASSIGN_ATTR);
+    code.Argument((char)attr->Location());
+    return code;
+}
+
+// Assing value on stack to the end of the path
+CodeGen Expression::GenAssignPath(vector<ExpressionPath> path)
+{
+    CodeGen code;
     ExpressionPath last = path[path.size() - 1];
 
     // If the path only has one element, then assign to the local var
     if (path.size() == 1)
     {
         // If the local var does not exist, then create one
-        if (table->FindSymbol(last.var) == NULL)
-            table->AddLocal(last.var);
+        Symbol *symb = scope->FindSymbol(last.var);
+        if (symb == NULL)
+        {
+            if (attrs != NULL)
+            {
+                Symbol *attr = attrs->FindSymbol(last.var);
+                if (attr != NULL)
+                    return AssignSelfAttribute(attr);
+            }
+            symb = scope->MakeLocal(last.var);
+        }
         
-        int index = table->FindLocation(last.var);
-        code.push_back((char)ByteCode::ASSIGN);
-        code.push_back((char)index);
+        int index = symb->Location();
+        code.Instruction(ByteCode::ASSIGN);
+        code.Argument((char)index);
         return code;
     }
 
@@ -292,21 +347,21 @@ bool Expression::IsPathFunc(vector<ExpressionPath> path)
 }
 
 // Allocate a new object and push it onto stack
-void Expression::CompileNewObject(Class *c, Node *node)
+void Expression::CompileNewObject(SymbolType *c, Node *node)
 {
-    int class_id = table->FindClassLocation(c);
-    node->code.push_back((char)ByteCode::MALLOC);
-    node->code.push_back((char)class_id);
+    int class_id = c->TypeID();
+    node->code.Instruction(ByteCode::MALLOC);
+    node->code.Argument((char)class_id);
 
     // Find a method named the same as the class
-    Function *init = c->FindMethod(c->Name());
+    Symbol *init = c->Attr(c->Name());
 
     // If found, then use as constructor
     if (init != NULL)
     {
-        AppendTo(node->code, CompileCallFunc(init));
-        node->code.push_back((char)ByteCode::POP);
-        node->code.push_back((char)1);
+        node->code.Append(CompileCallFunc(init));
+        node->code.Instruction(ByteCode::POP);
+        node->code.Argument((char)1);
     }
 }
 
@@ -317,7 +372,7 @@ void Expression::CompileName(Node *node)
     Token name = tk->Match("Name", TkType::Name);
 
     // If it's a name of a class, then create a new instance
-    Class *c = table->FindClass(name.data);
+    SymbolType *c = global->Type(name.data);
     if (c != NULL)
     {
         CompileNewObject(c, node);
@@ -327,22 +382,13 @@ void Expression::CompileName(Node *node)
     // If the next token is an open argument, then call a function
     if (tk->LookType() == TkType::OpenArg)
     {
-        AppendTo(node->code, CompileFunction(name.data));
-        return;
-    }
-
-    // If it's a function location
-    if (table->FindFunction(name.data))
-    {
-        Function *func = table->FindFunction(name.data);
-        node->code.push_back((char)ByteCode::PUSH_INT);
-        PushData(func->Location(), node->code);
+        node->code.Append(CompileFunction(name.data));
         return;
     }
 
     // Otherwise it's a local
     vector<ExpressionPath> path = CompilePath(name.data);
-    AppendTo(node->code, GenPushPath(path));
+    node->code.Append(GenPushPath(path));
 }
 
 void Expression::CompileConst(Node *node)
@@ -358,15 +404,15 @@ void Expression::CompileArray(Node *node)
     while (tk->LookType() != TkType::CloseIndex)
     {
         size++;
-        AppendTo(node->code, Compile());
+        node->code.Append(Compile());
         if (tk->LookType() != TkType::CloseIndex)
             tk->Match(",", TkType::Next);
     }
     tk->Match("]", TkType::CloseIndex);
 
     node->is_literal = false;
-    node->code.push_back((char)ByteCode::MAKE_ARRAY);
-    node->code.push_back((char)size);
+    node->code.Instruction(ByteCode::MAKE_ARRAY);
+    node->code.Argument((char)size);
 }
 
 // Compile an expression inside an expression, enclosed in parentheses
@@ -409,7 +455,8 @@ Node *Expression::CompileFactor()
     Node *left = CompileTerm();
     while (tk->LookType() == TkType::Mul || tk->LookType() == TkType::Div || 
         tk->LookType() == TkType::Equals || tk->LookType() == TkType::GreaterThan || 
-        tk->LookType() == TkType::LessThan)
+        tk->LookType() == TkType::GreaterThanEqual || tk->LookType() == TkType::LessThan ||
+        tk->LookType() == TkType::LessThanEqual)
     {
         Node *node = new Node();
         node->left = left;
@@ -436,36 +483,50 @@ Node *Expression::CompileExpression()
     return left;
 }
 
-// Gen the code for pushing a value to the stack
-vector<char> Expression::GenLiteral(Token literal)
+// Compile the logic operations (and, or)
+Node *Expression::CompileLogic()
 {
-    vector<char> code;
+    Node *left = CompileExpression();
+    while (tk->LookType() == TkType::And || tk->LookType() == TkType::Or)
+    {
+        Node *node = new Node();
+        node->left = left;
+        node->op = tk->NextLook();
+        node->right = CompileExpression();
+        left = node;
+    }
+    return left;
+}
+
+// Gen the code for pushing a value to the stack
+CodeGen Expression::GenLiteral(Token literal)
+{
+    CodeGen code;
     switch (literal.type)
     {
         case TkType::Int:
-            code.push_back((char)ByteCode::PUSH_INT);
-            PushData(stoi(literal.data), code);
+            code.Instruction(ByteCode::PUSH_INT);
+            code.Argument(stoi(literal.data));
             break;
 
         case TkType::Float:
-            code.push_back((char)ByteCode::PUSH_FLOAT);
-            PushData(stof(literal.data), code);
+            code.Instruction(ByteCode::PUSH_FLOAT);
+            code.Argument(stof(literal.data));
             break;
         
         case TkType::Char:  
-            code.push_back((char)ByteCode::PUSH_CHAR);
-            code.push_back(literal.data[0]);
+            code.Instruction(ByteCode::PUSH_CHAR);
+            code.Argument(literal.data[0]);
             break;
 
         case TkType::Bool:
-            code.push_back((char)ByteCode::PUSH_BOOL);
-            code.push_back((char)(literal.data == "true" ? 1 : 0));
+            code.Instruction(ByteCode::PUSH_BOOL);
+            code.Argument((char)(literal.data == "true" ? 1 : 0));
             break;
         
         case TkType::String:
-            code.push_back((char)ByteCode::PUSH_STRING);
-            code.push_back((char)literal.data.size());
-            code.insert(code.end(), literal.data.begin(), literal.data.end());
+            code.Instruction(ByteCode::PUSH_STRING);
+            code.String(literal.data);
             break;
         
         default: break;
@@ -474,7 +535,7 @@ vector<char> Expression::GenLiteral(Token literal)
 }
 
 // Gen the code for an operation
-vector<char> Expression::GenCode(Node *node)
+CodeGen Expression::GenCode(Node *node)
 {
     if (node->left == NULL && node->right == NULL)
     {
@@ -483,19 +544,23 @@ vector<char> Expression::GenCode(Node *node)
         return node->code;
     }
 
-    vector<char> code;
-    AppendTo(code, GenCode(node->left));
-    AppendTo(code, GenCode(node->right));
+    CodeGen code;
+    code.Append(GenCode(node->left));
+    code.Append(GenCode(node->right));
 
     switch(node->op.type)
     {
-        case TkType::Add: code.push_back((char)ByteCode::ADD); break;
-        case TkType::Sub: code.push_back((char)ByteCode::SUB); break;
-        case TkType::Mul: code.push_back((char)ByteCode::MUL); break;
-        case TkType::Div: code.push_back((char)ByteCode::DIV); break;
-        case TkType::Equals: code.push_back((char)ByteCode::EQUALS); break;
-        case TkType::GreaterThan: code.push_back((char)ByteCode::GREATERTHAN); break;
-        case TkType::LessThan: code.push_back((char)ByteCode::LESSTHAN); break;
+        case TkType::Add: code.Instruction(ByteCode::ADD); break;
+        case TkType::Sub: code.Instruction(ByteCode::SUB); break;
+        case TkType::Mul: code.Instruction(ByteCode::MUL); break;
+        case TkType::Div: code.Instruction(ByteCode::DIV); break;
+        case TkType::Equals: code.Instruction(ByteCode::EQUALS); break;
+        case TkType::GreaterThan: code.Instruction(ByteCode::GREATERTHAN); break;
+        case TkType::GreaterThanEqual: code.Instruction(ByteCode::GREATERTHANEQUAL); break;
+        case TkType::LessThan: code.Instruction(ByteCode::LESSTHAN); break;
+        case TkType::LessThanEqual: code.Instruction(ByteCode::LESSTHANEQUAL); break;
+        case TkType::And: code.Instruction(ByteCode::AND); break;
+        case TkType::Or: code.Instruction(ByteCode::OR); break;
         default: tk->Error("Token '" + node->op.data + "' is not an operation"); break;
     }
     return code;
@@ -510,10 +575,10 @@ void Expression::CleanNodes(Node *node)
     delete node;
 }
 
-vector<char> Expression::Compile()
+CodeGen Expression::Compile()
 {
-    Node *node = CompileExpression();
-    vector<char> code = GenCode(node);
+    Node *node = CompileLogic();
+    CodeGen code = GenCode(node);
 
     CleanNodes(node);
     return code;

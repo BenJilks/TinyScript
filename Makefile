@@ -14,7 +14,7 @@ OBJECTS = $(COMPILER_OBJECTS) $(VM_OBJECTS) $(BUILD_PATH)/Main.o
 DEPS = $(OBJECTS:.o=.d)
 
 COMPILE_FLAGS = -std=c++11
-INCLUDES = -I Compiler/Include -I VM/Include -I /usr/local/include
+INCLUDES = -I Compiler/Include -I VM/Include
 LIBS = 
 
 .PHONY: default_target
@@ -46,7 +46,7 @@ $(BUILD_PATH)/%.o: $(COMPILER_SRC_PATH)/%.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -MP -MMD -c $< -o $@
 
 $(BUILD_PATH)/%.o: $(VM_SRC_PATH)/%.c
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -MP -MMD -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -O3 -MP -MMD -c $< -o $@
 
 $(BUILD_PATH)/%.o: %.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -MP -MMD -c $< -o $@

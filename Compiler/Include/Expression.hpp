@@ -1,6 +1,7 @@
 #pragma once
 #include "Symbol.hpp"
 #include "Tokenizer.hpp"
+#include "CodeGen.hpp"
 
 struct Node
 {
@@ -10,7 +11,7 @@ struct Node
     Token op;
 
     // Value data
-    vector<char> code;
+    CodeGen code;
     Token literal;
     bool is_literal;
 };
@@ -24,9 +25,9 @@ enum class PathType
 
 struct ExpressionPath
 {
-    Class *c;
+    SymbolType *c;
     string var;
-    vector<char> code;
+    CodeGen code;
     PathType type;
 };
 
@@ -35,44 +36,49 @@ class Expression
 public:
     Expression() {}
 
-    Expression(SymbolTable *table, Tokenizer *tk) :
-        table(table), tk(tk) {}
-    vector<char> Compile();
-    vector<char> CompileFunction(string name);
+    Expression(Scope *scope, Tokenizer *tk, Scope *attrs) :
+        scope(scope), tk(tk), global(scope->Global()), attrs(attrs) {}
+    CodeGen Compile();
+    CodeGen CompileFunction(string name);
 
     vector<ExpressionPath> CompilePath(string var);
-    vector<char> GenPushPath(vector<ExpressionPath> path);
-    vector<char> GenAssignPath(vector<ExpressionPath> path);
+    CodeGen GenPushPath(vector<ExpressionPath> path);
+    CodeGen GenAssignPath(vector<ExpressionPath> path);
     bool IsPathFunc(vector<ExpressionPath> path);
 
 private:
     ExpressionPath ParseFirstPath(string var);
-    void ParsePathNode(ExpressionPath& node, Class *pre_type);
+    void ParsePathNode(ExpressionPath& node, SymbolType *pre_type);
     void ParsePathIndex(ExpressionPath& node);
     void ParseFunctionNode(ExpressionPath& node);
-    Class *GetNodeType(ExpressionPath node);
-    vector<char> GenFirstPath(ExpressionPath first);
-    void GenPushAttr(vector<char> &code, ExpressionPath node);
-    void GenPushMethod(vector<char> &code, ExpressionPath node);
-    void GenPushIndex(vector<char> &code, ExpressionPath node);
-    void AssignLast(vector<char> &code, ExpressionPath last);
+    SymbolType *GetNodeType(ExpressionPath node);
+    CodeGen GenSelfAttribute(ExpressionPath first);
+    CodeGen AssignSelfAttribute(Symbol *attr);
+    CodeGen GenFirstPath(ExpressionPath first);
+    void GenPushAttr(CodeGen &code, ExpressionPath node);
+    void GenPushMethod(CodeGen &code, ExpressionPath node);
+    void GenPushIndex(CodeGen &code, ExpressionPath node);
+    void AssignLast(CodeGen &code, ExpressionPath last);
 
     Node *CompileParentheses();
+    Node *CompileLogic();
     Node *CompileTerm();
     Node *CompileFactor();
     Node *CompileExpression();
     void CleanNodes(Node *node);
     
-    void CompileNewObject(Class *c, Node *node);
+    void CompileNewObject(SymbolType *c, Node *node);
     void CompileName(Node *node);
     void CompileConst(Node *node);
     void CompileArray(Node *node);
     
-    int CompileFuncArgs(vector<char> &code);
-    vector<char> CompileCallFunc(Function *func);
-    vector<char> GenCode(Node *node);
-    vector<char> GenLiteral(Token literal);
+    int CompileFuncArgs(CodeGen &code);
+    CodeGen CompileCallFunc(Symbol *func);
+    CodeGen GenCode(Node *node);
+    CodeGen GenLiteral(Token literal);
 
-    SymbolTable *table;
+    Scope *scope;
+    Scope *attrs;
+    GlobalScope *global;
     Tokenizer *tk;
 };

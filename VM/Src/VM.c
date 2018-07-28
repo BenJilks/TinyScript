@@ -54,7 +54,11 @@ typedef enum ByteCode
 	DIV,
 	EQUALS,
 	GREATERTHAN,
+	GREATERTHANEQUAL,
 	LESSTHAN,
+	LESSTHANEQUAL,
+	AND,
+	OR,
 	CALL,
 	CALL_SYS,
 	RETURN,
@@ -286,7 +290,7 @@ void LoadProgram(char *program_data, int program_length)
 	LOG("Finished linking\n");
 
 	CallFunc(main_func);
-	CleanUp();
+	//CleanUp();
 	free(pointers);
 }
 
@@ -295,7 +299,11 @@ OP_FUNC(Sub, -, operator_subtract);
 OP_FUNC(Mul, *, operator_multiply);
 OP_FUNC(Div, /, operator_divide);
 COMPARE_FUNC(GreaterThan, >);
+COMPARE_FUNC(GreaterThanEqual, >=);
 COMPARE_FUNC(LessThan, <);
+COMPARE_FUNC(LessThanEqual, <=);
+LOGIC_FUNC(And, &&);
+LOGIC_FUNC(Or, ||);
 
 #define OP_INSTUCTION(code, op) \
 	case code: \
@@ -308,6 +316,28 @@ COMPARE_FUNC(LessThan, <);
 	{ \
 		ERROR("Error: No %s of type '%s' found\n", #operator, obj.type->name); \
 	}
+
+void log_object(Object obj)
+{
+	printf("%s", obj.type->name);
+	if (obj.type != NULL)
+	{
+		switch (obj.type->prim)
+		{
+			case INT: printf("(%i)", obj.i); break;
+			case OBJECT: 
+			{
+				printf("(");
+				int j;
+				for (j = 0; j < obj.type->size; j++)
+					log_object(obj.p->attrs[j]);
+				printf(")");
+				break;
+			}
+		}
+	}
+	printf(", ");
+}
 
 void CallFunc(int func)
 {
@@ -405,7 +435,11 @@ void CallFunc(int func)
 			OP_INSTUCTION(DIV, Div)
 			OP_INSTUCTION(EQUALS, Equals)
 			OP_INSTUCTION(GREATERTHAN, GreaterThan)
+			OP_INSTUCTION(GREATERTHANEQUAL, GreaterThanEqual)
 			OP_INSTUCTION(LESSTHAN, LessThan)
+			OP_INSTUCTION(LESSTHANEQUAL, LessThanEqual)
+			OP_INSTUCTION(AND, And)
+			OP_INSTUCTION(OR, Or)
 
 			case CALL:
 				LOG("Call function at %i\n", *((int*)(data + pc)));
@@ -459,17 +493,13 @@ void CallFunc(int func)
 
 			case MALLOC:
 			{
-				LOG("Malloc new '%s' object\n", types[data[pc]].name);
+				LOG("Malloc new %i[%s] object (of size %i bytes)\n", data[pc], types[data[pc]].name, sizeof(Object) * types[data[pc]].size);
 				Object obj;
 				obj.type = &types[data[pc++]];
 				if (obj.type->size > 0)
 				{
-					Object *attrs = (Object*)malloc(sizeof(Object) * obj.type->size);
+					Object *attrs = (Object*)calloc(obj.type->size, sizeof(Object));
 					obj.p = AllocPointer(attrs);
-
-					int i;
-					for (i = 0; i < data[pc-1]; i++)
-						attrs[i] = (Object){&t_int, 0};
 				}
 				stack[sp++] = obj;
 				break;
@@ -577,7 +607,7 @@ void CallFunc(int func)
 		int i;
 		printf("Stack: ");
 		for (i = 0; i < sp; i++)
-			printf("%s, ", stack[i].type->name);
+			log_object(stack[i]);
 		printf("\n");
 #endif
 	}

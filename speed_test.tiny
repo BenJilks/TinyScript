@@ -18,8 +18,8 @@ func fac(n)
 	ret fn
 }
 
-func Main()
+func main()
 {
-	Println(fac(40))
+	for i = 0 to 10000
+		println(fac(40))
 }
-

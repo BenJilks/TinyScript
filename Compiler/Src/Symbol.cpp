@@ -1,111 +1,89 @@
 #include "Symbol.hpp"
-#include "Function.hpp"
-#include "Class.hpp"
-#include "Bytecode.hpp"
-#include <algorithm>
-#include <limits>
 
-int SymbolTable::GetPrimType(string name)
+Symbol *SymbolType::Attr(string name)
 {
-    if (name == "int") return (int)Primitive::INT;
-    if (name == "float") return (int)Primitive::FLOAT;
-    if (name == "char") return (int)Primitive::CHAR;
-    if (name == "bool") return (int)Primitive::BOOL;
-    return (int)Primitive::OBJECT;
+    return attrs->FindSymbol(name);
 }
 
-// Creates a new local symbol
-void SymbolTable::AddLocal(string local) 
+GlobalScope::GlobalScope() :
+    globals(NULL)
 {
-    Symbol *symb = new Symbol();
-    symb->name = local;
-    symb->is_const = false;
-    symb->type = NULL;
-    locals.push_back(symb);
+    // Define primitive types
+    types.push_back(SymbolType("int", -1, NULL));
+    types.push_back(SymbolType("float", -1, NULL));
+    types.push_back(SymbolType("char", -1, NULL));
+    types.push_back(SymbolType("bool", -1, NULL));
+    prim_types = types.size();
 }
 
-// Create a new argument symbol
-void SymbolTable::AddArgument(string arg) 
-{ 
-    Symbol *symb = new Symbol();
-    symb->name = arg;
-    symb->is_const = false;
-    symb->type = NULL;
-    args.push_back(symb);
+void GlobalScope::MakeType(string name, Scope *attrs)
+{
+    SymbolType type(name, types.size() - prim_types, attrs);
+    types.push_back(type);
 }
 
-// Finds the local location of a symbol by its name
-int SymbolTable::FindLocation(string name)
+// Search for a type of a name
+SymbolType *GlobalScope::Type(string name)
 {
-    // Check for local table
-    Symbol *symb = FindSymbol(name);
-    int local_index = find(locals.begin(), locals.end(), symb) - locals.begin();
-    if (local_index != locals.size())
-        return local_index;
-    
-    // Check for arg table
-    int arg_index = find(args.begin(), args.end(), symb) - args.begin();
-    if (arg_index != args.size())
-        // Args are backwards and negitive
-        return -(args.size() - arg_index);
-    
-    // If it could not be found, then return max int value
-    return numeric_limits<int>::max();
+    for (int i = 0; i < types.size(); i++)
+    {
+        SymbolType *type = &types[i];
+        if (type->Name() == name)
+            return type;
+    }
+    return NULL;
 }
 
-int SymbolTable::FindClassLocation(Class *c)
+Symbol *Scope::FindSymbol(string name)
 {
-    int index = find(classes.begin(), classes.end(), c) - classes.begin();
-    if (index != classes.size())
-        return index;
-    return -1;
-}
-
-// Finds a symbol by its name
-Symbol *SymbolTable::FindSymbol(string name)
-{
-    // Search local
-    for (Symbol *symb : locals)
-        if (symb->name == name)
+    // Search in current scope
+    for (int i = 0; i < table.size(); i++)
+    {
+        Symbol *symb = &table[i];
+        if (symb->Name() == name)
             return symb;
-    
-    // Search args
-    for (Symbol *symb : args)
-        if (symb->name == name)
-            return symb;
+    }
+
+    // Search in global scope
+    if (global != NULL)
+    {
+        Scope *globals = global->Globals();
+        return globals->FindSymbol(name);
+    }
+
+    // If it could not be found, return error (null)
     return NULL;
 }
 
-Function *SymbolTable::FindFunction(string name)
+Symbol *Scope::MakeLocal(string name)
 {
-    for (Function *func : functions)
-        if (func->Name() == name)
-            return func;
-    return NULL;
+    Symbol symb(name, curr_location++, false);
+    table.push_back(symb);
+    max_size++;
+    return &table[table.size()-1];
 }
 
-Class *SymbolTable::FindClass(string name)
+Symbol *Scope::MakeFunc(string name, int location, bool is_sys, Scope *params)
 {
-    for (Class *c : classes)
-        if (c->Name() == name)
-            return c;
-    return NULL;
+    Symbol symb(name, location, is_sys, params);
+    table.push_back(symb);
+    return &table[table.size()-1];
 }
 
-void SymbolTable::PopScope()
+void Scope::MakeParameter(string name, SymbolType *type)
 {
-    for (Symbol *symb : locals)
-        delete symb;
-    
-    for (Symbol *symb : args)
-        delete symb;
+    auto param = make_tuple(name, type);
+    params.push_back(param);
 }
 
-void SymbolTable::CleanUp()
+void Scope::FinishParams()
 {
-    for (Function *func : functions)
-        delete func;
-    
-    for (Class *c : classes)
-        delete c;
+    int curr_loc = -1;
+    for (int i = params.size() - 1; i >= 0; i--)
+    {
+        auto param = params[i];
+        Symbol symb(get<0>(param), curr_loc--, true);
+        symb.AssignType(get<1>(param));
+        table.push_back(symb);
+    }
 }

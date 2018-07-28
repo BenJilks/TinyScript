@@ -27,11 +27,16 @@ enum class TkType
     Div,
     Equals,
     GreaterThan,
+    GreaterThanEqual,
     LessThan,
+    LessThanEqual,
+    And,
+    Or,
     
     Function,
     Return,
     If,
+    Else,
     For,
     While,
     To,
@@ -72,7 +77,7 @@ public:
 private:
     Token Next();
     char NextChar();
-    Token ReadEquals();
+    Token ReadEquals(char ch, TkType s, TkType d);
     Token ReadName(char c);
     Token ReadNumber(char c);
     Token ReadChar();
