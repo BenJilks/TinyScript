@@ -41,7 +41,7 @@ Variables are declared by simply assigning them to a value, this will make them 
 You have 4 primitive types: int, float, char and bool. Ints and floats will act as longs and doubles on 64bit systems only (NOTE: not yet implemented). 'String' and 'List' are objects and not primitive types.
 
 ## Basic Input/Output
-There are three main functions: 'print', 'println' and 'input'. The print function will convert any object given to a string (same behavior as the 'str' function) and print that to console. The println function will do the same, adding a new line at the end. The input function will just ask the user for input and return the next line given. To include variables in your string, you can use the string add operator to concatenate. Anything on the left of a string operation will automatically get converted to a string.
+There are three main functions: 'print', 'println' and 'input'. The print function will convert any object given to a string (same behavior as the 'str' function) and print that to console. The println function will do the same, adding a new line at the end. The input function will just ask the user for input and return the next line given. To include variables in your string, you can use the string add operator to concatenate. Anything on the right of a string operation will automatically get converted to a string.
 
     name = input("Enter your name: ")
     num = as_int(input("Enter a number: "))
