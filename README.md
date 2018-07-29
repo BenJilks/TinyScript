@@ -17,7 +17,7 @@ Hello world:
 TinyScript is a dynamically typed language at core, but static types can be assigned. There are no ';'s at the end of lines, all whitespace is ignored including new-lines and indentations. Single line comments are defined with "# ..." and multi-line comments with "#* ... *#". The code is compiled into bytecode and runs on the internal virtual machine.
 
 ## Functions
-Functions can be declared in the main scope with the format "func name(args...) block". A block can be either a single statement or multiply statements wraped in "{ ... }" notation. Return statements are given with the 'ret' keyword. For Example:
+Functions can be declared in the main scope with the format "func name(args...) block". A block can be either a single statement or multiply statements wrapped in "{ ... }" notation. Return statements are given with the 'ret' keyword. For Example:
 
     func add(a, b)
         ret a + b
@@ -27,12 +27,12 @@ Parameter types can be assigned by adding ": type" to the end. As well as return
     func add(a: int, b: int): int
         ret a + b
 
-Code exection starts at the "main" function, no code can be outside a function scope.
+Code execution starts at the "main" function, no code can be outside a function scope.
 
 ## Variables
 Variables are declared by simply assigning them to a value, this will make them a dynamic type that can change during execution. However, if you specify a static type
 
-    var = "String" # Creates a new variable and assignes a string
+    var = "String" # Creates a new variable and assigning a string
     var = 20       # As 'var' is dynamic type, its type can change
 
     i: int = 5     # Variable 'i' is assigned the static type of int
@@ -76,7 +76,7 @@ There are three types of loops. A while loop is declared as "while condition". A
         println(prime)
 
 ## Classes
-Classes are declared as "class name { ... }". Attributes can only be defined in the scope of the class. Methods are defined using the same function notation. Attributes can be refered to either inside the 'self' object or on there own. The function with the same name as the class is the constructor.
+Classes are declared as "class name { ... }". Attributes can only be defined in the scope of the class. Methods are defined using the same function notation. Attributes can be referred to either inside the 'self' object or on there own. The function with the same name as the class is the constructor.
 
 TODO: fix crash when error + get attr
 
@@ -141,7 +141,7 @@ Operator overloading can be done by naming a method with that operators name. Op
             ret [x, y]
     }
 
-To use operators, it deos not have to be a static type
+To use operators, it does not have to be a static type
 
     a = Vec2(1.0, 2.0)
     b = Vec2(3.3, 4.0)
