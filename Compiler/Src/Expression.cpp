@@ -290,7 +290,7 @@ void Expression::AssignLast(CodeGen &code, ExpressionPath last)
         Symbol *symb = last.c->Attr(last.var);
         if (symb == NULL)
         {
-            tk->Error("No attributed named '" + last.var + 
+            tk->Error("No attribute named '" + last.var + 
                 "' in class '" + last.c->Name() + "' found");
             return;
         }
