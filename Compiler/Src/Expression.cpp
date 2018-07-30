@@ -71,6 +71,7 @@ void Expression::ParsePathNode(ExpressionPath& node, SymbolType *pre_type)
 {
     tk->Match(".", TkType::Path);
     Token class_name = tk->Match("Name", TkType::Name);
+    node.type = PathType::Attr;
     
     if (tk->LookType() == TkType::Of)
     {
@@ -85,7 +86,6 @@ void Expression::ParsePathNode(ExpressionPath& node, SymbolType *pre_type)
         tk->Error("Must state class type for '" + class_name.data + "' in non static var");
     node.c = pre_type;
     node.var = class_name.data;
-    node.type = PathType::Attr;
 }
 
 void Expression::ParsePathIndex(ExpressionPath& node)
@@ -99,6 +99,9 @@ void Expression::ParsePathIndex(ExpressionPath& node)
 // TODO: Explain what this does
 void Expression::ParseFunctionNode(ExpressionPath& node)
 {
+    if (node.c == NULL)
+        return;
+    
     Symbol *func = node.c->Attr(node.var);
     if (func == NULL)
     {
@@ -224,9 +227,9 @@ CodeGen Expression::GenFirstPath(ExpressionPath first)
 
 void Expression::GenPushAttr(CodeGen &code, ExpressionPath node)
 {
-    // Push the attrubute of last object on stack
-    code.Instruction(ByteCode::PUSH_ATTR);
-
+    if (node.c == NULL)
+        return;
+    
     Symbol *symb = node.c->Attr(node.var);
     if (symb == NULL)
     {
@@ -235,11 +238,9 @@ void Expression::GenPushAttr(CodeGen &code, ExpressionPath node)
         return;
     }
 
-    int index = symb->Location();
-    if (index == numeric_limits<int>::max())
-        tk->Error("No attribute '" + node.var + "' in class '" + 
-            node.c->Name() + "' found");
-    code.Argument((char)index);
+    // Push the attrubute of last object on stack
+    code.Instruction(ByteCode::PUSH_ATTR);
+    code.Argument((char)symb->Location());
 }
 
 void Expression::GenPushMethod(CodeGen &code, ExpressionPath node)
@@ -283,8 +284,16 @@ void Expression::AssignLast(CodeGen &code, ExpressionPath last)
     }
     else
     {
+        if (last.c == NULL)
+            return;
+        
         Symbol *symb = last.c->Attr(last.var);
-        // TODO: Error checking
+        if (symb == NULL)
+        {
+            tk->Error("No attributed named '" + last.var + 
+                "' in class '" + last.c->Name() + "' found");
+            return;
+        }
         code.Instruction(ByteCode::ASSIGN_ATTR);
         code.Argument((char)symb->Location());
     }

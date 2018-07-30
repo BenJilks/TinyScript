@@ -78,8 +78,6 @@ There are three types of loops. A while loop is declared as "while condition". A
 ## Classes
 Classes are declared as "class name { ... }". Attributes can only be defined in the scope of the class. Methods are defined using the same function notation. Attributes can be referred to either inside the 'self' object or on there own. The function with the same name as the class is the constructor.
 
-TODO: fix crash when error + get attr
-
     class Cat
     {
         name: String
