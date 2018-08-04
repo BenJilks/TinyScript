@@ -5,6 +5,7 @@
 #include "Debug.hpp"
 #include <iostream>
 #include <algorithm>
+#include <tuple>
 
 bool Compiler::Compile(string file_path)
 {
@@ -18,10 +19,9 @@ bool Compiler::Compile(string file_path)
         switch(tk.LookType())
         {
             case TkType::Include: CompileInclude(&tk); break;
+            case TkType::External: CompileExternal(&tk); break;
             case TkType::Function: CompileFunc(&tk); break;
-            case TkType::SysCall: CompileSysCall(&tk); break;
             case TkType::Class: CompileClass(&tk); break;
-            case TkType::SysClass: CompileSysClass(&tk); break;
             default: tk.Error("Unexpect token '" + tk.LookData() + "' in global scope"); break;
         }
     }
@@ -47,13 +47,24 @@ static void PushData(T data, vector<char> &code)
         bytes + sizeof(T));
 }
 
+void Compiler::DumpExternals(CodeGen &out_code)
+{
+    out_code.Argument((char)externals.size());
+    for (External extenral : externals)
+    {
+        vector<string> calls = get<1>(extenral);
+        out_code.String(get<0>(extenral));
+        out_code.Argument((char)calls.size());
+        for (string call : calls)
+            out_code.String(call);
+    }
+}
+
 void Compiler::DumpSysCalls(CodeGen &out_code)
 {
-    char count = syscalls.size();
-    out_code.Argument((char)count);
-
-    for (string syscall : syscalls)
-        out_code.String(syscall);
+    out_code.Argument((char)syscalls.size());
+    for (string call : syscalls)
+        out_code.String(call);
 }
 
 static void DumpOperator(Class *c, string name, CodeGen &out_code)
@@ -112,6 +123,7 @@ vector<char> Compiler::GetDump()
     }
 
     out_code.Argument(func->Location());
+    DumpExternals(out_code);
     DumpSysCalls(out_code);
     DumpTypes(out_code);
     
@@ -137,6 +149,45 @@ void Compiler::CompileInclude(Tokenizer *tk)
     }
 }
 
+void Compiler::CompileExternal(Tokenizer *tk)
+{
+    tk->Match("external", TkType::External);
+    Token file_path = tk->Match("String", TkType::String);
+    LOG("External for lib '%s'\n", file_path.data.c_str());
+
+    vector<string> external;
+    tk->Match("{", TkType::OpenBlock);
+    while (tk->LookType() != TkType::CloseBlock)
+    {
+        switch(tk->LookType())
+        {
+            case TkType::SysCall: CompileExternalCall(tk, external); break;
+            case TkType::SysClass: CompileExternalClass(tk, external); break;
+        }
+    }
+    tk->Match("}", TkType::CloseBlock);
+    externals.push_back(make_tuple(file_path.data, external));
+}
+
+void Compiler::CompileExternalCall(Tokenizer *tk, vector<string> &calls)
+{
+    tk->Match("syscall", TkType::SysCall);
+    Token name = tk->Match("Name", TkType::Name);
+    calls.push_back(name.data);
+    globals->MakeFunc(name.data, pointer++, true, NULL);
+}
+
+void Compiler::CompileExternalClass(Tokenizer *tk, vector<string> &calls)
+{
+    tk->Match("sysclass", TkType::SysClass);
+    Token name = tk->Match("Name", TkType::Name);
+
+    Class *c = new Class(name.data, tk, NULL, NULL);
+    c->CompileSys(calls, &pointer);
+    global_scope.MakeType(name.data, c->Attrs());
+    classes.push_back(c);
+}
+
 // Compiles a global function
 // := func <Name>(<Args>, ...) <Block>
 void Compiler::CompileFunc(Tokenizer *tk)
@@ -155,19 +206,6 @@ void Compiler::CompileFunc(Tokenizer *tk)
     symb->AssignType(func.ReturnType());
 }
 
-// Marks a function name as a system call
-// := syscall <Name>
-void Compiler::CompileSysCall(Tokenizer *tk)
-{
-    tk->Match("syscall", TkType::SysCall);
-    Token name = tk->Match("Name", TkType::Name);
-    LOG("Syscall '%s'\n", name.data.c_str());
-
-    // new Function(name.data, syscalls.size())
-    globals->MakeFunc(name.data, syscalls.size(), true, NULL);
-    syscalls.push_back(name.data);
-}
-
 // Compiles a new class data struct
 // := class <Name> { <Data> ... }
 void Compiler::CompileClass(Tokenizer *tk)
@@ -179,20 +217,6 @@ void Compiler::CompileClass(Tokenizer *tk)
 	Class *c = new Class(name.data, tk, &code, &global_scope);
     global_scope.MakeType(name.data, c->Attrs());
 	c->Compile();
-    classes.push_back(c);
-}
-
-// Marks a class name as a system class
-// := sysclass <Name> { <Syscall> ... }
-void Compiler::CompileSysClass(Tokenizer *tk)
-{
-    tk->Match("sysclass", TkType::SysClass);
-    Token name = tk->Match("Name", TkType::Name);
-    LOG("SysClass '%s'\n", name.data.c_str());
-
-    Class *c = new Class(name.data, tk, &code, &global_scope);
-    c->CompileSys(syscalls);
-    global_scope.MakeType(name.data, c->Attrs());
     classes.push_back(c);
 }
 

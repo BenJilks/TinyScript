@@ -37,6 +37,8 @@ sysclass List
 {
 	syscall push
 	syscall size
+	syscall contains
+	syscall index_of
 	syscall operator_add
 	syscall operator_multiply
 	syscall operator_get_index

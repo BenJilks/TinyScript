@@ -76,6 +76,9 @@
         "hash_map": "cpp",
         "typeindex": "c",
         "unordered_map": "c",
-        "stb_image.h": "c"
+        "stb_image.h": "c",
+        "stdio.h": "c",
+        "dlfcn.h": "c",
+        "stdlib.h": "c"
     }
 }

@@ -203,7 +203,7 @@ Token Tokenizer::ReadChar()
 TkType Tokenizer::FindKeywords(string buffer)
 {
     if (buffer == "func") return TkType::Function;
-    if (buffer == "ret") return TkType::Return;
+    if (buffer == "return") return TkType::Return;
     if (buffer == "true") return TkType::Bool;
     if (buffer == "false") return TkType::Bool;
     if (buffer == "if") return TkType::If;
@@ -216,6 +216,7 @@ TkType Tokenizer::FindKeywords(string buffer)
     if (buffer == "class") return TkType::Class;
     if (buffer == "sysclass") return TkType::SysClass;
     if (buffer == "include") return TkType::Include;
+    if (buffer == "external") return TkType::External;
     if (buffer == "and") return TkType::And;
     if (buffer == "or") return TkType::Or;
     return TkType::Name;

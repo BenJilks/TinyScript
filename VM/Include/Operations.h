@@ -21,7 +21,7 @@ Type t_char = {"char", CHAR, sizeof(char), 1, -1, -1, -1, -1, -1, -1};
 
 #define CALL_OP(obj, overload) \
 	if (obj.type->is_sys_type) \
-		sys_funcs[obj.type->overload](stack, &sp); \
+		sys_funcs[obj.type->overload](stack, &sp, vm); \
 	else \
 		CallFunc(obj.type->overload);
 

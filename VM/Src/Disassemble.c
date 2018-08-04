@@ -15,14 +15,22 @@ void Disassemble(const char *file_path)
     FILE *file = fopen(file_path, "rb");
     int start = INT;
 
+    // Skip over external info
+    int i, j;
+    int extern_len = SINGLE;
+    for (i = 0; i < extern_len; i++)
+    {
+        fseek(file, SINGLE, SEEK_CUR);
+
+        int call_len = SINGLE;
+        for (j = 0; j < call_len; j++)
+            fseek(file, SINGLE, SEEK_CUR);
+    }
+
     // Skip over syscall info
-    int i;
     int syscall_length = SINGLE;
     for (i = 0; i < syscall_length; i++)
-    {
-        int length = SINGLE;
-        fseek(file, length, SEEK_CUR);
-    }
+        fseek(file, SINGLE, SEEK_CUR);
 
     // Skip over type info (string, 1 * char, 9 * int)
     int type_length = SINGLE;

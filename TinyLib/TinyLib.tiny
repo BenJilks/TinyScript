@@ -1,0 +1,49 @@
+
+external "TinyLib/TinyLib.so"
+{
+    syscall print
+    syscall println
+    syscall input
+    syscall as_int
+    syscall as_float
+    syscall size_of
+    syscall str
+
+    sysclass String
+    {
+        syscall operator_add
+        syscall operator_multiply
+        syscall size
+        syscall append
+        syscall split
+    }
+
+    sysclass Array
+    {
+        syscall push
+        syscall size
+        syscall operator_add
+        syscall operator_multiply
+        syscall operator_get_index
+        syscall operator_set_index
+        syscall contains
+        syscall index_of
+    }
+
+    sysclass Image
+    {
+        syscall Image
+        syscall pixels
+        syscall width
+        syscall height
+    }
+
+    sysclass File
+    {
+        syscall File
+        syscall has_error
+        syscall read_all
+        syscall close
+        syscall operator_it
+    }
+}

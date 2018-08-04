@@ -151,14 +151,28 @@ ExpressionPath Expression::ParseFirstPath(string var)
     return first;
 }
 
+SymbolType *Expression::FindType(string var)
+{
+    Symbol *symb = scope->FindSymbol(var);
+    if (symb != NULL)
+        return symb->Type();
+    
+    if (attrs != NULL)
+    {
+        symb = attrs->FindSymbol(var);
+        if (symb != NULL)
+            return symb->Type();
+    }
+    return NULL;
+}
+
 // TODO: Explain what this does
 vector<ExpressionPath> Expression::CompilePath(string var)
 {
     vector<ExpressionPath> path;
     path.push_back(ParseFirstPath(var));
 
-    Symbol *symb = scope->FindSymbol(var);
-    SymbolType *pre_type = symb == NULL ? NULL : symb->Type();
+    SymbolType *pre_type = FindType(var);
     while (tk->LookType() == TkType::Path || tk->LookType() == TkType::OpenIndex)
     {
         ExpressionPath node;
@@ -429,7 +443,7 @@ void Expression::CompileArray(Node *node)
 Node *Expression::CompileParentheses()
 {
     tk->Match("(", TkType::OpenArg);
-    Node *inside = CompileExpression();
+    Node *inside = CompileLogic();
     tk->Match(")", TkType::CloseArg);
     return inside;
 }
@@ -462,10 +476,7 @@ Node *Expression::CompileTerm()
 Node *Expression::CompileFactor()
 {
     Node *left = CompileTerm();
-    while (tk->LookType() == TkType::Mul || tk->LookType() == TkType::Div || 
-        tk->LookType() == TkType::Equals || tk->LookType() == TkType::GreaterThan || 
-        tk->LookType() == TkType::GreaterThanEqual || tk->LookType() == TkType::LessThan ||
-        tk->LookType() == TkType::LessThanEqual)
+    while (tk->LookType() == TkType::Mul || tk->LookType() == TkType::Div)
     {
         Node *node = new Node();
         node->left = left;
@@ -496,7 +507,10 @@ Node *Expression::CompileExpression()
 Node *Expression::CompileLogic()
 {
     Node *left = CompileExpression();
-    while (tk->LookType() == TkType::And || tk->LookType() == TkType::Or)
+    while (tk->LookType() == TkType::And || tk->LookType() == TkType::Or || 
+        tk->LookType() == TkType::Equals || tk->LookType() == TkType::GreaterThan || 
+        tk->LookType() == TkType::GreaterThanEqual || tk->LookType() == TkType::LessThan ||
+        tk->LookType() == TkType::LessThanEqual)
     {
         Node *node = new Node();
         node->left = left;

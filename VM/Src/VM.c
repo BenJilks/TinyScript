@@ -1,8 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <dlfcn.h>
+#include <unistd.h>
 #include "VM.h"
-#include "String.h"
 #include "Operations.h"
 
 #define DEBUG 0
@@ -26,8 +27,9 @@ char *data;
 int length;
 
 int header_size;
-SysFunc sys_funcs[80];
+SysFunc sys_funcs[1024];
 Type types[80];
+int sys_func_size;
 
 int pc, sp, bp, fp, cycle;
 int stack_frame[STACK_SIZE];
@@ -35,6 +37,7 @@ Object stack[STACK_SIZE];
 
 Pointer *pointers;
 int pointer_count;
+VM vm = {PrimType, AllocPointer, CallFunc};
 
 typedef enum ByteCode
 {
@@ -208,6 +211,54 @@ int LoadInt()
 	return i;
 }
 
+void GetFullPath(char *out, int max_size, char *file)
+{
+    getcwd(out, max_size);
+    int cwd_len = strlen(out);
+
+    out[cwd_len] = '/';
+    memcpy(out + cwd_len + 1, file, strlen(file));
+    out[cwd_len + strlen(file) + 1] = '\0';
+}
+
+void LoadExternals()
+{
+	int i, j;
+	int len = data[header_size++];
+	for (i = 0; i < len; i++)
+	{
+		char file[80];
+		char path[1024];
+		LoadString(file);
+		GetFullPath(path, 1024, file);
+		LOG("Loading external '%s'\n", path);
+
+		void *handle = dlopen(path, RTLD_LAZY);
+		if (!handle) 
+		{
+			fprintf(stderr, "%s\n", dlerror());
+			return;
+		}
+
+		dlerror();
+		int call_len = data[header_size++];
+		for (j = 0; j < call_len; j++)
+		{
+			char *error;
+			char call[80];
+			LoadString(call);
+			LOG(" ==> Loading external function '%s'\n", call);
+
+			sys_funcs[sys_func_size++] = (SysFunc)dlsym(handle, call);
+			if ((error = dlerror()) != NULL)  
+			{
+				fprintf (stderr, "%s\n", error);
+				continue;
+			}
+		}
+	}
+}
+
 void LoadSysCalls()
 {
 	int i, j;
@@ -222,7 +273,7 @@ void LoadSysCalls()
 		{
 			if (!strcmp(syscall, sys_calls[j].name))
 			{
-				sys_funcs[i] = sys_calls[j].func;
+				sys_funcs[sys_func_size++] = sys_calls[j].func;
 				was_found = 1;
 				break;
 			}
@@ -272,6 +323,7 @@ void ResetReg()
 	fp = 0;
 	cycle = 0;
 	pointer_count = 0;
+	sys_func_size = 0;
 }
 
 void LoadProgram(char *program_data, int program_length)
@@ -285,6 +337,7 @@ void LoadProgram(char *program_data, int program_length)
 
 	LOG("Linking program...\n");
 	ResetReg();
+	LoadExternals();
 	LoadSysCalls();
 	LoadDataTypes();
 	LOG("Finished linking\n");
@@ -455,7 +508,7 @@ void CallFunc(int func)
 
 				LOG("Call: %i\n", index);
 				SysFunc func = sys_funcs[index];
-				func(stack, &sp);
+				func(stack, &sp, vm);
 				break;
 			}
 			
@@ -531,6 +584,8 @@ void CallFunc(int func)
 			{
 				LOG("Assign index\n", data[pc]);
 				Object obj = stack[(sp-2)];
+				stack[(sp-2)] = stack[(sp-3)];
+				stack[(sp-3)] = obj;
 				CHECK_OP(obj, operator_set_index);
 				CALL_OP(obj, operator_set_index);
 				sp -= 4;

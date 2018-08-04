@@ -8,13 +8,18 @@ To run a script:
 
 Hello world:
 
-    include "IO.tiny"
+    include "TinyLib/TinyLib.tiny"
     
     func main()
         println("Hello, World!")
 
 # Documentation
 TinyScript is a dynamically typed language at core, but static types can be assigned. There are no ';'s at the end of lines, all whitespace is ignored including new-lines and indentations. Single line comments are defined with "# ..." and multi-line comments with "#* ... *#". The code is compiled into bytecode and runs on the internal virtual machine.
+
+## Includes
+Include statements will simply compile a file and include its code into your script. To access the default inbuilt functions and classes, you must include TinyLib at the start of the program.
+
+    include "TinyLib/TinyLib.tiny"
 
 ## Functions
 Functions can be declared in the main scope with the format "func name(args...) block". A block can be either a single statement or multiply statements wrapped in "{ ... }" notation. Return statements are given with the 'ret' keyword. For Example:
@@ -30,7 +35,7 @@ Parameter types can be assigned by adding ": type" to the end. As well as return
 Code execution starts at the "main" function, no code can be outside a function scope.
 
 ## Variables
-Variables are declared by simply assigning them to a value, this will make them a dynamic type that can change during execution. However, if you specify a static type
+Variables are declared by simply assigning them to a value, this will make them a dynamic type that can change during execution. However, if you specify a static type, they cannot be assigned a new type.
 
     var = "String" # Creates a new variable and assigning a string
     var = 20       # As 'var' is dynamic type, its type can change

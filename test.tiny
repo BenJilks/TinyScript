@@ -1,0 +1,4 @@
+include "TinyLib/TinyLib.tiny"
+
+func main()
+	println("Hello, TinyLib!")

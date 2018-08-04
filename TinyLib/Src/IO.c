@@ -1,29 +1,27 @@
-#ifndef IO_H
-#define IO_H
-
-#include "VM.h"
-#include "String.h"
+#include "TinyScript.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-void Print(Object *stack, int *sp)
+char *AsString(Object obj, Object *stack, int *sp, VM vm);
+
+void print(Object *stack, int *sp, VM vm)
 {
 	Object obj = stack[(*sp)-1];
-	char *str = AsString(obj, stack, sp);
+	char *str = AsString(obj, stack, sp, vm);
 	printf("%s", str);
 	free(str);
 
-	stack[(*sp)++] = (Object){PrimType(INT), 0};
+	stack[(*sp)++] = (Object){vm.PrimType(INT), 0};
 }
 
-void Println(Object *stack, int *sp)
+void println(Object *stack, int *sp, VM vm)
 {
-	Print(stack, sp);
+	print(stack, sp, vm);
 	printf("\n");
 }
 
-void Input(Object *stack, int *sp)
+void input(Object *stack, int *sp, VM vm)
 {
 	printf("%s", stack[(*sp)-1].p->str);
 
@@ -35,17 +33,17 @@ void Input(Object *stack, int *sp)
 	buffer[len-1] = '\0';
 
 	Object obj;
-	obj.type = PrimType(STRING);
-	obj.p = AllocPointer(buffer);
+	obj.type = vm.PrimType(STRING);
+	obj.p = vm.AllocPointer(buffer);
 	stack[(*sp)++] = obj;
 }
 
-void Int(Object *stack, int *sp)
+void as_int(Object *stack, int *sp, VM vm)
 {
 	Object out;
 	Object in = stack[(*sp)-1];
 
-	out.type = PrimType(INT);
+	out.type = vm.PrimType(INT);
 	switch(in.type->prim)
 	{
 		case INT: out.i = in.i; break;
@@ -57,12 +55,12 @@ void Int(Object *stack, int *sp)
 	stack[(*sp)++] = out;
 }
 
-void Float(Object *stack, int *sp)
+void as_float(Object *stack, int *sp, VM vm)
 {
 	Object out;
 	Object in = stack[(*sp)-1];
 
-	out.type = PrimType(FLOAT);
+	out.type = vm.PrimType(FLOAT);
 	switch(in.type->prim)
 	{
 		case INT: out.f = (float)in.i; break;
@@ -107,39 +105,39 @@ int SizeOfObject(Object obj)
 	return size;
 }
 
-void SizeOf(Object *stack, int *sp)
+void size_of(Object *stack, int *sp, VM vm)
 {
 	Object obj = stack[(*sp)-1];
-	stack[(*sp)++] = (Object){PrimType(INT), SizeOfObject(obj)};
+	stack[(*sp)++] = (Object){vm.PrimType(INT), SizeOfObject(obj)};
 }
 
 // Class File
 
-void File_File(Object *stack, int *sp)
+void File_File(Object *stack, int *sp, VM vm)
 {
 	char *path = (char*)stack[(*sp)-2].p->str;
 	char *mode = (char*)stack[(*sp)-1].p->str;
 	Object *file_obj = &stack[(*sp)-3];
 
 	FILE *file = fopen(path, mode);
-	file_obj->p = AllocPointer(file);
-	stack[(*sp)++] = (Object){PrimType(INT), 0};
+	file_obj->p = vm.AllocPointer(file);
+	stack[(*sp)++] = (Object){vm.PrimType(INT), 0};
 }
 
-void File_Has_Error(Object *stack, int *sp)
+void File_has_error(Object *stack, int *sp, VM vm)
 {
 	Object *file_obj = &stack[(*sp)-1];
 	int has_error = !file_obj->p->v;
-	stack[(*sp)++] = (Object){PrimType(BOOL), has_error};
+	stack[(*sp)++] = (Object){vm.PrimType(BOOL), has_error};
 }
 
-void File_ReadAll(Object *stack, int *sp)
+void File_read_all(Object *stack, int *sp, VM vm)
 {
 	Object file_obj = stack[(*sp)-1];
 	FILE *file = (FILE*)file_obj.p->v;
 	if (!file)
 	{
-		stack[(*sp)++] = (Object){PrimType(INT), 0};
+		stack[(*sp)++] = (Object){vm.PrimType(INT), 0};
 		return;
 	}
 
@@ -151,22 +149,22 @@ void File_ReadAll(Object *stack, int *sp)
 	data[length] = '\0';
 
 	Object str_obj;
-	str_obj.type = PrimType(STRING);
-	str_obj.p = AllocPointer(data);
+	str_obj.type = vm.PrimType(STRING);
+	str_obj.p = vm.AllocPointer(data);
 	stack[(*sp)++] = str_obj;
 }
 
-void File_Close(Object *stack, int *sp)
+void File_close(Object *stack, int *sp, VM vm)
 {
 	Object file_obj = stack[(*sp)-1];
 	FILE *file = (FILE*)file_obj.p->v;
 	int error = 0;
 	if (file)
 		error = fclose(file);
-	stack[(*sp)++] = (Object){PrimType(INT), error};
+	stack[(*sp)++] = (Object){vm.PrimType(INT), error};
 }
 
-void File_It(Object *stack, int *sp)
+void File_operator_it(Object *stack, int *sp, VM vm)
 {
 	Object file_obj = stack[(*sp)-1];
 	FILE *file = (FILE*)file_obj.p->v;
@@ -177,7 +175,7 @@ void File_It(Object *stack, int *sp)
 	{
 		char * line = NULL;
 		size_t len = 0;
-		ssize_t read;
+		size_t read;
 		while ((read = getline(&line, &len, file)) != -1) 
 		{
 			int size = strlen(line);
@@ -186,42 +184,16 @@ void File_It(Object *stack, int *sp)
 			line_str[size-1] = '\0';
 
 			Object item;
-			item.type = PrimType(STRING);
-			item.p = AllocPointer(line_str);
+			item.type = vm.PrimType(STRING);
+			item.p = vm.AllocPointer(line_str);
 			attrs[counter++] = item;
 		}
 	}
-	attrs[0] = (Object){PrimType(INT), counter-1};
+	attrs[0] = (Object){vm.PrimType(INT), counter-1};
 	attrs = (Object*)realloc(attrs, sizeof(Object) * counter);
 
 	Object obj;
-	obj.type = PrimType(ARRAY);
-	obj.p = AllocPointer(attrs);
+	obj.type = vm.PrimType(ARRAY);
+	obj.p = vm.AllocPointer(attrs);
 	stack[(*sp)++] = obj;
 }
-
-void Function_Call(Object *stack, int *sp)
-{
-	Object func = stack[(*sp) - 1];
-	CallFunc(func.i);
-}
-
-void RegisterIO()
-{
-	RegisterFunc((char*)"print", Print);
-	RegisterFunc((char*)"println", Println);
-	RegisterFunc((char*)"input", Input);
-	RegisterFunc((char*)"as_int", Int);
-	RegisterFunc((char*)"as_float", Float);
-	RegisterFunc((char*)"sizeof", SizeOf);
-
-	RegisterFunc((char*)"File:File", File_File);
-	RegisterFunc((char*)"File:has_error", File_Has_Error);
-	RegisterFunc((char*)"File:read_all", File_ReadAll);
-	RegisterFunc((char*)"File:close", File_Close);
-	RegisterFunc((char*)"File:operator_it", File_It);
-
-	RegisterFunc((char*)"Function:call", Function_Call);
-}
-
-#endif // IO_H

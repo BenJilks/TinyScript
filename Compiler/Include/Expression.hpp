@@ -48,6 +48,7 @@ public:
 
 private:
     ExpressionPath ParseFirstPath(string var);
+    SymbolType *FindType(string var);
     void ParsePathNode(ExpressionPath& node, SymbolType *pre_type);
     void ParsePathIndex(ExpressionPath& node);
     void ParseFunctionNode(ExpressionPath& node);

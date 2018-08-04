@@ -1,5 +1,5 @@
-#ifndef VM_H
-#define VM_H
+#ifndef TINY_SCRIPT_H
+#define TINY_SCRIPT_H
 
 #define MAX_NAME_LENGTH 80
 #define STACK_SIZE 80
@@ -68,11 +68,4 @@ typedef struct VM
 } VM;
 typedef void (*SysFunc)(Object *stack, int *sp, VM vm);
 
-void RegisterFunc(char *name, SysFunc func);
-Pointer *AllocPointer(void *p);
-void LoadProgram(char *program_data, int program_length);
-void CallFunc(int func);
-void ExecFile(char *file_path);
-Type *PrimType(int prim);
-
-#endif // VM_H
+#endif // TINY_SCRIPT_H

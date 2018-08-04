@@ -63,7 +63,7 @@ void Class::CompileMethod()
     symb->AssignType(func.ReturnType());
 }
 
-void Class::CompileSys(vector<string> &syscalls)
+void Class::CompileSys(vector<string> &syscalls, int *pointer)
 {
     START_SCOPE();
     tk->Match("{", TkType::OpenBlock);
@@ -72,8 +72,8 @@ void Class::CompileSys(vector<string> &syscalls)
         // Match a syscall statement (syscall <Name>) and add it as a method
         tk->Match("syscall", TkType::SysCall);
         Token call = tk->Match("Name", TkType::Name);
-        attrs->MakeFunc(call.data, syscalls.size(), true, NULL);
-        syscalls.push_back(name + ":" + call.data);
+        attrs->MakeFunc(call.data, (*pointer)++, true, NULL);
+        syscalls.push_back(name + "_" + call.data);
 
         LOG("SysMethod '%s'\n", call.data.c_str());
     }

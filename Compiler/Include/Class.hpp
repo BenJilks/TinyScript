@@ -9,8 +9,8 @@ class Class
 {
 public:
     Class(string name, Tokenizer *tk, CodeGen *code, GlobalScope *global);
+    void CompileSys(vector<string> &syscalls, int *pointer);
     void Compile();
-    void CompileSys(vector<string> &syscalls);
 
     inline Scope *Attrs() const { return attrs; }
     inline string Name() const { return name; }

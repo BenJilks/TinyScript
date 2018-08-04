@@ -45,6 +45,7 @@ enum class TkType
     SysCall,
     SysClass,
     Include,
+    External,
     EndOfFile
 };
 

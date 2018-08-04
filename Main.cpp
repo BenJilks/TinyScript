@@ -1,10 +1,6 @@
 #include "Compiler.hpp"
 #include "VM.h"
-#include "IO.h"
-#include "Array.h"
-#include "Image.h"
 #include "Disassemble.h"
-#include "stb_image.h"
 #include <iostream>
 #include <fstream>
 
@@ -29,10 +25,6 @@ int Interpreter()
 
 int main(int argc, char **argv)
 {
-    RegisterIO();
-    RegisterString();
-    RegisterArray();
-    RegisterImage();
     if (argc < 2)
         return Interpreter();
 

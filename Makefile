@@ -15,7 +15,7 @@ DEPS = $(OBJECTS:.o=.d)
 
 COMPILE_FLAGS = -std=c++11
 INCLUDES = -I Compiler/Include -I VM/Include
-LIBS = 
+LIBS = -ldl
 
 .PHONY: default_target
 default_target: release
@@ -36,6 +36,7 @@ clean:
 
 .PHONY: all
 all: $(BIN_NAME)
+	gcc TinyLib/Src/*.c -shared -fPIC -o TinyLib/TinyLib.so
 
 $(BIN_NAME): $(OBJECTS)
 	$(CXX) $(OBJECTS) $(LIBS) -o $@
@@ -51,3 +52,6 @@ $(BUILD_PATH)/%.o: $(VM_SRC_PATH)/%.c
 $(BUILD_PATH)/%.o: %.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -MP -MMD -c $< -o $@
 
+.PHONY: install
+install: 
+	cp TinyScript /bin/TinyScript
