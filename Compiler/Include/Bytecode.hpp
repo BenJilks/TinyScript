@@ -25,6 +25,7 @@ enum class ByteCode
 	OR,
 	CALL,
 	CALL_SYS,
+	CALL_METHOD,
 	RETURN,
 	BRANCH_IF_NOT,
 	BRANCH_IF_IT,

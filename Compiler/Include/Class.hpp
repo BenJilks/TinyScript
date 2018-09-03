@@ -8,7 +8,7 @@ class Function;
 class Class
 {
 public:
-    Class(string name, Tokenizer *tk, CodeGen *code, GlobalScope *global);
+    Class(string name, vector<Function> *functions, Tokenizer *tk, GlobalScope *global);
     void CompileSys(vector<string> &syscalls, int *pointer);
     void Compile();
 
@@ -24,8 +24,8 @@ private:
     void CompileMethod();
 
     string name;
+    vector<Function> *functions;
     bool is_sys_class;
-    CodeGen *code;
     Scope *attrs;
     GlobalScope *global;
     Tokenizer *tk;

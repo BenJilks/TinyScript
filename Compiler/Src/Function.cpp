@@ -5,11 +5,11 @@
 #include <algorithm>
 #include <memory.h>
 
-Function::Function(string name, int location, GlobalScope *global, Tokenizer *tk, Scope *attrs) :
-    name(name), location(location), scope(global), tk(tk), is_syscall(false), type(NULL)
+Function::Function(string name, int func_id, GlobalScope *global, Tokenizer *tk, Scope *attrs) :
+    name(name), func_id(func_id), scope(global), tk(tk), is_syscall(false), type(NULL)
 {
     expression = Expression(&scope, tk, attrs);
-    scope.MakeFunc(name, location, false, NULL);
+    scope.MakeFunc(name, func_id, false, NULL);
 }
 
 void Function::AddSelf(SymbolType *type)
@@ -58,7 +58,6 @@ void Function::CompileParams()
         tk->Match(",", TkType::Next);
     }
     tk->Match(")", TkType::CloseArg);
-    scope.FinishParams();
 }
 
 CodeGen Function::OutputCode()
@@ -66,8 +65,6 @@ CodeGen Function::OutputCode()
     CodeGen out_code;
 
     // Allocate stack frame of function size
-    out_code.Instruction(ByteCode::ALLOC);
-    out_code.Argument((char)scope.Length());
     out_code.Append(code);
 
     // Add default return statement for (int)0 at end of function

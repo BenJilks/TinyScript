@@ -47,6 +47,7 @@ public:
     bool IsPathFunc(vector<ExpressionPath> path);
 
 private:
+    CodeGen PushLocal(Symbol *local);
     ExpressionPath ParseFirstPath(string var);
     SymbolType *FindType(string var);
     void ParsePathNode(ExpressionPath& node, SymbolType *pre_type);
@@ -74,7 +75,7 @@ private:
     void CompileArray(Node *node);
     
     int CompileFuncArgs(CodeGen &code);
-    CodeGen CompileCallFunc(Symbol *func);
+    CodeGen CompileCallFunc(Symbol *func, bool is_method);
     CodeGen GenCode(Node *node);
     CodeGen GenLiteral(Token literal);
 

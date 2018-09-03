@@ -3,27 +3,39 @@
 #include <stdlib.h>
 #include <string.h>
 
-char *AsString(Object obj, Object *stack, int *sp, VM vm);
+char *AsString(Object obj, VM vm);
 
-void print(Object *stack, int *sp, VM vm)
+Object print(Object *args, int arg_size, VM vm)
 {
-	Object obj = stack[(*sp)-1];
-	char *str = AsString(obj, stack, sp, vm);
-	printf("%s", str);
-	free(str);
+	int i;
+	for (i = 0; i < arg_size; i++)
+	{
+		Object obj = args[i];
+		char *str = AsString(obj, vm);
+		printf("%s", str);
+		free(str);
+	}
 
-	stack[(*sp)++] = (Object){vm.PrimType(INT), 0};
+	return (Object){vm.PrimType(INT), 0};
 }
 
-void println(Object *stack, int *sp, VM vm)
+Object println(Object *args, int arg_size, VM vm)
 {
-	print(stack, sp, vm);
+	Object obj = print(args, arg_size, vm);
 	printf("\n");
+	return obj;
 }
 
-void input(Object *stack, int *sp, VM vm)
+Object call_func(Object *args, int arg_size, VM vm)
 {
-	printf("%s", stack[(*sp)-1].p->str);
+	int func_id = args[0].i;
+	Function func = vm.FindFunc(func_id);
+	return vm.CallFunc(func, args + 1, arg_size - 1);
+}
+
+Object input(Object *args, int arg_size, VM vm)
+{
+	printf("%s", args[0].p->str);
 
 	char *buffer = (char*)malloc(1024);
 	size_t size = 1024;
@@ -35,13 +47,13 @@ void input(Object *stack, int *sp, VM vm)
 	Object obj;
 	obj.type = vm.PrimType(STRING);
 	obj.p = vm.AllocPointer(buffer);
-	stack[(*sp)++] = obj;
+	return obj;
 }
 
-void as_int(Object *stack, int *sp, VM vm)
+Object as_int(Object *args, int arg_size, VM vm)
 {
 	Object out;
-	Object in = stack[(*sp)-1];
+	Object in = args[0];
 
 	out.type = vm.PrimType(INT);
 	switch(in.type->prim)
@@ -52,13 +64,13 @@ void as_int(Object *stack, int *sp, VM vm)
 		case BOOL: out.i = in.c; break;
 		case STRING: out.i = atoi(in.p->str); break;
 	}
-	stack[(*sp)++] = out;
+	return out;
 }
 
-void as_float(Object *stack, int *sp, VM vm)
+Object as_float(Object *args, int arg_size, VM vm)
 {
 	Object out;
-	Object in = stack[(*sp)-1];
+	Object in = args[0];
 
 	out.type = vm.PrimType(FLOAT);
 	switch(in.type->prim)
@@ -69,7 +81,7 @@ void as_float(Object *stack, int *sp, VM vm)
 		case BOOL: out.f = (float)in.c; break;
 		case STRING: out.f = atof(in.p->str); break;
 	}
-	stack[(*sp)++] = out;
+	return out;
 }
 
 int SizeOfObject(Object obj);
@@ -105,41 +117,38 @@ int SizeOfObject(Object obj)
 	return size;
 }
 
-void size_of(Object *stack, int *sp, VM vm)
+Object size_of(Object *args, int arg_size, VM vm)
 {
-	Object obj = stack[(*sp)-1];
-	stack[(*sp)++] = (Object){vm.PrimType(INT), SizeOfObject(obj)};
+	Object obj = args[0];
+	return (Object){vm.PrimType(INT), SizeOfObject(obj)};
 }
 
 // Class File
 
-void File_File(Object *stack, int *sp, VM vm)
+Object File_File(Object *args, int arg_size, VM vm)
 {
-	char *path = (char*)stack[(*sp)-2].p->str;
-	char *mode = (char*)stack[(*sp)-1].p->str;
-	Object *file_obj = &stack[(*sp)-3];
+	char *path = (char*)args[0].p->str;
+	char *mode = (char*)args[1].p->str;
+	Object *file_obj = &args[2];
 
 	FILE *file = fopen(path, mode);
 	file_obj->p = vm.AllocPointer(file);
-	stack[(*sp)++] = (Object){vm.PrimType(INT), 0};
+	return (Object){vm.PrimType(INT), 0};
 }
 
-void File_has_error(Object *stack, int *sp, VM vm)
+Object File_has_error(Object *args, int arg_size, VM vm)
 {
-	Object *file_obj = &stack[(*sp)-1];
+	Object *file_obj = &args[0];
 	int has_error = !file_obj->p->v;
-	stack[(*sp)++] = (Object){vm.PrimType(BOOL), has_error};
+	return (Object){vm.PrimType(BOOL), has_error};
 }
 
-void File_read_all(Object *stack, int *sp, VM vm)
+Object File_read_all(Object *args, int arg_size, VM vm)
 {
-	Object file_obj = stack[(*sp)-1];
+	Object file_obj = args[0];
 	FILE *file = (FILE*)file_obj.p->v;
 	if (!file)
-	{
-		stack[(*sp)++] = (Object){vm.PrimType(INT), 0};
-		return;
-	}
+		return (Object){vm.PrimType(INT), 0};
 
 	fseek(file, 0L, SEEK_END);
 	int length = ftell(file);
@@ -151,22 +160,22 @@ void File_read_all(Object *stack, int *sp, VM vm)
 	Object str_obj;
 	str_obj.type = vm.PrimType(STRING);
 	str_obj.p = vm.AllocPointer(data);
-	stack[(*sp)++] = str_obj;
+	return str_obj;
 }
 
-void File_close(Object *stack, int *sp, VM vm)
+Object File_close(Object *args, int arg_size, VM vm)
 {
-	Object file_obj = stack[(*sp)-1];
+	Object file_obj = args[0];
 	FILE *file = (FILE*)file_obj.p->v;
 	int error = 0;
 	if (file)
 		error = fclose(file);
-	stack[(*sp)++] = (Object){vm.PrimType(INT), error};
+	return (Object){vm.PrimType(INT), error};
 }
 
-void File_operator_it(Object *stack, int *sp, VM vm)
+Object File_operator_it(Object *args, int arg_size, VM vm)
 {
-	Object file_obj = stack[(*sp)-1];
+	Object file_obj = args[0];
 	FILE *file = (FILE*)file_obj.p->v;
 	Object *attrs = (Object*)malloc(sizeof(Object) * 100);
 	int counter = 1;
@@ -195,5 +204,5 @@ void File_operator_it(Object *stack, int *sp, VM vm)
 	Object obj;
 	obj.type = vm.PrimType(ARRAY);
 	obj.p = vm.AllocPointer(attrs);
-	stack[(*sp)++] = obj;
+	return obj;
 }

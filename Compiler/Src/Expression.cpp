@@ -27,7 +27,7 @@ CodeGen Expression::CompileFunction(string name)
         tk->Error("No function called '" + name + "' found");
         return CodeGen();
     }
-    return CompileCallFunc(func);
+    return CompileCallFunc(func, false);
 }
 
 int Expression::CompileFuncArgs(CodeGen &code)
@@ -47,8 +47,11 @@ int Expression::CompileFuncArgs(CodeGen &code)
 }
 
 // Compiles a function call of know origin
-CodeGen Expression::CompileCallFunc(Symbol *func)
+CodeGen Expression::CompileCallFunc(Symbol *func, bool is_method)
 {
+    if (!func->IsFunction())
+        tk->Error("The symbol '" + func->Name() + "' is not a function");
+
     // Push args
     CodeGen code;
     int arg_length = CompileFuncArgs(code);
@@ -57,11 +60,13 @@ CodeGen Expression::CompileCallFunc(Symbol *func)
     if (func->IsSystem())
         code.Instruction(ByteCode::CALL_SYS);
     else
-        code.Instruction(ByteCode::CALL);
+    {
+        if (is_method)
+            code.Instruction(ByteCode::CALL_METHOD);
+        else
+            code.Instruction(ByteCode::CALL);
+    }
     code.Argument(func->Location());
-
-    // Clean up arguments from stack after function call
-    code.Instruction(ByteCode::POP_ARGS);
     code.Argument((char)arg_length);
     return code;
 }
@@ -109,7 +114,7 @@ void Expression::ParseFunctionNode(ExpressionPath& node)
             node.c->Name() + "' found");
         return;
     }
-    node.code = CompileCallFunc(func);
+    node.code = CompileCallFunc(func, true);
     node.type = PathType::Func;
 }
 
@@ -145,7 +150,7 @@ ExpressionPath Expression::ParseFirstPath(string var)
             tk->Error("Could not find function named '" + var + "'");
             return first;
         }
-        first.code = CompileCallFunc(func);
+        first.code = CompileCallFunc(func, false);
         first.type = PathType::Func;
     }
     return first;
@@ -208,11 +213,24 @@ CodeGen Expression::GenSelfAttribute(ExpressionPath first)
     }
 
     Symbol *self = scope->FindSymbol("self");
-    code.Instruction(ByteCode::PUSH_LOC);
-    code.Argument((char)self->Location());
+    code.Append(PushLocal(self));
 
     code.Instruction(ByteCode::PUSH_ATTR);
     code.Argument((char)symb->Location());
+    return code;
+}
+
+CodeGen Expression::PushLocal(Symbol *local)
+{
+    CodeGen code;
+    int location = local->Location();
+
+    if (local->IsParameter())
+        code.Instruction(ByteCode::PUSH_ARG);
+    else
+        code.Instruction(ByteCode::PUSH_LOC);
+    code.Argument((char)location);
+
     return code;
 }
 
@@ -233,9 +251,7 @@ CodeGen Expression::GenFirstPath(ExpressionPath first)
         return code;
     }
 
-    int location = symb->Location();
-    code.Instruction(ByteCode::PUSH_LOC);
-    code.Argument((char)location);
+    code.Append(PushLocal(symb));
     return code;
 }
 
@@ -317,8 +333,7 @@ CodeGen Expression::AssignSelfAttribute(Symbol *attr)
 {
     CodeGen code;
     Symbol *self = scope->FindSymbol("self");
-    code.Instruction(ByteCode::PUSH_LOC);
-    code.Argument((char)self->Location());
+    code.Append(PushLocal(self));
 
     code.Instruction(ByteCode::ASSIGN_ATTR);
     code.Argument((char)attr->Location());
@@ -382,7 +397,7 @@ void Expression::CompileNewObject(SymbolType *c, Node *node)
     // If found, then use as constructor
     if (init != NULL)
     {
-        node->code.Append(CompileCallFunc(init));
+        node->code.Append(CompileCallFunc(init, true));
         node->code.Instruction(ByteCode::POP);
         node->code.Argument((char)1);
     }
@@ -407,6 +422,18 @@ void Expression::CompileName(Node *node)
     {
         node->code.Append(CompileFunction(name.data));
         return;
+    }
+
+    // If the name is a function, then push the location
+    Symbol *symb = scope->FindSymbol(name.data);
+    if (symb != NULL)
+    {
+        if (symb->IsFunction())
+        {
+            node->code.Instruction(ByteCode::PUSH_INT);
+            node->code.Argument(symb->Location());
+            return;
+        }
     }
 
     // Otherwise it's a local

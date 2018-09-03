@@ -49,6 +49,7 @@ int main(int argc, char **argv)
 
     if (dis_mode)
     {
+        printf("Disassemble file: %s\n", file_path.c_str());
         Disassemble(file_path.c_str());
         return 0;
     }

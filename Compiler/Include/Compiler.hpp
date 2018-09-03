@@ -1,10 +1,11 @@
 #pragma once
 #include "Symbol.hpp"
 #include "Tokenizer.hpp"
-#include "CodeGen.hpp"
+#include "CodeGen.hpp" 
 
 using External = tuple<string, vector<string>>;
 
+class Function;
 class Class;
 class Compiler
 {
@@ -19,9 +20,8 @@ public:
     ~Compiler();
 private:
     void DumpExternals(CodeGen &out_code);
-    void DumpSysCalls(CodeGen &out_code);
     void DumpTypes(CodeGen &out_code);
-    CodeGen Optimize();
+    void DumpFunctions(CodeGen &out_code);
 
     void CompileInclude(Tokenizer *tk);
     void CompileExternal(Tokenizer *tk);
@@ -30,9 +30,8 @@ private:
     void CompileFunc(Tokenizer *tk);
     void CompileClass(Tokenizer *tk);
 
-    CodeGen code;
+    vector<Function> functions;
     vector<string> compiled_files;
-    vector<string> syscalls;
     vector<External> externals;
     int pointer;
 

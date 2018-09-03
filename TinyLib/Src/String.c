@@ -3,8 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-char *AsString(Object obj, Object *stack, int *sp, VM vm);
-char *ArrayAsString(Object obj, char *str, Object *stack, int *sp, VM vm)
+char *AsString(Object obj, VM vm);
+char *ArrayAsString(Object obj, char *str, VM vm)
 {
     int size = obj.p->attrs[0].i;
     int i = 0, curr_p = 1;
@@ -12,7 +12,7 @@ char *ArrayAsString(Object obj, char *str, Object *stack, int *sp, VM vm)
     for (i = 0; i < size; i++)
     {
         Object attr = obj.p->attrs[i+1];
-        char *item = AsString(attr, stack, sp, vm);
+        char *item = AsString(attr, vm);
         int item_len = strlen(item);
 
         str = (char*)realloc(str, curr_p + item_len + 4);
@@ -28,24 +28,21 @@ char *ArrayAsString(Object obj, char *str, Object *stack, int *sp, VM vm)
     return str;
 }
 
-char *ObjectAsString(Object obj, char *str, Object *stack, int *sp, VM vm)
+char *ObjectAsString(Object obj, char *str, VM vm)
 {
     if (obj.type->operator_to_string != -1)
     {
-        stack[(*sp)++] = obj;
-        vm.CallFunc(obj.type->operator_to_string);
-		Object ret = stack[(*sp)-1];
-	
+		Function func = vm.FindFunc(obj.type->operator_to_string);
+        Object ret = vm.CallFunc(func, &obj, 1);
         str = (char*)realloc(str, strlen(ret.p->str)+1);
         strcpy(str, ret.p->str);
-        *sp -= 2;
         return str;
     }
     sprintf(str, "<%s at 0x%x>", obj.type->name, obj.p->v); 
     return str;
 }
 
-char *AsString(Object obj, Object *stack, int *sp, VM vm)
+char *AsString(Object obj, VM vm)
 {
 	char *str = (char*)malloc(80);
 	if (obj.type == NULL)
@@ -64,18 +61,18 @@ char *AsString(Object obj, Object *stack, int *sp, VM vm)
 			str = (char*)realloc(str, strlen(obj.p->str)+1);
 			strcpy(str, obj.p->str);
 		       	break;
-		case ARRAY: str = ArrayAsString(obj, str, stack, sp, vm); break;
-		case OBJECT: str = ObjectAsString(obj, str, stack, sp, vm); break;
+		case ARRAY: str = ArrayAsString(obj, str, vm); break;
+		case OBJECT: str = ObjectAsString(obj, str, vm); break;
 	}
 	return str;
 }
 
-void String_operator_add(Object *stack, int *sp, VM vm)
+Object String_operator_add(Object *args, int arg_size, VM vm)
 {
 	// Fetch operation data
-    Object left = stack[(*sp)-2];
-    Object right = stack[(*sp)-1];
-    char *right_str = AsString(right, stack, sp, vm);
+    Object left = args[0];
+    Object right = args[1];
+    char *right_str = AsString(right, vm);
 
 	// Create a new combined string
     int left_len = strlen(left.p->str);
@@ -89,19 +86,19 @@ void String_operator_add(Object *stack, int *sp, VM vm)
 	Object result;
 	result.type = vm.PrimType(STRING);
 	result.p = vm.AllocPointer(str);
-	stack[(*sp)++] = result;
+	return result;
 }
 
-void String_operator_multiply(Object *stack, int *sp, VM vm)
+Object String_operator_multiply(Object *args, int arg_size, VM vm)
 {
 	// Fetch operation data
-	Object left = stack[(*sp)-2];
-    Object right = stack[(*sp)-1];
+	Object left = args[0];
+    Object right = args[1];
 	if (right.type != vm.PrimType(INT))
 	{
 		printf("Error: cannot multiply a string by a '%s'\n", 
 			right.type->name);
-		return;
+		return (Object){vm.PrimType(INT), 0};
 	}
 
 	// Create a new string, and fill
@@ -116,40 +113,40 @@ void String_operator_multiply(Object *stack, int *sp, VM vm)
 	Object result;
 	result.type = vm.PrimType(STRING);
 	result.p = vm.AllocPointer(str);
-	stack[(*sp)++] = result;
+	return result;
 }
 
-void StringError(Object *stack, int *sp)
+void StringError(Object *args, int arg_size)
 {
 	printf("Error: invalid string operation\n");
 }
 
-void str(Object *stack, int *sp, VM vm)
+Object str(Object *args, int arg_size, VM vm)
 {
-	Object in = stack[(*sp)-1];
-	char *str = AsString(in, stack, sp, vm);
+	Object in = args[0];
+	char *str = AsString(in, vm);
 
 	Object out;
 	out.type = vm.PrimType(STRING);
 	out.p = vm.AllocPointer(str);
-	stack[(*sp)++] = out;
+	return out;
 }
 
-void String_size(Object *stack, int *sp, VM vm)
+Object String_size(Object *args, int arg_size, VM vm)
 {
-	Object str = stack[(*sp)-1];
+	Object str = args[0];
 	int length = strlen(str.p->str);
 
 	Object size_obj;
 	size_obj.type = vm.PrimType(INT);
 	size_obj.i = length;
-	stack[(*sp)++] = size_obj;
+	return size_obj;
 }
 
-void String_append(Object *stack, int *sp, VM vm)
+Object String_append(Object *args, int arg_size, VM vm)
 {
-	char *dest = stack[(*sp)-2].p->str;
-	char *src = AsString(stack[(*sp)-1], stack, sp, vm);
+	char *dest = args[0].p->str;
+	char *src = AsString(args[1], vm);
 
 	int dest_len = strlen(dest);
 	int src_len = strlen(src);
@@ -158,14 +155,14 @@ void String_append(Object *stack, int *sp, VM vm)
 	dest[dest_len + src_len] = '\0';
 	free(src);
 
-	stack[(*sp)-2].p->str = dest;
-	stack[(*sp)++] = (Object){vm.PrimType(INT), 0};
+	args[0].p->str = dest;
+	return (Object){vm.PrimType(INT), 0};
 }
 
-void String_split(Object *stack, int *sp, VM vm)
+Object String_split(Object *args, int arg_size, VM vm)
 {
-	Object str_obj = stack[(*sp) - 2];
-	Object c_obj = stack[(*sp) - 1];
+	Object str_obj = args[0];
+	Object c_obj = args[1];
 	char *str = str_obj.p->str;
 	char sc = c_obj.c;
 	int str_len = strlen(str);
@@ -197,5 +194,5 @@ void String_split(Object *stack, int *sp, VM vm)
 	Object out;
 	out.type = vm.PrimType(ARRAY);
 	out.p = vm.AllocPointer(attr);
-	stack[(*sp)++] = out;
+	return out;
 }

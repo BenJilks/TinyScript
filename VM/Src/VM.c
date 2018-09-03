@@ -4,7 +4,6 @@
 #include <dlfcn.h>
 #include <unistd.h>
 #include "VM.h"
-#include "Operations.h"
 
 #define DEBUG 0
 #define DEBUG_MEM 0
@@ -23,21 +22,22 @@
 #define LOG_MEM(...)
 #endif
 
-char *data;
-int length;
-
-int header_size;
 SysFunc sys_funcs[1024];
 Type types[80];
-int sys_func_size;
-
-int pc, sp, bp, fp, cycle;
-int stack_frame[STACK_SIZE];
-Object stack[STACK_SIZE];
-
+Function functions[80];
 Pointer *pointers;
+
+int sys_func_size;
+int func_size;
 int pointer_count;
-VM vm = {PrimType, AllocPointer, CallFunc};
+int cycle;
+
+static Function FindFunc(int id)
+{
+	return  functions[id];
+}
+VM vm = {PrimType, AllocPointer, CallFunc, FindFunc};
+#include "Operations.h"
 
 typedef enum ByteCode
 {
@@ -64,6 +64,7 @@ typedef enum ByteCode
 	OR,
 	CALL,
 	CALL_SYS,
+	CALL_METHOD,
 	RETURN,
 	BRANCH_IF_NOT,
 	BRANCH_IF_IT,
@@ -80,23 +81,6 @@ typedef enum ByteCode
 	IT_NEXT
 } ByteCode;
 
-typedef struct SysCall
-{
-	char name[80];
-	SysFunc func;
-} SysCall;
-
-SysCall sys_calls[80];
-int sys_call_size = 0;
-
-void RegisterFunc(char *name, SysFunc func)
-{
-	SysCall call;
-	strcpy(call.name, name);
-	call.func = func;
-	sys_calls[sys_call_size++] = call;
-}
-
 Type *PrimType(int prim)
 {
 	switch(prim)
@@ -111,52 +95,8 @@ Type *PrimType(int prim)
 	return NULL;
 }
 
-// Scan an object for refrences to a pointer
-void ScanObject(Object obj)
-{
-	int i;
-	if (obj.type->prim == STRING)
-	{
-		obj.p->ref_count++;
-	}
-	else if (obj.type->prim == ARRAY)
-	{
-		obj.p->ref_count++;
-		for (i = 1; i < obj.p->attrs[0].i; i++)
-			ScanObject(obj.p->attrs[i]);
-	}
-	else if (obj.type->prim == OBJECT)
-	{
-		obj.p->ref_count++;
-		for (i = 0; i < obj.type->size; i++)
-			ScanObject(obj.p->attrs[i]);
-	}
-}
-
-void CleanUp()
-{
-	int i;
-	for (i = 0; i < sp; i++)
-		if (stack[i].type != NULL)
-			ScanObject(stack[i]);
-
-	for (i = 0; i < pointer_count; i++)
-	{
-		Pointer *p = &pointers[i];
-		if (p->ref_count <= 0 && p->v != NULL)
-		{
-			LOG_MEM("Freed pointer 0x%x (at %i)\n", p->v, i);
-			free(p->v);
-			p->v = NULL;
-		}
-		p->ref_count = 0;
-	}
-}
-
 void ErrorOut()
 {
-	sp = 0;
-	CleanUp();
 	free(pointers);
 	exit(0);
 }
@@ -168,17 +108,12 @@ void CheckMemory()
 		printf("Error: Out of memory\n");
 		ErrorOut();
 	}
-	
-	if (cycle > MEM_CLEAR_RATE)
-	{
-		CleanUp();
-		cycle = 0;
-	}
 }
 
 Pointer *AllocPointer(void *p)
 {
 	CheckMemory();
+	
 	int i;
 	for (i = 0; i < pointer_count; i++)
 	{
@@ -196,18 +131,18 @@ Pointer *AllocPointer(void *p)
 	return &pointers[pointer_count++];
 }
 
-void LoadString(char *str)
+void LoadString(char *str, char *data, int *pointer)
 {
-	int length = data[header_size];
-	memcpy(str, data + header_size + 1, length);
+	int length = data[(*pointer)];
+	memcpy(str, data + (*pointer) + 1, length);
 	str[length] = '\0';
-	header_size += length + 1;
+	*pointer += length + 1;
 }
 
-int LoadInt()
+int LoadInt(char *data, int *pointer)
 {
-	int i = *(int*)(data + header_size);
-	header_size += 4;
+	int i = *(int*)(data + (*pointer));
+	*pointer += 4;
 	return i;
 }
 
@@ -221,15 +156,37 @@ void GetFullPath(char *out, int max_size, char *file)
     out[cwd_len + strlen(file) + 1] = '\0';
 }
 
-void LoadExternals()
+void LoadLib(void *handle, char *data, int *pointer)
 {
-	int i, j;
-	int len = data[header_size++];
+	int i;
+	char *error;
+	char call[80];
+	int call_len = data[(*pointer)++];
+
+	for (i = 0; i < call_len; i++)
+	{
+		LoadString(call, data, pointer);
+		LOG(" ==> Loading external function '%s'\n", call);
+
+		sys_funcs[sys_func_size++] = (SysFunc)dlsym(handle, call);
+		if ((error = dlerror()) != NULL)  
+		{
+			fprintf (stderr, "%s\n", error);
+			continue;
+		}
+	}
+}
+
+void LoadExternals(char *data, int *pointer)
+{
+	int i;
+	int len = data[(*pointer)++];
+	
 	for (i = 0; i < len; i++)
 	{
 		char file[80];
 		char path[1024];
-		LoadString(file);
+		LoadString(file, data, pointer);
 		GetFullPath(path, 1024, file);
 		LOG("Loading external '%s'\n", path);
 
@@ -241,71 +198,28 @@ void LoadExternals()
 		}
 
 		dlerror();
-		int call_len = data[header_size++];
-		for (j = 0; j < call_len; j++)
-		{
-			char *error;
-			char call[80];
-			LoadString(call);
-			LOG(" ==> Loading external function '%s'\n", call);
-
-			sys_funcs[sys_func_size++] = (SysFunc)dlsym(handle, call);
-			if ((error = dlerror()) != NULL)  
-			{
-				fprintf (stderr, "%s\n", error);
-				continue;
-			}
-		}
+		LoadLib(handle, data, pointer);
 	}
 }
 
-void LoadSysCalls()
-{
-	int i, j;
-	int syscall_length = data[header_size++];
-	for (i = 0; i < syscall_length; i++)
-	{
-		char syscall[80];
-		LoadString(syscall);
-
-		int was_found = 0;
-		for (j = 0; j < sys_call_size; j++)
-		{
-			if (!strcmp(syscall, sys_calls[j].name))
-			{
-				sys_funcs[sys_func_size++] = sys_calls[j].func;
-				was_found = 1;
-				break;
-			}
-		}
-		LOG("System function: '%s': %s\n", syscall, was_found ? "Found" : "Not Found");
-
-		if (!was_found)
-		{
-			printf("Error: No system function named '%s' could be found\n", syscall);
-			ErrorOut();
-		}
-	}
-}
-
-void LoadDataTypes()
+void LoadDataTypes(char *data, int *pointer)
 {
 	int i;
-	int type_length = data[header_size++];
+	int type_length = data[(*pointer)++];
 	for (i = 0; i < type_length; i++)
 	{
 		Type type;
-		LoadString(type.name);
-		type.size = LoadInt();
-		type.is_sys_type = data[header_size++];
-		type.operator_add = LoadInt();
-		type.operator_subtract = LoadInt();
-		type.operator_multiply = LoadInt();
-		type.operator_divide = LoadInt();
-		type.operator_to_string = LoadInt();
-		type.operator_get_index = LoadInt();
-		type.operator_set_index = LoadInt();
-		type.operator_it = LoadInt();
+		LoadString(type.name, data, pointer);
+		type.size = LoadInt(data, pointer);
+		type.is_sys_type = data[(*pointer)++];
+		type.operator_add = LoadInt(data, pointer);
+		type.operator_subtract = LoadInt(data, pointer);
+		type.operator_multiply = LoadInt(data, pointer);
+		type.operator_divide = LoadInt(data, pointer);
+		type.operator_to_string = LoadInt(data, pointer);
+		type.operator_get_index = LoadInt(data, pointer);
+		type.operator_set_index = LoadInt(data, pointer);
+		type.operator_it = LoadInt(data, pointer);
 		type.prim = OBJECT;
 
 		if (!strcmp(type.name, "String")) { type.prim = STRING; t_string = type; }
@@ -315,35 +229,49 @@ void LoadDataTypes()
 	}
 }
 
-void ResetReg()
+// Load function data from file
+void LoadFunctions(char *data, int *pointer)
 {
-	pc = 0;
-	sp = 0;
-	bp = 0;
-	fp = 0;
-	cycle = 0;
-	pointer_count = 0;
-	sys_func_size = 0;
+	int i;
+	int count = LoadInt(data, pointer);
+
+	for (i = 0; i < count; i++)
+	{
+		Function func;
+		LoadString(func.name, data, pointer);
+		func.size = LoadInt(data, pointer);
+		func.length = LoadInt(data, pointer);
+		func.bytecode = data + (*pointer);
+		*pointer += func.length;
+
+		LOG("Loaded function '%s' of size %i\n", func.name, func.length);
+		functions[func_size++] = func;
+	}
 }
 
+// Load and run a program
 void LoadProgram(char *program_data, int program_length)
 {
+	// Init registers and pointer
 	pointers = (Pointer*)malloc(sizeof(Pointer) * MEM_SIZE);
-	data = program_data;
-	length = program_length;
+	pointer_count = 0;
+	sys_func_size = 0;
+	func_size = 0;
+	cycle = 0;
 
-	int main_func = *(int*)data;
-	header_size = 4;
+	// Load program data
+	LOG("Loading program\n");
+	int pointer = 0;
+	LoadExternals(program_data, &pointer);
+	LoadDataTypes(program_data, &pointer);
+	LoadFunctions(program_data, &pointer);
+	LOG("Finished loading program\n");
 
-	LOG("Linking program...\n");
-	ResetReg();
-	LoadExternals();
-	LoadSysCalls();
-	LoadDataTypes();
-	LOG("Finished linking\n");
+	// Call main functions
+	Function main = functions[LoadInt(program_data, &pointer)];
+	CallFunc(main, NULL, 0);
 
-	CallFunc(main_func);
-	//CleanUp();
+	// Free program data
 	free(pointers);
 }
 
@@ -361,7 +289,7 @@ LOGIC_FUNC(Or, ||);
 #define OP_INSTUCTION(code, op) \
 	case code: \
 		LOG("%s operation\n", #op); \
-		stack[(--sp)-1] = op(stack[sp-2], stack[sp-1]); \
+		stack[(--sp)-1] = op(stack[sp-2], stack[sp-1], stack, sp); \
 		break; \
 
 #define CHECK_OP(obj, operator) \
@@ -370,55 +298,28 @@ LOGIC_FUNC(Or, ||);
 		ERROR("Error: No %s of type '%s' found\n", #operator, obj.type->name); \
 	}
 
-void log_object(Object obj)
+Object CallFunc(Function func, Object *params, int param_size)
 {
-	printf("%s", obj.type->name);
-	if (obj.type != NULL)
-	{
-		switch (obj.type->prim)
-		{
-			case INT: printf("(%i)", obj.i); break;
-			case OBJECT: 
-			{
-				printf("(");
-				int j;
-				for (j = 0; j < obj.type->size; j++)
-					log_object(obj.p->attrs[j]);
-				printf(")");
-				break;
-			}
-		}
-	}
-	printf(", ");
-}
+	Object stack[80];
+	char *data = func.bytecode;
+	int sp = func.size, pc = 0;
 
-void CallFunc(int func)
-{
-	int recursion_depth = 1;
-	stack_frame[fp++] = pc;
-	pc = func + header_size;
-
-	while (recursion_depth > 0 && pc < length)
+	int should_return = 0;
+	while (pc < func.length && !should_return)
 	{
 		cycle++;
-		char bytecode = data[pc++];
-		LOG("#%i (%x): ", pc-header_size-1, bytecode);
+		char bytecode = func.bytecode[pc++];
+		LOG("%s -> #%i (%x): ", func.name, pc, bytecode);
 		switch(bytecode)
 		{
-			case ALLOC:
-				LOG("New stack frame size %i\n", data[pc]);
-				stack_frame[fp++] = bp;
-				bp = sp;
-				sp += data[pc++];
-				break;
-			
 			case PUSH_ARG:
-				stack[sp++] = stack[bp-data[pc++]-1]; 
+				LOG("Push argument #%i\n", data[pc]);
+				stack[sp++] = params[data[pc++]];
 				break;
 			
 			case PUSH_LOC:
 				LOG("Push local #%i\n", data[pc]);
-				stack[sp++] = stack[bp+data[pc++]];
+				stack[sp++] = stack[data[pc++]];
 				break;
 			
 			case PUSH_INT:
@@ -479,7 +380,7 @@ void CallFunc(int func)
 
 			case ASSIGN:
 				LOG("Assign to local %i\n", data[pc]);
-				stack[bp+data[pc++]] = stack[--sp];
+				stack[data[pc++]] = stack[--sp];
 				break;
 
 			OP_INSTUCTION(ADD, Add)
@@ -495,20 +396,46 @@ void CallFunc(int func)
 			OP_INSTUCTION(OR, Or)
 
 			case CALL:
-				LOG("Call function at %i\n", *((int*)(data + pc)));
-				stack_frame[fp++] = pc+4;
-				pc = *((int*)(data + pc)) + header_size;
-				recursion_depth++;
+			{
+				int index = *((int*)(data + pc));
+				int arg_size = data[pc+4];
+				pc += 5;
+
+				Function func = functions[index];
+				LOG("Call function %s(%i), with %i arg(s)\n", func.name, index, arg_size);
+
+				Object ret = CallFunc(func, stack + sp - arg_size, arg_size);
+				stack[sp - arg_size] = ret;
+				sp -= arg_size - 1;
 				break;
+			}
 
 			case CALL_SYS:
 			{
 				int index = *((int*)(data + pc));
-				pc += 4;
+				int arg_size = data[pc+4];
+				pc += 5;
 
-				LOG("Call: %i\n", index);
+				LOG("Call external %i with %i arg(s)\n", index, arg_size);
 				SysFunc func = sys_funcs[index];
-				func(stack, &sp, vm);
+				Object ret = func(stack + sp - arg_size, arg_size, vm);
+				stack[sp - arg_size] = ret;
+				sp -= arg_size - 1;
+				break;
+			}
+
+			case CALL_METHOD:
+			{
+				int index = *((int*)(data + pc));
+				int arg_size = data[pc+4];
+				pc += 5;
+
+				Function func = functions[index];
+				LOG("Call method %s(%i), with %i arg(s)\n", func.name, index, arg_size);
+
+				Object ret = CallFunc(func, stack + sp - arg_size - 1, arg_size);
+				stack[sp - arg_size] = ret;
+				sp -= arg_size - 1;
 				break;
 			}
 			
@@ -524,21 +451,17 @@ void CallFunc(int func)
 				break;
 
 			case RETURN:
-				LOG("Return from function call to %i\n", stack_frame[fp-2]);
-				stack[bp] = stack[sp-1];
-				sp = bp + 1;
-				bp = stack_frame[--fp];
-				pc = stack_frame[--fp];
-				recursion_depth--;
+				LOG("Return from function call\n");
+				should_return = 1;
 				break;
 
 			case INC_LOC:
 				LOG("Inc local at %i by %i\n", data[pc], data[pc+1]);
-				switch(stack[bp+data[pc]].type->prim)
+				switch(stack[data[pc]].type->prim)
 				{
-					case INT: stack[bp+data[pc]].i += data[pc+1]; break;
-					case FLOAT: stack[bp+data[pc]].f += data[pc+1]; break;
-					case CHAR: stack[bp+data[pc]].c += data[pc+1]; break;
+					case INT: stack[data[pc]].i += data[pc+1]; break;
+					case FLOAT: stack[data[pc]].f += data[pc+1]; break;
+					case CHAR: stack[data[pc]].c += data[pc+1]; break;
 					default: printf("Error: Invalid inc\n"); ErrorOut(); break;
 				}
 				pc += 2;
@@ -567,8 +490,8 @@ void CallFunc(int func)
 			{
 				LOG("Push index\n", data[pc]);
 				Object obj = stack[(sp-2)];
-				CHECK_OP(obj, operator_get_index);
-				CALL_OP(obj, operator_get_index);
+				//CHECK_OP(obj, operator_get_index);
+				//CALL_OP(obj, operator_get_index);
 				stack[sp-3] = stack[sp-1];
 				sp -= 2;
 				break;
@@ -586,8 +509,8 @@ void CallFunc(int func)
 				Object obj = stack[(sp-2)];
 				stack[(sp-2)] = stack[(sp-3)];
 				stack[(sp-3)] = obj;
-				CHECK_OP(obj, operator_set_index);
-				CALL_OP(obj, operator_set_index);
+				//CHECK_OP(obj, operator_set_index);
+				//CALL_OP(obj, operator_set_index);
 				sp -= 4;
 				break;
 			}
@@ -614,11 +537,11 @@ void CallFunc(int func)
 				Object arr = stack[sp-1];
 				if (arr.type->prim == OBJECT)
 				{
-					CHECK_OP(arr, operator_it);
-					CALL_OP(arr, operator_it);
-					arr = stack[--sp];
+					//CHECK_OP(arr, operator_it);
+					//CALL_OP(arr, operator_it);
+					//arr = stack[--sp];
 				}
-				sp--;
+				//sp--;
 
 				// Create an object with a counter and array
 				Object *attrs = (Object*)malloc(sizeof(Object) * 2);
@@ -640,7 +563,7 @@ void CallFunc(int func)
 
 				int index = it.p->attrs[0].i++;
 				Object next = it.p->attrs[1].p->attrs[index+1];
-				stack[bp+data[pc++]] = next;
+				stack[data[pc++]] = next;
 				break;
 			}
 
@@ -662,10 +585,12 @@ void CallFunc(int func)
 		int i;
 		printf("Stack: ");
 		for (i = 0; i < sp; i++)
-			log_object(stack[i]);
+			printf("%s, ", stack[i].type->name);
 		printf("\n");
 #endif
 	}
+
+	return stack[sp - 1];
 }
 
 void ExecFile(char *file_path)

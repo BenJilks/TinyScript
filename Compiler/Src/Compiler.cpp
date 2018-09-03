@@ -60,13 +60,6 @@ void Compiler::DumpExternals(CodeGen &out_code)
     }
 }
 
-void Compiler::DumpSysCalls(CodeGen &out_code)
-{
-    out_code.Argument((char)syscalls.size());
-    for (string call : syscalls)
-        out_code.String(call);
-}
-
 static void DumpOperator(Class *c, string name, CodeGen &out_code)
 {
     Symbol *func = c->Attrs()->FindSymbol(name);
@@ -78,8 +71,7 @@ static void DumpOperator(Class *c, string name, CodeGen &out_code)
 
 void Compiler::DumpTypes(CodeGen &out_code)
 {
-    char count = classes.size();
-    out_code.Argument((char)count);
+    out_code.Argument((char)classes.size());
 
     // Push class data:
     // string: name, int: size
@@ -99,17 +91,19 @@ void Compiler::DumpTypes(CodeGen &out_code)
     }
 }
 
-CodeGen Compiler::Optimize()
+void Compiler::DumpFunctions(CodeGen &out_code)
 {
-    return code;
-    /*
-    vector<char> out_code;
-    for (int i = 0; i < code.size(); i++)
+    out_code.Argument((int)functions.size());
+
+    for (Function func : functions)
     {
-        char c = code[i];
-        out_code.push_back(c);
+        out_code.String(func.Name());
+        out_code.Argument(func.Length());
+
+        CodeGen code = func.OutputCode();
+        out_code.Argument(code.CurrPC());
+        out_code.Append(code);
     }
-    return out_code;*/
 }
 
 vector<char> Compiler::GetDump()
@@ -122,13 +116,11 @@ vector<char> Compiler::GetDump()
         return vector<char>();
     }
 
-    out_code.Argument(func->Location());
     DumpExternals(out_code);
-    DumpSysCalls(out_code);
     DumpTypes(out_code);
-    
-    CodeGen optimized = Optimize();
-    out_code.Append(optimized);
+    DumpFunctions(out_code);
+
+    out_code.Argument(func->Location());
     return out_code.GetCode();
 }
 
@@ -182,7 +174,7 @@ void Compiler::CompileExternalClass(Tokenizer *tk, vector<string> &calls)
     tk->Match("sysclass", TkType::SysClass);
     Token name = tk->Match("Name", TkType::Name);
 
-    Class *c = new Class(name.data, tk, NULL, NULL);
+    Class *c = new Class(name.data, NULL, tk, NULL);
     c->CompileSys(calls, &pointer);
     global_scope.MakeType(name.data, c->Attrs());
     classes.push_back(c);
@@ -196,13 +188,12 @@ void Compiler::CompileFunc(Tokenizer *tk)
     Token name = tk->Match("Name", TkType::Name);
     LOG("Function '%s'\n", name.data.c_str());
     
-    Function func(name.data, code.CurrPC(), &global_scope, tk, NULL);
+    Function func(name.data, functions.size(), &global_scope, tk, NULL);
     func.Compile();
+    functions.push_back(func);
     
     // Append function code to main code, then add function to symbol table
-    CodeGen func_code = func.OutputCode();
-    code.Append(func_code);
-    Symbol *symb = globals->MakeFunc(name.data, func.Location(), false, NULL);
+    Symbol *symb = globals->MakeFunc(name.data, func.FuncID(), false, NULL);
     symb->AssignType(func.ReturnType());
 }
 
@@ -214,7 +205,7 @@ void Compiler::CompileClass(Tokenizer *tk)
 	Token name = tk->Match("Name", TkType::Name);
     LOG("Class '%s'\n", name.data.c_str());
 	
-	Class *c = new Class(name.data, tk, &code, &global_scope);
+	Class *c = new Class(name.data, &functions, tk, &global_scope);
     global_scope.MakeType(name.data, c->Attrs());
 	c->Compile();
     classes.push_back(c);

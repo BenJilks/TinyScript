@@ -1,4 +1,10 @@
 include "TinyLib/TinyLib.tiny"
 
+func add(a, b)
+	return a + b
+
+func print_item(item)
+	println(item)
+
 func main()
-	println("Hello, TinyLib!")
+	call_func(print_item, call_func(add, 1, 2))

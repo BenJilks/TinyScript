@@ -19,14 +19,16 @@ Type t_char = {"char", CHAR, sizeof(char), 1, -1, -1, -1, -1, -1, -1};
         left.type->name, #op, right.type->name); \
     exit(0)
 
-#define CALL_OP(obj, overload) \
-	if (obj.type->is_sys_type) \
-		sys_funcs[obj.type->overload](stack, &sp, vm); \
-	else \
-		CallFunc(obj.type->overload);
+Object CallOp(Object obj, int overload, int arg_size, Object *stack, int sp)
+{
+	Object *params = stack + sp - arg_size + 1;
+	if (obj.type->is_sys_type)
+		return sys_funcs[overload](params, arg_size, vm);
+	return CallFunc(functions[overload], params, arg_size);
+}
 
 #define OP_FUNC(name, op, overload) \
-	Object name(Object left, Object right) \
+	static Object name(Object left, Object right, Object *stack, int sp) \
 	{ \
 		Object obj; \
 		switch(left.type->prim) \
@@ -65,12 +67,7 @@ Type t_char = {"char", CHAR, sizeof(char), 1, -1, -1, -1, -1, -1, -1};
 			case STRING: \
 			case ARRAY: \
 				if (left.type->overload != -1) \
-				{ \
-					sp++; \
-					CALL_OP(left, overload); \
-					sp -= 2; \
-					return stack[sp+1]; \
-				} \
+					return CallOp(left, left.type->overload, 2, stack, sp); \
 				OP_ERROR(left, right, op); \
 				break; \
 		} \
@@ -78,7 +75,7 @@ Type t_char = {"char", CHAR, sizeof(char), 1, -1, -1, -1, -1, -1, -1};
 	}
 
 #define COMPARE_FUNC(name, op) \
-	Object name(Object left, Object right) \
+	Object name(Object left, Object right, Object *stack, int sp) \
 	{ \
 		Object obj; \
 		switch(left.type->prim) \
@@ -118,7 +115,7 @@ Type t_char = {"char", CHAR, sizeof(char), 1, -1, -1, -1, -1, -1, -1};
 	}
 
 #define LOGIC_FUNC(name, op) \
-	Object name(Object left, Object right) \
+	Object name(Object left, Object right, Object *stack, int sp) \
 	{ \
 		Object obj; \
 		switch(left.type->prim) \
@@ -144,7 +141,7 @@ Type t_char = {"char", CHAR, sizeof(char), 1, -1, -1, -1, -1, -1, -1};
 		return obj; \
 	}
 
-Object Equals(Object left, Object right)
+Object Equals(Object left, Object right, Object *stack, int sp)
 {
 	Object obj;
 	switch(left.type->prim)

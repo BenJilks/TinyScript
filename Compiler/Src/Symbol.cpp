@@ -57,7 +57,7 @@ Symbol *Scope::FindSymbol(string name)
 
 Symbol *Scope::MakeLocal(string name)
 {
-    Symbol symb(name, curr_location++, false);
+    Symbol symb(name, curr_loc++, false);
     table.push_back(symb);
     max_size++;
     return &table[table.size()-1];
@@ -72,18 +72,7 @@ Symbol *Scope::MakeFunc(string name, int location, bool is_sys, Scope *params)
 
 void Scope::MakeParameter(string name, SymbolType *type)
 {
-    auto param = make_tuple(name, type);
-    params.push_back(param);
-}
-
-void Scope::FinishParams()
-{
-    int curr_loc = -1;
-    for (int i = params.size() - 1; i >= 0; i--)
-    {
-        auto param = params[i];
-        Symbol symb(get<0>(param), curr_loc--, true);
-        symb.AssignType(get<1>(param));
-        table.push_back(symb);
-    }
+    Symbol symb(name, curr_param++, true);
+    symb.AssignType(type);
+    table.push_back(symb);
 }

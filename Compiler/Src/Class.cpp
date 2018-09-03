@@ -4,8 +4,8 @@
 #include "Debug.hpp"
 #include <algorithm>
 
-Class::Class(string name, Tokenizer *tk, CodeGen *code, GlobalScope *global) :
-    name(name), tk(tk), code(code), global(global)
+Class::Class(string name, vector<Function> *functions, Tokenizer *tk, GlobalScope *global) :
+    name(name), functions(functions), tk(tk), global(global)
 {
     attrs = new Scope(NULL);
     is_sys_class = true;
@@ -53,13 +53,12 @@ void Class::CompileMethod()
     Token name = tk->Match("Name", TkType::Name);
     LOG("Method '%s'\n", name.data.c_str());
 
-    Function func(name.data, code->CurrPC(), global, tk, attrs);
+    Function func(name.data, functions->size(), global, tk, attrs);
     func.AddSelf(global->Type(this->name));
     func.Compile();
+    functions->push_back(func);
     
-    CodeGen func_code = func.OutputCode();
-    code->Append(func_code);
-    Symbol *symb = attrs->MakeFunc(name.data, func.Location(), false, NULL);
+    Symbol *symb = attrs->MakeFunc(name.data, func.FuncID(), false, NULL);
     symb->AssignType(func.ReturnType());
 }
 

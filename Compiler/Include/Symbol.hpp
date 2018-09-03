@@ -26,10 +26,10 @@ class Symbol
 {
 public:
     Symbol(string name, int location, bool is_parameter) :
-        name(name), location(location), is_parameter(is_parameter), params(NULL), type(NULL) {}
+        name(name), location(location), is_parameter(is_parameter), is_func(false), params(NULL), type(NULL) {}
     
     Symbol(string name, int location, bool is_sys, Scope *params) :
-        name(name), location(location), is_sys(is_sys), params(params), type(NULL) {}
+        name(name), location(location), is_sys(is_sys), is_func(true), params(params), type(NULL) {}
 
     inline void AssignType(SymbolType *t) { type = t; }
 
@@ -38,12 +38,14 @@ public:
     inline SymbolType *Type() const { return type; }
     inline bool IsParameter() const { return is_parameter; }
     inline bool IsSystem() const { return is_sys; }
+    inline bool IsFunction() const { return is_func; }
     
 private:
     string name;
     int location;
     bool is_sys;
     bool is_parameter;
+    bool is_func;
     Scope *params;
     SymbolType *type;
 
@@ -54,7 +56,7 @@ class Scope
 {
 public:
     Scope(GlobalScope *global) :
-        curr_location(0), max_size(0), global(global) {}
+        curr_loc(0), curr_param(0), max_size(0), global(global) {}
     
     inline GlobalScope *Global() const { return global; }
     inline int Length() const { return max_size; }
@@ -62,12 +64,10 @@ public:
     Symbol *MakeLocal(string name);
     Symbol *MakeFunc(string name, int location, bool is_sys, Scope *params);
     void MakeParameter(string name, SymbolType *type);
-    void FinishParams();
 
 private:
     vector<Symbol> table;
-    vector<tuple<string, SymbolType*>> params;
-    int curr_location;
+    int curr_loc, curr_param;
     int max_size;
     GlobalScope *global;
 

@@ -10,15 +10,16 @@ using namespace std;
 class Function
 {
 public:
-    Function(string name, int location, GlobalScope *global, Tokenizer *tk, Scope *attrs);
+    Function(string name, int func_id, GlobalScope *global, Tokenizer *tk, Scope *attrs);
     CodeGen OutputCode();
 	void AddSelf(SymbolType *type);
 	void Compile();
     void CompileBlock();
 	void CompileStatement();
     
-    inline int Location() const { return location; }
     inline string Name() const { return name; }
+	inline int Length() const { return scope.Length(); }
+	inline int FuncID() const { return func_id; }
 	inline bool IsSysCall() const { return is_syscall; }
 	inline SymbolType *ReturnType() const { return type; }
     
@@ -34,7 +35,7 @@ private:
 	void CompileWhile();
 
 	string name;
-	int location;
+	int func_id;
 	SymbolType *type;
 
     CodeGen code;

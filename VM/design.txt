@@ -1,0 +1,63 @@
+
+Src:
+func a(x, y)
+    return x + y
+
+func b(msg)
+{
+    while true
+        println(msg)
+}
+
+func main()
+{
+    x = a(1, 2)
+    println(x)
+}
+
+Compiled:
+func a size 0
+{
+    PUSH_PARAM 0
+    PUSH_PARAM 1
+    ADD
+    RETURN
+}
+
+func b size 0
+{
+    start:
+    PUSH_BOOL true
+    JUMP_IF_NOT end
+
+    PUSH_PARAM 0
+    SYS_CALL println
+
+    JUMP start
+    end:
+}
+
+func main size 1
+{
+    PUSH_INT 1
+    PUSH_INT 2
+    CALL a, 2
+    STORE 0
+
+    LOAD 0
+    SYS_CALL println
+}
+
+Structures:
+struct Function
+{
+    char *name;
+    int size;
+    char *bytecode;
+}
+
+Object Call(Function func, Object *params) 
+{
+    Object stack[80];
+    int sp, pc;
+}

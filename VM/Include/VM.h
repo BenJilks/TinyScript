@@ -3,7 +3,7 @@
 
 #define MAX_NAME_LENGTH 80
 #define STACK_SIZE 80
-#define MEM_SIZE 1024 * 1024
+#define MEM_SIZE 80
 
 typedef enum Primitive
 {
@@ -57,21 +57,30 @@ typedef struct Object
 	};
 } Object;
 
+typedef struct Function
+{
+	char name[80];
+	int size;
+	char *bytecode;
+	int length;
+} Function;
+
 typedef Type *(*PrimTypeFunc)(int);
 typedef Pointer *(*AllocPointerFunc)(void *p);
-typedef void (*CallFuncFunc)(int);
+typedef Object (*CallFuncFunc)(Function, Object*, int);
+typedef Function (*FindFuncFunc)(int);
 typedef struct VM
 {
 	PrimTypeFunc PrimType;
 	AllocPointerFunc AllocPointer;
 	CallFuncFunc CallFunc;
+	FindFuncFunc FindFunc;
 } VM;
-typedef void (*SysFunc)(Object *stack, int *sp, VM vm);
+typedef Object (*SysFunc)(Object *params, int param_size, VM vm);
 
-void RegisterFunc(char *name, SysFunc func);
 Pointer *AllocPointer(void *p);
 void LoadProgram(char *program_data, int program_length);
-void CallFunc(int func);
+Object CallFunc(Function func, Object *params, int param_size);
 void ExecFile(char *file_path);
 Type *PrimType(int prim);
 

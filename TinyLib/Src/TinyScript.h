@@ -57,15 +57,25 @@ typedef struct Object
 	};
 } Object;
 
+typedef struct Function
+{
+	char name[80];
+	int size;
+	char *bytecode;
+	int length;
+} Function;
+
 typedef Type *(*PrimTypeFunc)(int);
 typedef Pointer *(*AllocPointerFunc)(void *p);
-typedef void (*CallFuncFunc)(int);
+typedef Object (*CallFuncFunc)(Function, Object*, int);
+typedef Function (*FindFuncFunc)(int);
 typedef struct VM
 {
 	PrimTypeFunc PrimType;
 	AllocPointerFunc AllocPointer;
 	CallFuncFunc CallFunc;
+	FindFuncFunc FindFunc;
 } VM;
-typedef void (*SysFunc)(Object *stack, int *sp, VM vm);
+typedef Object (*SysFunc)(Object *params, int param_size, VM vm);
 
 #endif // TINY_SCRIPT_H

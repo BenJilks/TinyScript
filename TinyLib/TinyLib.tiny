@@ -3,6 +3,7 @@ external "TinyLib/TinyLib.so"
 {
     syscall print
     syscall println
+    syscall call_func
     syscall input
     syscall as_int
     syscall as_float
