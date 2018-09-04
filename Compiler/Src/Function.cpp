@@ -181,34 +181,42 @@ void Function::CompileReturn()
 // := if <condition> <block>
 void Function::CompileIf()
 {
+    int end = code.MakeLabel();
+
     LOG("If statement\n");
     tk->Match("if", TkType::If);
     code.Append(expression.Compile());
     
     code.Instruction(ByteCode::BRANCH_IF_NOT);
-    int else_l = code.MakeLabel();
+    code.Label(end);
     CompileBlock();
-    code.SetLabel(else_l);
+    code.SetLabel(end);
 }
 
 void Function::CompileIter(vector<ExpressionPath> path)
 {
+    int start = code.MakeLabel();
+    int end = code.MakeLabel();
+
     string name = path[0].var;
     Symbol *iter = scope.MakeLocal(name);
 
     tk->Match("in", TkType::In);
     code.Append(expression.Compile());
+    
     code.Instruction(ByteCode::MAKE_IT);
-    int start = code.CurrPC();
+    code.SetLabel(start);
     code.Instruction(ByteCode::BRANCH_IF_IT);
-    int end = code.MakeLabel();
+    code.Label(end);
+
     code.Instruction(ByteCode::IT_NEXT);
     code.Argument((char)iter->Location());
 
     CompileBlock();
 
     code.Instruction(ByteCode::BRANCH);
-    code.Argument(start - code.CurrPC());
+    code.Label(start);
+
     code.SetLabel(end);
     code.Instruction(ByteCode::POP);
     code.Argument((char)1);
@@ -218,6 +226,9 @@ void Function::CompileIter(vector<ExpressionPath> path)
 // := for <var> = <start> to <end> <block>
 void Function::CompileFor()
 {
+    int start = code.MakeLabel();
+    int end = code.MakeLabel();
+
     LOG("For loop\n");
     tk->Match("for", TkType::For);
     Token var = tk->Match("Name", TkType::Name);
@@ -236,13 +247,13 @@ void Function::CompileFor()
     Symbol *iter = scope.FindSymbol(var.data);
 
     // Test if value is less than end state, and jump to end if not
-    int start = code.CurrPC();
+    code.SetLabel(start);
     code.Instruction(ByteCode::PUSH_LOC);
     code.Argument((char)iter->Location());
     code.Append(expression.Compile());
     code.Instruction(ByteCode::LESSTHAN);
     code.Instruction(ByteCode::BRANCH_IF_NOT);
-    int end = code.MakeLabel();
+    code.Label(end);
 
     CompileBlock();
 
@@ -253,27 +264,30 @@ void Function::CompileFor()
 
     // Jump to start of loop
     code.Instruction(ByteCode::BRANCH);
-    code.Argument(start - code.CurrPC());
+    code.Label(start);
     code.SetLabel(end);
 }
 
 void Function::CompileWhile()
 {
+    int start = code.MakeLabel();
+    int end = code.MakeLabel();
+
     LOG("While loop\n");
     tk->Match("while", TkType::While);
     
     // Compile condition
-    int start = code.CurrPC();
+    code.SetLabel(start);
     code.Append(expression.Compile());
     
     // Branch to end if condition is not met
     code.Instruction(ByteCode::BRANCH_IF_NOT);
-    int end = code.MakeLabel();
+    code.Label(end);
 
     CompileBlock();
 
     // Jump to start
     code.Instruction(ByteCode::BRANCH);
-    code.Argument(start - code.CurrPC());
+    code.Label(start);
     code.SetLabel(end);
 }

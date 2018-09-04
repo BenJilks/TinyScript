@@ -102,7 +102,7 @@ void Compiler::DumpFunctions(CodeGen &out_code)
 
         CodeGen code = func.OutputCode();
         out_code.Argument(code.CurrPC());
-        out_code.Append(code);
+        out_code.Append(CodeGen(code.GetCode()));
     }
 }
 

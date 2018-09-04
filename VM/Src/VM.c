@@ -441,13 +441,13 @@ Object CallFunc(Function func, Object *params, int param_size)
 			
 			case BRANCH_IF_NOT:
 				LOG("Branch if not (%s) by %i\n", stack[sp-1].i ? "false" : "true", *((int*)(data + pc)));
-				if (!stack[--sp].i) pc += (*((int*)(data + pc)))-4;
+				if (!stack[--sp].i) pc = (*((int*)(data + pc))) - 4;
 				pc += 4;
 				break;
 
 			case BRANCH:
 				LOG("Branch by %i\n", *((int*)(data + pc)));
-				pc += *((int*)(data + pc));
+				pc = *((int*)(data + pc));
 				break;
 
 			case RETURN:
@@ -575,7 +575,7 @@ Object CallFunc(Function func, Object *params, int param_size)
 				int size = it.p->attrs[1].p->attrs[0].i;
 
 				if (index >= size)
-					pc += (*((int*)(data + pc)))-4;
+					pc = (*((int*)(data + pc)))-4;
 				pc += 4;
 				break;
 			}
@@ -585,7 +585,7 @@ Object CallFunc(Function func, Object *params, int param_size)
 		int i;
 		printf("Stack: ");
 		for (i = 0; i < sp; i++)
-			printf("%s, ", stack[i].type->name);
+			printf("%s(#%i), ", stack[i].type->name, stack[i].p);
 		printf("\n");
 #endif
 	}

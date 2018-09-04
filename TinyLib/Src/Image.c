@@ -40,10 +40,10 @@ Object LoadImage(const char *path, int *width, int *height, VM vm)
     return MakeArray(w * h * 4, pixels, vm);
 }
 
-void Image_Image(Object *stack, int *sp, VM vm)
+Object Image_Image(Object *args, int arg_size, VM vm)
 {
-    Object *img_obj = &stack[(*sp)-2];
-    Object path_obj = stack[(*sp)-1];
+    Object *img_obj = &args[0];
+    Object path_obj = args[1];
     char *path = path_obj.p->str;
 
     int width, height;
@@ -53,26 +53,26 @@ void Image_Image(Object *stack, int *sp, VM vm)
     attrs[2] = MakeInt(height, vm);
     img_obj->p = vm.AllocPointer(attrs);
 
-    stack[(*sp)++] = MakeInt(0, vm);
+    return MakeInt(0, vm);
 }
 
-void Image_pixels(Object *stack, int *sp, VM vm)
+Object Image_pixels(Object *args, int arg_size, VM vm)
 {
-    Object img_obj = stack[(*sp)-1];
+    Object img_obj = args[0];
     Object pixels = img_obj.p->attrs[0];
-    stack[(*sp)++] = pixels;
+    return pixels;
 }
 
-void Image_width(Object *stack, int *sp, VM vm)
+Object Image_width(Object *args, int arg_size, VM vm)
 {
-    Object img_obj = stack[(*sp)-1];
+    Object img_obj = args[0];
     Object width = img_obj.p->attrs[1];
-    stack[(*sp)++] = width;
+    return width;
 }
 
-void Image_height(Object *stack, int *sp, VM vm)
+Object Image_height(Object *args, int arg_size, VM vm)
 {
-    Object img_obj = stack[(*sp)-1];
+    Object img_obj = args[0];
     Object height = img_obj.p->attrs[2];
-    stack[(*sp)++] = height;
+    return height;
 }

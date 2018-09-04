@@ -33,6 +33,25 @@ Object call_func(Object *args, int arg_size, VM vm)
 	return vm.CallFunc(func, args + 1, arg_size - 1);
 }
 
+Object sum(Object *args, int arg_size, VM vm)
+{
+	int i;
+	Object out = args[0];
+
+	for (i = 1; i < arg_size; i++)
+	{
+		Object item = args[i];
+		switch(item.type->prim)
+		{
+			case INT: out.i += item.i; break;
+			case FLOAT: out.f += item.f; break;
+			default: break;
+		}
+	}
+
+	return out;
+}
+
 Object input(Object *args, int arg_size, VM vm)
 {
 	printf("%s", args[0].p->str);

@@ -60,29 +60,29 @@ Object Compair(Object left, Object right, VM vm)
 	return obj;
 }
 
-void Array_push(Object *stack, int *sp, VM vm)
+Object Array_push(Object *args, int arg_size, VM vm)
 {
-    Object arr = stack[(*sp) - 2];
-    Object obj = stack[(*sp) - 1];
+    Object arr = args[0];
+    Object obj = args[1];
     int size = arr.p->attrs[0].i;
 
     arr.p->v = realloc(arr.p->v, (size + 2) * sizeof(Object));
     arr.p->attrs[size + 1] = obj;
     arr.p->attrs[0].i++;
-    stack[(*sp)++] = (Object){vm.PrimType(INT), 0};
+    return (Object){vm.PrimType(INT), 0};
 }
 
-void Array_size(Object *stack, int *sp, VM vm)
+Object Array_size(Object *args, int arg_size, VM vm)
 {
-    Object arr = stack[(*sp) - 1];
+    Object arr = args[0];
     Object size_obj = arr.p->attrs[0];
-    stack[(*sp)++] = size_obj;
+    return size_obj;
 }
 
-void Array_operator_add(Object *stack, int *sp, VM vm)
+Object Array_operator_add(Object *args, int arg_size, VM vm)
 {
-    Object left = stack[(*sp) - 2];
-    Object right = stack[(*sp) - 1];
+    Object left = args[0];
+    Object right = args[1];
     int left_size = left.p->attrs[0].i;
     int right_size = right.p->attrs[0].i;
     int new_size = left_size + right_size;
@@ -95,18 +95,18 @@ void Array_operator_add(Object *stack, int *sp, VM vm)
     Object new_arr;
     new_arr.type = vm.PrimType(ARRAY);
     new_arr.p = vm.AllocPointer(attrs);
-    stack[(*sp)++] = new_arr;
+    return new_arr;
 }
 
-void Array_operator_multiply(Object *stack, int *sp, VM vm)
+Object Array_operator_multiply(Object *args, int arg_size, VM vm)
 {
-    Object left = stack[(*sp) - 2];
-    Object right = stack[(*sp) - 1];
+    Object left = args[0];
+    Object right = args[1];
     if (right.type != vm.PrimType(INT))
 	{
 		printf("Error: cannot multiply an array by a '%s'\n", 
 			right.type->name);
-		return;
+		return (Object){vm.PrimType(INT), 0};
 	}
     int size = left.p->attrs[0].i;
     int amount = right.i;
@@ -120,25 +120,25 @@ void Array_operator_multiply(Object *stack, int *sp, VM vm)
     Object new_arr;
     new_arr.type = vm.PrimType(ARRAY);
     new_arr.p = vm.AllocPointer(attrs);
-    stack[(*sp)++] = new_arr;
+    return new_arr;
 }
 
-void Array_operator_get_index(Object *stack, int *sp, VM vm)
+Object Array_operator_get_index(Object *args, int arg_size, VM vm)
 {
-    Object arr = stack[(*sp) - 2];
-    Object index = stack[(*sp) - 1];
+    Object arr = args[0];
+    Object index = args[1];
     Object obj = arr.p->attrs[index.i + 1];
-    stack[(*sp)++] = obj;
+    return obj;
 }
 
-void Array_operator_set_index(Object *stack, int *sp, VM vm)
+Object Array_operator_set_index(Object *args, int arg_size, VM vm)
 {
-    Object arr = stack[(*sp) - 3];
-    Object obj = stack[(*sp) - 2];
-    Object index = stack[(*sp) - 1];
+    Object arr = args[0];
+    Object obj = args[1];
+    Object index = args[2];
     arr.p->attrs[index.i+1] = obj;
 
-    stack[(*sp)++] = (Object){vm.PrimType(INT), 0};
+    return (Object){vm.PrimType(INT), 0};
 }
 
 int Find(Object arr, Object obj, VM vm)
@@ -155,20 +155,20 @@ int Find(Object arr, Object obj, VM vm)
     return -1;
 }
 
-void Array_contains(Object *stack, int *sp, VM vm)
+Object Array_contains(Object *args, int arg_size, VM vm)
 {
-    Object arr = stack[(*sp) - 2];
-    Object obj = stack[(*sp) - 1];
+    Object arr = args[0];
+    Object obj = args[1];
 
     int found = Find(arr, obj, vm) != -1;
-    stack[(*sp)++] = (Object){vm.PrimType(BOOL), found};
+    return (Object){vm.PrimType(BOOL), found};
 }
 
-void Array_index_of(Object *stack, int *sp, VM vm)
+Object Array_index_of(Object *args, int arg_size, VM vm)
 {
-    Object arr = stack[(*sp) - 2];
-    Object obj = stack[(*sp) - 1];
+    Object arr = args[0];
+    Object obj = args[1];
 
     int index = Find(arr, obj, vm);
-    stack[(*sp)++] = (Object){vm.PrimType(INT), index};
+    return (Object){vm.PrimType(INT), index};
 }
