@@ -4,7 +4,7 @@ class ReadOnlyList
 {
     items : List
     
-    func Container(items : List)
+    func ReadOnlyList(items : List)
     {
         self.items = items
     }
