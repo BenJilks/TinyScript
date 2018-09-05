@@ -1,10 +1,27 @@
 include "TinyLib/TinyLib.tiny"
 
+class ReadOnlyList
+{
+    items : List
+    
+    func Container(items : List)
+    {
+        self.items = items
+    }
+    
+    func for_item(callback)
+    {
+        for item in items
+            call_func(callback, item)
+    }
+}
+
+func print_item(item)
+    println(item)
+
 func main()
 {
-	test = input("Test: ")
-
-	if test == "a"
-		println("First")
-	println("test")
+    list : List = ["Very", "Important", "Stuff"]
+    read_only_list : ReadOnlyList = ReadOnlyList(list)
+    read_only_list.for_item(print_item)
 }
