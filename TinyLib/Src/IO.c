@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 char *AsString(Object obj, VM vm);
 
@@ -31,6 +32,34 @@ Object call_func(Object *args, int arg_size, VM vm)
 	int func_id = args[0].i;
 	Function func = vm.FindFunc(func_id);
 	return vm.CallFunc(func, args + 1, arg_size - 1);
+}
+
+Object typename(Object *args, int arg_size, VM vm)
+{
+	Object obj = args[0];
+	char *name = malloc(strlen(obj.type->name));
+	strcpy(name, obj.type->name);
+
+	Object name_obj;
+	name_obj.type = vm.PrimType(STRING);
+	name_obj.p = vm.AllocPointer(name);
+	return name_obj;
+}
+
+Object sqroot(Object *args, int arg_size, VM vm)
+{
+	Object obj = args[0];
+
+	Object out;
+	out.type = vm.PrimType(FLOAT);
+
+	switch(obj.type->prim)
+	{
+		case INT: out.f = sqrt(out.i); break;
+		case FLOAT: out.f = sqrt(out.f); break;
+		default: out.i = -1; break;
+	}
+	return out;
 }
 
 Object sum(Object *args, int arg_size, VM vm)

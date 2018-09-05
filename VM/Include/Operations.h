@@ -6,7 +6,7 @@
 Type t_int = {"int", INT, sizeof(int), 1, -1, -1, -1, -1, -1, -1};
 Type t_float = {"float", FLOAT, sizeof(int), 1, -1, -1, -1, -1, -1, -1};
 Type t_string = {"string", STRING, sizeof(void*), 1, -1, -1, -1, -1, -1, -1};
-Type t_array = {"array", ARRAY, sizeof(void*), 1, -1, -1, -1, -1, -1, -1};
+Type t_array = {"List", ARRAY, sizeof(void*), 1, -1, -1, -1, -1, -1, -1};
 Type t_bool = {"bool", BOOL, sizeof(char), 1, -1, -1, -1, -1, -1, -1};
 Type t_char = {"char", CHAR, sizeof(char), 1, -1, -1, -1, -1, -1, -1};
 

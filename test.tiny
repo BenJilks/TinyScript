@@ -1,27 +1,14 @@
 include "TinyLib/TinyLib.tiny"
-
-class ReadOnlyList
-{
-    items : List
-    
-    func ReadOnlyList(items : List)
-    {
-        self.items = items
-    }
-    
-    func for_item(callback)
-    {
-        for item in items
-            call_func(callback, item)
-    }
-}
+include "TinyLib/Vector.tiny"
 
 func print_item(item)
     println(item)
 
 func main()
 {
-    list : List = ["Very", "Important", "Stuff"]
+    list : List = ["Very", "Important", "List"]
     read_only_list : ReadOnlyList = ReadOnlyList(list)
     read_only_list.for_item(print_item)
+
+    println(Vec2(1, 2) + Vec2(3, 4) / Vec2(2, 2))
 }

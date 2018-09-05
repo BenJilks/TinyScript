@@ -1,0 +1,66 @@
+include "TinyLib/TinyLib.tiny"
+
+class Vec2
+{
+    x y
+
+    func Vec2(x, y)
+    {
+        self.x = x
+        self.y = y
+    }
+
+    func length()
+        return sqroot(x*x + y*y)
+
+    func operator_add(other : Vec2)
+        return Vec2(x + other.x, y + other.y)
+    
+    func operator_subtract(other : Vec2)
+        return Vec2(x - other.x, y - other.y)
+    
+    func operator_multiply(other : Vec2)
+        return Vec2(x * other.x, y * other.y)
+    
+    func operator_divide(other : Vec2)
+        return Vec2(x / other.x, y / other.y)
+    
+    func operator_to_string()
+        return "Vec2(X: " + x + ", Y: " + y + ")"
+    
+    func operator_it()
+        return [x, y]
+}
+
+class Vec3
+{
+    x y z
+
+    func Vec3(x, y, z)
+    {
+        self.x = x
+        self.y = y
+        self.z = z
+    }
+
+    func length()
+        return sqroot(x*x + y*y + z*z)
+
+    func operator_add(other : Vec3)
+        return Vec3(x + other.x, y + other.y, z + other.z)
+    
+    func operator_subtract(other : Vec3)
+        return Vec3(x - other.x, y - other.y, z - other.z)
+    
+    func operator_multiply(other : Vec3)
+        return Vec3(x * other.x, y * other.y, z * other.z)
+    
+    func operator_divide(other : Vec3)
+        return Vec3(x / other.x, y / other.y, z / other.z)
+    
+    func operator_to_string()
+        return "Vec3(X: " + x + ", Y: " + y + ", Z: " + z + ")"
+    
+    func operator_it()
+        return [x, y, z]
+}

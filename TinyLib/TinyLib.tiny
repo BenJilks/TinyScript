@@ -4,7 +4,9 @@ external "TinyLib/TinyLib.so"
     syscall print
     syscall println
     syscall call_func
+    syscall typename
     syscall sum
+    syscall sqroot
     syscall input
     syscall as_int
     syscall as_float
@@ -47,5 +49,21 @@ external "TinyLib/TinyLib.so"
         syscall read_all
         syscall close
         syscall operator_it
+    }
+}
+
+class ReadOnlyList
+{
+    items : List
+    
+    func ReadOnlyList(items : List)
+    {
+        self.items = items
+    }
+    
+    func for_item(callback)
+    {
+        for item in items
+            call_func(callback, item)
     }
 }
