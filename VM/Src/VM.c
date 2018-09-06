@@ -508,10 +508,9 @@ Object CallFunc(Function func, Object *params, int param_size)
 			{
 				LOG("Push index\n", data[pc]);
 				Object obj = stack[(sp-2)];
-				//CHECK_OP(obj, operator_get_index);
-				//CALL_OP(obj, operator_get_index);
-				stack[sp-3] = stack[sp-1];
-				sp -= 2;
+				CHECK_OP(obj, operator_get_index);
+				stack[sp-2] = CallOp(obj, obj.type->operator_get_index, 2, stack, sp);
+				sp -= 1;
 				break;
 			}
 			
@@ -537,9 +536,9 @@ Object CallFunc(Function func, Object *params, int param_size)
 				Object obj = stack[(sp-2)];
 				stack[(sp-2)] = stack[(sp-3)];
 				stack[(sp-3)] = obj;
-				//CHECK_OP(obj, operator_set_index);
-				//CALL_OP(obj, operator_set_index);
-				sp -= 4;
+				CHECK_OP(obj, operator_set_index);
+				CallOp(obj, obj.type->operator_set_index, 3, stack, sp);
+				sp -= 3;
 				break;
 			}
 
@@ -565,11 +564,9 @@ Object CallFunc(Function func, Object *params, int param_size)
 				Object arr = stack[sp-1];
 				if (arr.type->prim == OBJECT)
 				{
-					//CHECK_OP(arr, operator_it);
-					//CALL_OP(arr, operator_it);
-					//arr = stack[--sp];
+					CHECK_OP(arr, operator_it);
+					arr = CallOp(arr, arr.type->operator_it, 0, stack, sp);
 				}
-				//sp--;
 
 				// Create an object with a counter and array
 				Object *attrs = (Object*)malloc(sizeof(Object) * 2);
