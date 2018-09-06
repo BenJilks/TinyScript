@@ -203,21 +203,16 @@ vector<ExpressionPath> Expression::CompilePath(string var)
 
 CodeGen Expression::GenSelfAttribute(ExpressionPath first)
 {
-    CodeGen code;
     Symbol *symb = attrs->FindSymbol(first.var);
     if (symb == NULL)
     {
         tk->Error("No variable named '" + first.var + 
             "' found in scope");
-        return code;
+        return CodeGen();
     }
 
     Symbol *self = scope->FindSymbol("self");
-    code.Append(PushLocal(self));
-
-    code.Instruction(ByteCode::PUSH_ATTR);
-    code.Argument((char)symb->Location());
-    return code;
+    return PushLocalAttr(self, symb);
 }
 
 CodeGen Expression::PushLocal(Symbol *local)
@@ -231,6 +226,21 @@ CodeGen Expression::PushLocal(Symbol *local)
         code.Instruction(ByteCode::PUSH_LOC);
     code.Argument((char)location);
 
+    return code;
+}
+
+CodeGen Expression::PushLocalAttr(Symbol *local, Symbol *attr)
+{
+    CodeGen code;
+    int loc = local->Location();
+    int at = attr->Location();
+
+    if (local->IsParameter())
+        code.Instruction(ByteCode::PUSH_ATTR_ARG);
+    else
+        code.Instruction(ByteCode::PUSH_ATTR_LOC);
+    code.Argument((char)loc);
+    code.Argument((char)at);
     return code;
 }
 

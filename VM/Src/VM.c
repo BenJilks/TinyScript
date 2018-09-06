@@ -5,7 +5,7 @@
 #include <unistd.h>
 #include "VM.h"
 
-#define DEBUG 0
+#define DEBUG 1
 #define DEBUG_MEM 0
 #define LOG_STACK 0
 #define MEM_CLEAR_RATE 500
@@ -73,9 +73,17 @@ typedef enum ByteCode
 	POP_ARGS,
 	MALLOC,
 	PUSH_ATTR,
+	PUSH_ATTR_LOC,
+	PUSH_ATTR_ARG,
 	PUSH_INDEX,
+	PUSH_INDEX_LOC,
+	PUSH_INDEX_ARG,
 	ASSIGN_ATTR,
+	ASSIGN_ATTR_LOC,
+	ASSIGN_ATTR_ARG,
 	ASSIGN_INDEX,
+	ASSIGN_INDEX_LOC,
+	ASSIGN_INDEX_ARG,
 	MAKE_ARRAY,
 	MAKE_IT,
 	IT_NEXT
@@ -485,6 +493,16 @@ Object CallFunc(Function func, Object *params, int param_size)
 				LOG("Push attribute at %i\n", data[pc]);
 				stack[sp-1] = stack[sp-1].p->attrs[data[pc++]];
 				break;
+			
+			case PUSH_ATTR_LOC:
+				LOG("Push attribute from local %i at %i\n", data[pc], data[pc+1]);
+				stack[sp++] = stack[data[pc++]].p->attrs[data[pc++]];
+				break;
+			
+			case PUSH_ATTR_ARG:
+				LOG("Push attribute from arg %i at %i\n", data[pc], data[pc+1]);
+				stack[sp++] = params[data[pc++]].p->attrs[data[pc++]];
+				break;
 
 			case PUSH_INDEX:
 			{
@@ -501,6 +519,16 @@ Object CallFunc(Function func, Object *params, int param_size)
 				LOG("Assign attribute to %i\n", data[pc]);
 				stack[sp-1].p->attrs[data[pc++]] = stack[sp-2];
 				sp -= 2;
+				break;
+			
+			case ASSIGN_ATTR_LOC:
+				LOG("Assign attribute from local %i to %i\n", data[pc], data[pc+1]);
+				stack[data[pc++]].p->attrs[data[pc++]] = stack[--sp];
+				break;
+			
+			case ASSIGN_ATTR_ARG:
+				LOG("Assign attribute from local %i to %i\n", data[pc], data[pc+1]);
+				params[data[pc++]].p->attrs[data[pc++]] = stack[--sp];
 				break;
 			
 			case ASSIGN_INDEX:

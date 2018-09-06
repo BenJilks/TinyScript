@@ -1,14 +1,26 @@
 include "TinyLib/TinyLib.tiny"
 include "TinyLib/Vector.tiny"
 
-func print_item(item)
-    println(item)
+class Test
+{
+    var : int
+    attr : int
+
+    func Test()
+    {
+        var = 21
+        attr = 54
+    }
+    
+    func out()
+    {
+        println(var)
+        println(attr)
+    }
+}
 
 func main()
 {
-    list : List = ["Very", "Important", "List"]
-    read_only_list : ReadOnlyList = ReadOnlyList(list)
-    read_only_list.for_item(print_item)
-
-    println(Vec2(1, 2) + Vec2(3, 4) / Vec2(2, 2))
+    test : Test = Test()
+    test.out()
 }

@@ -48,6 +48,7 @@ public:
 
 private:
     CodeGen PushLocal(Symbol *local);
+    CodeGen PushLocalAttr(Symbol *local, Symbol *attr);
     ExpressionPath ParseFirstPath(string var);
     SymbolType *FindType(string var);
     void ParsePathNode(ExpressionPath& node, SymbolType *pre_type);
