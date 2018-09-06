@@ -10,14 +10,14 @@ Type t_array = {"List", ARRAY, sizeof(void*), 1, -1, -1, -1, -1, -1, -1};
 Type t_bool = {"bool", BOOL, sizeof(char), 1, -1, -1, -1, -1, -1, -1};
 Type t_char = {"char", CHAR, sizeof(char), 1, -1, -1, -1, -1, -1, -1};
 
-#define ERROR(...) \
+#define ERROR(func, ...) \
+	printf("TinyScript Error in function '%s': \n	", func); \
 	printf(__VA_ARGS__); \
-	exit(0)
+	ErrorOut()
 
-#define OP_ERROR(left, right, op) \
-    printf("Invalid operation of '%s %s %s'\n", \
-        left.type->name, #op, right.type->name); \
-    exit(0)
+#define OP_ERROR(func, left, right, op) \
+    ERROR(func, "Invalid operation of '%s %s %s'\n", \
+        left.type->name, #op, right.type->name)
 
 Object CallOp(Object obj, int overload, int arg_size, Object *stack, int sp)
 {
@@ -28,7 +28,7 @@ Object CallOp(Object obj, int overload, int arg_size, Object *stack, int sp)
 }
 
 #define OP_FUNC(name, op, overload) \
-	static Object name(Object left, Object right, Object *stack, int sp) \
+	static Object name(char* func, Object left, Object right, Object *stack, int sp) \
 	{ \
 		Object obj; \
 		switch(left.type->prim) \
@@ -39,7 +39,7 @@ Object CallOp(Object obj, int overload, int arg_size, Object *stack, int sp)
 					case INT: obj.type = &t_int; obj.i = left.i op right.i; break; \
 					case FLOAT: obj.type = &t_float; obj.f = left.i op right.f; break; \
 					case CHAR: obj.type = &t_int; obj.i = left.i op right.c; break; \
-					default: OP_ERROR(left, right, op); break; \
+					default: OP_ERROR(func, left, right, op); break; \
 				} \
 				break; \
 			case FLOAT: \
@@ -48,7 +48,7 @@ Object CallOp(Object obj, int overload, int arg_size, Object *stack, int sp)
 					case INT: obj.type = &t_float; obj.f = left.f op right.i; break; \
 					case FLOAT: obj.type = &t_float; obj.f = left.f op right.f; break; \
 					case CHAR: obj.type = &t_float; obj.f = left.f op right.c; break; \
-					default: OP_ERROR(left, right, op); break; \
+					default: OP_ERROR(func, left, right, op); break; \
 				} \
 				break; \
 			case CHAR: \
@@ -57,25 +57,25 @@ Object CallOp(Object obj, int overload, int arg_size, Object *stack, int sp)
 					case INT: obj.type = &t_int; obj.i = left.c op right.i; break; \
 					case FLOAT: obj.type = &t_float; obj.f = left.c op right.f; break; \
 					case CHAR: obj.type = &t_char; obj.c = left.c op right.c; break; \
-					default: OP_ERROR(left, right, op); break; \
+					default: OP_ERROR(func, left, right, op); break; \
 				} \
 				break; \
 			case BOOL: \
-				OP_ERROR(left, right, op); \
+				OP_ERROR(func, left, right, op); \
 				break; \
 			case OBJECT: \
 			case STRING: \
 			case ARRAY: \
 				if (left.type->overload != -1) \
 					return CallOp(left, left.type->overload, 2, stack, sp); \
-				OP_ERROR(left, right, op); \
+				OP_ERROR(func, left, right, op); \
 				break; \
 		} \
 		return obj; \
 	}
 
 #define COMPARE_FUNC(name, op) \
-	Object name(Object left, Object right, Object *stack, int sp) \
+	Object name(char* func, Object left, Object right, Object *stack, int sp) \
 	{ \
 		Object obj; \
 		switch(left.type->prim) \
@@ -86,7 +86,7 @@ Object CallOp(Object obj, int overload, int arg_size, Object *stack, int sp)
 					case INT: obj.type = &t_bool; obj.i = left.i op right.i; break; \
 					case FLOAT: obj.type = &t_bool; obj.i = left.i op right.f; break; \
 					case CHAR: obj.type = &t_bool; obj.i = left.i op right.c; break; \
-					default: OP_ERROR(left, right, op); break; \
+					default: OP_ERROR(func, left, right, op); break; \
 				} \
 				break; \
 			case FLOAT: \
@@ -95,7 +95,7 @@ Object CallOp(Object obj, int overload, int arg_size, Object *stack, int sp)
 					case INT: obj.type = &t_bool; obj.i = left.f op right.i; break; \
 					case FLOAT: obj.type = &t_bool; obj.i = left.f op right.f; break; \
 					case CHAR: obj.type = &t_bool; obj.i = left.f op right.c; break; \
-					default: OP_ERROR(left, right, op); break; \
+					default: OP_ERROR(func, left, right, op); break; \
 				} \
 				break; \
 			case CHAR: \
@@ -104,35 +104,35 @@ Object CallOp(Object obj, int overload, int arg_size, Object *stack, int sp)
 					case INT: obj.type = &t_bool; obj.i = left.c op right.i; break; \
 					case FLOAT: obj.type = &t_bool; obj.i = left.c op right.f; break; \
 					case CHAR: obj.type = &t_bool; obj.i = left.c op right.c; break; \
-					default: OP_ERROR(left, right, op); break; \
+					default: OP_ERROR(func, left, right, op); break; \
 				} \
 				break; \
 			case BOOL: \
-				OP_ERROR(left, right, op); \
+				OP_ERROR(func, left, right, op); \
 				break; \
 		} \
 		return obj; \
 	}
 
 #define LOGIC_FUNC(name, op) \
-	Object name(Object left, Object right, Object *stack, int sp) \
+	Object name(char* func, Object left, Object right, Object *stack, int sp) \
 	{ \
 		Object obj; \
 		switch(left.type->prim) \
 		{ \
 			case INT: \
-				OP_ERROR(left, right, op); \
+				OP_ERROR(func, left, right, op); \
 				break; \
 			case FLOAT: \
-				OP_ERROR(left, right, op); \
+				OP_ERROR(func, left, right, op); \
 				break; \
 			case CHAR: \
-				OP_ERROR(left, right, op); \
+				OP_ERROR(func, left, right, op); \
 				break; \
 			case BOOL: \
 				if (right.type->prim != BOOL) \
 				{ \
-					OP_ERROR(left, right, op); \
+					OP_ERROR(func, left, right, op); \
 					break; \
 				} \
 				obj.type = &t_bool; obj.i = left.c op right.c; \
@@ -141,59 +141,60 @@ Object CallOp(Object obj, int overload, int arg_size, Object *stack, int sp)
 		return obj; \
 	}
 
-Object Equals(Object left, Object right, Object *stack, int sp)
-{
-	Object obj;
-	switch(left.type->prim)
-	{
-		case INT:
-			switch(right.type->prim)
-			{
-				case INT: obj.type = &t_bool; obj.i = left.i == right.i; break;
-				case FLOAT: obj.type = &t_bool; obj.i = left.i == right.f; break;
-				case CHAR: obj.type = &t_bool; obj.i = left.i == right.c; break;
-				default: OP_ERROR(left, right, ==); break;
-			}
-			break;
-		case FLOAT:
-			switch(right.type->prim)
-			{
-				case INT: obj.type = &t_bool; obj.i = left.f == right.i; break;
-				case FLOAT: obj.type = &t_bool; obj.i = left.f == right.f; break;
-				case CHAR: obj.type = &t_bool; obj.i = left.f == right.c; break;
-				default: OP_ERROR(left, right, ==); break;
-			}
-			break;
-		case CHAR:
-			switch(right.type->prim)
-			{
-				case INT: obj.type = &t_bool; obj.i = left.c == right.i; break;
-				case FLOAT: obj.type = &t_bool; obj.i = left.c == right.f; break;
-				case CHAR: obj.type = &t_bool; obj.i = left.c == right.c; break;
-				default: OP_ERROR(left, right, ==); break;
-			}
-			break;
-		case BOOL:
-			switch(right.type->prim)
-			{
-				case BOOL: obj.type = &t_bool; obj.i = left.c == right.c; break;
-				default: OP_ERROR(left, right, ==); break;
-			}
-			break;
-		case STRING:
-			switch(right.type->prim)
-			{
-				case STRING: obj.type = &t_bool; obj.i = !strcmp(left.p->str, right.p->str); break;
-				default: OP_ERROR(left, right, ==); break;
-			}
-			break;
-        case OBJECT:
-            switch(right.type->prim)
-			{
-				case OBJECT: obj.type = &t_bool; obj.i = left.p->v == right.p->v; break;
-				default: OP_ERROR(left, right, ==); break;
-			}
-            break;
+#define EQUALS_FUNC() \
+	Object Equals(char* func, Object left, Object right, Object *stack, int sp) \
+	{ \
+		Object obj; \
+		switch(left.type->prim) \
+		{ \
+			case INT: \
+				switch(right.type->prim) \
+				{ \
+					case INT: obj.type = &t_bool; obj.i = left.i == right.i; break; \
+					case FLOAT: obj.type = &t_bool; obj.i = left.i == right.f; break; \
+					case CHAR: obj.type = &t_bool; obj.i = left.i == right.c; break; \
+					default: OP_ERROR(func, left, right, ==); break; \
+				} \
+				break; \
+			case FLOAT: \
+				switch(right.type->prim) \
+				{ \
+					case INT: obj.type = &t_bool; obj.i = left.f == right.i; break; \
+					case FLOAT: obj.type = &t_bool; obj.i = left.f == right.f; break; \
+					case CHAR: obj.type = &t_bool; obj.i = left.f == right.c; break; \
+					default: OP_ERROR(func, left, right, ==); break; \
+				} \
+				break; \
+			case CHAR: \
+				switch(right.type->prim) \
+				{ \
+					case INT: obj.type = &t_bool; obj.i = left.c == right.i; break; \
+					case FLOAT: obj.type = &t_bool; obj.i = left.c == right.f; break; \
+					case CHAR: obj.type = &t_bool; obj.i = left.c == right.c; break; \
+					default: OP_ERROR(func, left, right, ==); break; \
+				} \
+				break; \
+			case BOOL: \
+				switch(right.type->prim) \
+				{ \
+					case BOOL: obj.type = &t_bool; obj.i = left.c == right.c; break; \
+					default: OP_ERROR(func, left, right, ==); break; \
+				} \
+				break; \
+			case STRING: \
+				switch(right.type->prim) \
+				{ \
+					case STRING: obj.type = &t_bool; obj.i = !strcmp(left.p->str, right.p->str); break; \
+					default: OP_ERROR(func, left, right, ==); break; \
+				} \
+				break; \
+			case OBJECT: \
+				switch(right.type->prim) \
+				{ \
+					case OBJECT: obj.type = &t_bool; obj.i = left.p->v == right.p->v; break; \
+					default: OP_ERROR(func, left, right, ==); break; \
+				} \
+				break; \
+		} \
+		return obj; \
 	}
-	return obj;
-}

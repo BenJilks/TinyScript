@@ -1,26 +1,5 @@
 include "TinyLib/TinyLib.tiny"
 include "TinyLib/Vector.tiny"
 
-class Test
-{
-    var : int
-    attr : int
-
-    func Test()
-    {
-        var = 21
-        attr = 54
-    }
-    
-    func out()
-    {
-        println(var)
-        println(attr)
-    }
-}
-
 func main()
-{
-    test : Test = Test()
-    test.out()
-}
+    println(21 + false)

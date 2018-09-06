@@ -5,7 +5,7 @@
 #include <unistd.h>
 #include "VM.h"
 
-#define DEBUG 1
+#define DEBUG 0
 #define DEBUG_MEM 0
 #define LOG_STACK 0
 #define MEM_CLEAR_RATE 500
@@ -31,6 +31,7 @@ int sys_func_size;
 int func_size;
 int pointer_count;
 int cycle;
+int force_close;
 
 static Function FindFunc(int id)
 {
@@ -105,8 +106,8 @@ Type *PrimType(int prim)
 
 void ErrorOut()
 {
-	free(pointers);
-	exit(0);
+	printf("TinyScript was forced closed\n");
+	force_close = 1;
 }
 
 void CheckMemory()
@@ -266,6 +267,7 @@ void LoadProgram(char *program_data, int program_length)
 	sys_func_size = 0;
 	func_size = 0;
 	cycle = 0;
+	force_close = 0;
 
 	// Load program data
 	LOG("Loading program\n");
@@ -293,11 +295,12 @@ COMPARE_FUNC(LessThan, <);
 COMPARE_FUNC(LessThanEqual, <=);
 LOGIC_FUNC(And, &&);
 LOGIC_FUNC(Or, ||);
+EQUALS_FUNC();
 
 #define OP_INSTUCTION(code, op) \
 	case code: \
 		LOG("%s operation\n", #op); \
-		stack[(--sp)-1] = op(stack[sp-2], stack[sp-1], stack, sp); \
+		stack[(--sp)-1] = op(func.name, stack[sp-2], stack[sp-1], stack, sp); \
 		break; \
 
 #define CHECK_OP(obj, operator) \
@@ -313,7 +316,7 @@ Object CallFunc(Function func, Object *params, int param_size)
 	int sp = func.size, pc = 0;
 
 	int should_return = 0;
-	while (pc < func.length && !should_return)
+	while (!(should_return || force_close))
 	{
 		cycle++;
 		char bytecode = func.bytecode[pc++];
