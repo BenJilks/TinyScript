@@ -22,12 +22,34 @@ Node *out;
 	#include <string>
 	using namespace std;
 
+	enum class PrimType
+	{
+		Int,
+		Float,
+		String,
+		Bool,
+		Char,
+	};
+
+	struct Literal
+	{
+		union
+		{
+			int i;
+			float f;
+			bool b;
+			char c;
+			string *s;
+		};
+		PrimType type;
+	};
+
 	struct Node
 	{
 		Node(Node *left, char op, Node *right) :
-			left(left), right(right), op(op) {}
+			left(left), right(right), op(op), val(NULL) {}
 
-		Node(int val) :
+		Node(Literal *val) :
 			left(NULL), right(NULL), val(val) {}
 
 		~Node()
@@ -37,27 +59,35 @@ Node *out;
 				delete left;
 				delete right;
 			}
+
+			if (val != NULL)
+				delete val;
 		}
 
 		Node *left;
 		Node *right;
 		char op;
-		int val;
+		Literal *val;
 	};
 }
 
 %union {
-	int	int_val;
-	string*	str_val;
-	Node*	node_val;
+	Literal*	lit_val;
+	string*		str_val;
+	Node*		node_val;
 }
 
 %start program
 
-%token <int_val> 	NUM
+%token <lit_val> 	INT_LIT
+%token <lit_val> 	FLOAT_LIT
+%token <lit_val> 	BOOL_LIT
+%token <lit_val> 	CHAR_LIT
+%token <lit_val> 	STRING_LIT
 %token <str_val>	IDENT
 %token 			FUNC
 %type <node_val> 	expr
+%type <lit_val> 	term
 %left '+' '-'
 %left '*' '/'
 
@@ -67,12 +97,19 @@ program:
 	expr		{ out = $1; }
 
 expr:	
-	NUM		{ $$ = new Node($1); }
+	term		{ $$ = new Node($1); }
 |	expr '+' expr 	{ $$ = new Node($1, '+', $3); }
 |	expr '-' expr 	{ $$ = new Node($1, '-', $3); }
 |	expr '*' expr 	{ $$ = new Node($1, '*', $3); }
 |	expr '/' expr 	{ $$ = new Node($1, '/', $3); }
 |	'(' expr ')'	{ $$ = $2; }
+
+term:
+	INT_LIT
+|	FLOAT_LIT
+|	BOOL_LIT
+|	CHAR_LIT
+|	STRING_LIT
 
 %%
 
@@ -82,6 +119,31 @@ void yyerror(char const *s)
 		yylineno, yytext, s);
 }
 
+void print_lit(Literal *lit)
+{
+	switch(lit->type)
+	{
+		case PrimType::Int: printf("%i ", lit->i); break;
+		case PrimType::Float: printf("%.6g ", lit->f); break;
+		case PrimType::Bool: printf("%s ", lit->b ? "true" : "false"); break;
+		case PrimType::Char: printf("%c ", lit->c); break;
+		case PrimType::String: printf("%s ", lit->s->c_str()); break;
+	}
+}
+
+void print_node(Node *node)
+{
+	if (node->left == NULL && node->right == NULL)
+	{
+		print_lit(node->val);
+		return;
+	}
+
+	print_node(node->left);
+	print_node(node->right);
+	printf("%c ", node->op);
+}
+
 int main(int argc, char *argv[])
 {
 	yydebug = 0;
@@ -89,7 +151,7 @@ int main(int argc, char *argv[])
 	if (yyparse() != 0)
 		return 1;
 	
-	printf("%i\n", out->right->right->val);
+	print_node(out);
+	printf("\n");	
 	delete out;
 }
-
