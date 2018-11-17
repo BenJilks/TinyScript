@@ -59,6 +59,9 @@ struct VMMod
 };
 
 struct VMMod *VM_LoadMod(char *header, char *data);
+struct VMMod *VM_CreateSysMod(const char *name);
+void VM_LoadSysFunc(struct VMMod *mod, SysFunc func, const char *name);
+struct VMType *VM_PrimType(int prim);
 int VM_Link();
 
 struct VMObject VM_CallFunc(struct VMFunc *func, 

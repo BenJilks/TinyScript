@@ -62,6 +62,7 @@ struct VMMod *VM_LoadMod(char *header, char *data)
         func.code = data + INT(header, pc); NEXT_INT(pc);
         func.size = INT(header, pc); NEXT_INT(pc);
         func.mod = mod;
+        func.is_sys = 0;
         mod->funcs[i] = func;
         LOG("   - Loaded function '%s' at %i of size %i\n", 
             func.name, func.code - data, func.size);
@@ -89,6 +90,37 @@ struct VMMod *VM_LoadMod(char *header, char *data)
 
     mod_size++;
     return mod;
+}
+
+struct VMMod *VM_CreateSysMod(const char *name)
+{
+    struct VMMod *mod = &mods[mod_size++];
+    strcpy(mod->name, name);
+    mod->data = NULL;
+    mod->func_size = 0;
+    mod->sub_size = 0;
+    return mod;
+}
+
+void VM_LoadSysFunc(struct VMMod *mod, SysFunc func, const char *name)
+{
+    struct VMFunc sfunc;
+    strcpy(sfunc.name, name);
+    sfunc.sys_func = func;
+    sfunc.is_sys = 1;
+    mod->funcs[mod->func_size++] = sfunc;
+}
+
+struct VMType *VM_PrimType(int prim)
+{
+    switch(prim)
+    {
+        case PRIM_INT: return &dt_int;
+        case PRIM_FLOAT: return &dt_float;
+        case PRIM_CHAR: return &dt_char;
+        case PRIM_BOOL: return &dt_bool;
+    }
+    return NULL;
 }
 
 // Find a function of a name within a module
@@ -217,6 +249,9 @@ struct VMObject Add(struct VMObject left, struct VMObject right)
 struct VMObject VM_CallFunc(struct VMFunc *func,
     struct VMObject *args, int arg_size)
 {
+    if (func->is_sys)
+        return func->sys_func(args, arg_size);
+
     char not_returned = 1;
     char *code = func->code;
     LOG("Calling function %s\n", func->name);
@@ -239,20 +274,20 @@ struct VMObject VM_CallFunc(struct VMFunc *func,
             
             // PUSH_FLOAT <float>
             case BC_PUSH_FLOAT: 
-                CREATE_OBJECT(&dt_int, f, FLOAT(code, pc)); 
+                CREATE_OBJECT(&dt_float, f, FLOAT(code, pc)); 
                 LOG("Push float %d\n", FLOAT(code, pc)); 
                 NEXT_FLOAT(pc); 
                 break;
             
             // PUSH_CHAR <char>
             case BC_PUSH_CHAR: 
-                CREATE_OBJECT(&dt_int, c, code[pc++]); 
+                CREATE_OBJECT(&dt_char, c, code[pc++]); 
                 LOG("Push char %i\n", code[pc - 1]); 
                 break;
             
             // PUSH_BOOL <bool>
             case BC_PUSH_BOOL: 
-                CREATE_OBJECT(&dt_int, b, code[pc++]); 
+                CREATE_OBJECT(&dt_bool, b, code[pc++]); 
                 LOG("Push bool %s\n", code[pc - 1] ? "true" : "false");
                 break;
             

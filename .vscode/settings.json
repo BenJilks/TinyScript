@@ -79,6 +79,7 @@
         "stb_image.h": "c",
         "stdio.h": "c",
         "dlfcn.h": "c",
-        "stdlib.h": "c"
+        "stdlib.h": "c",
+        "string.h": "c"
     }
 }

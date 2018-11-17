@@ -1,8 +1,9 @@
 #include <stdio.h>
 #include <string.h>
 #include "compiler.h"
-#include "vm.h"
 #include "bytecode.h"
+#include "vm.h"
+#include "io.h"
 
 static struct Module mods[80];
 static int mod_size;
@@ -28,15 +29,16 @@ void LoadFile(const char *file_name)
     close_tokenizer(tk);
 }
 
-int main()
+int main(int argc, char **argv)
 {
-    LoadFile("maths.tiny");
-	LoadFile("test.tiny");
-    VM_Link();
-	struct VMObject obj = VM_CallFuncName("main");
-    printf("%i\n", obj.i);
-
     int i;
+    for (i = 1; i < argc; i++)
+        LoadFile(argv[i]);
+    
+    VM_Load_IO();
+    if (!VM_Link())
+	    VM_CallFuncName("main");
+    
     for (i = 0; i < mod_size; i++)
         delete_module(mods[i]);
 }

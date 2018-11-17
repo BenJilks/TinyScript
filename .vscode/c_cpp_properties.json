@@ -10,8 +10,7 @@
             },
             "includePath": [
                 "${workspaceFolder}",
-                "${workspaceFolder}/Compiler/Include",
-                "${workspaceFolder}/VM/Include"
+                "${workspaceFolder}/include"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/clang",

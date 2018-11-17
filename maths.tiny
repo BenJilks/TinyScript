@@ -1,4 +1,4 @@
 import test
 
-func sin(x)
+func inc(x)
     return test:add(x, 1)

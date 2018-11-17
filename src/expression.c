@@ -76,7 +76,7 @@ struct Node *parse_data(struct Tokenizer *tk)
         case TK_INT: node->i = atoi(data); break;
         case TK_FLOAT: node->f = atof(data); break;
         case TK_CHAR: node->c = data[0]; break;
-        case TK_BOOL: node->b = strcpy(data, "true") ? 0 : 1; break;
+        case TK_BOOL: node->b = strcmp(data, "true") ? 0 : 1; break;
         case TK_STRING: strcpy(node->s, data); break;
         case TK_NAME: parse_name(tk, node, data); break;
         default: printf("Error: Unexpected token '%s', expected expression\n", data);
