@@ -1,0 +1,4 @@
+import test
+
+func sin(x)
+    return test:add(x, 1)

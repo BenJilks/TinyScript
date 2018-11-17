@@ -1,6 +1,7 @@
-include "IO.tiny"
+import maths
+
+func add(a, b)
+    return a + b
 
 func main()
-{
-	print(str(10) + '\n')
-}
+    return maths:sin(1)
