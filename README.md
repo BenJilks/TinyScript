@@ -17,7 +17,7 @@ Hello world:
 TinyScript is a dynamically typed language at core, but static types can be assigned. There are no ';'s at the end of lines, all whitespace is ignored including new-lines and indentations. Single line comments are defined with "# ..." and multi-line comments with "#* ... *#". The code is compiled into bytecode and runs on the internal virtual machine.
 
 ## Imports
-Imports allow you do include other modules in your code. All the standered library functions are within the io module, including print and println
+Imports allow you do include other modules in your code. All the standard library functions are within the io module, including print and println
 
     import io
 
