@@ -24,6 +24,7 @@ enum Bytecode
     BC_DIV,
     BC_MORE_THAN,
     BC_LESS_THAN,
+    BC_EQUAL_TO,
     BC_ASSIGN
 };
 

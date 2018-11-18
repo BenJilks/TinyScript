@@ -309,6 +309,7 @@ OPERATION_FUNC(Mul, *, "*");
 OPERATION_FUNC(Div, /, "/");
 COMP_FUNC(MoreThan, >);
 COMP_FUNC(LessThan, <);
+COMP_FUNC(EqualTo, ==);
 
 // Call a function in a module
 struct VMObject VM_CallFunc(struct VMFunc *func,
@@ -316,19 +317,16 @@ struct VMObject VM_CallFunc(struct VMFunc *func,
 {
     if (func->is_sys)
         return func->sys_func(args, arg_size);
-
-    char not_returned = 1;
-    char *code = func->code;
     LOG("Calling function %s\n", func->name);
 
     struct VMObject stack[80];
-    int sp = func->size;
-    int pc = 0;
-    while (not_returned)
+    register char *code = func->code;
+    register int sp = func->size;
+    register int pc = 0;
+    for (;;)
     {
-        char bc = code[pc++];
-        LOG("%i (%x): ", pc, bc);
-        switch (bc)
+        LOG("%i (%x): ", pc, code[pc]);
+        switch (code[pc++])
         {
             // PUSH_INT <int>
             case BC_PUSH_INT: 
@@ -422,6 +420,7 @@ struct VMObject VM_CallFunc(struct VMFunc *func,
             OPERATION(BC_DIV, Div, "Div");
             OPERATION(BC_MORE_THAN, MoreThan, "MoreThan");
             OPERATION(BC_LESS_THAN, LessThan, "LessThan");
+            OPERATION(BC_EQUAL_TO, EqualTo, "EqualTo");
             
             // ASSIGN
             case BC_ASSIGN:
@@ -436,7 +435,7 @@ struct VMObject VM_CallFunc(struct VMFunc *func,
                 return stack[sp-1];
 
             default: 
-                printf("Error unkown bytecode %x (%i)\n", bc, bc);
+                printf("Error unkown bytecode %x (%i)\n", code[pc-1], code[pc-1]);
                 break;
         }
     }

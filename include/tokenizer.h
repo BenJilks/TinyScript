@@ -26,6 +26,7 @@ enum TokenType
 	TK_DIV,
     TK_MORE_THAN,
     TK_LESS_THAN,
+    TK_EQUAL,
 	TK_IN,
 	TK_ASSIGN,
 	TK_NEXT,

@@ -22,7 +22,8 @@ static char is_object_op(int op)
 
 static char is_logic_op(int op)
 {
-    return op == TK_MORE_THAN || op == TK_LESS_THAN;
+    return op == TK_MORE_THAN || op == TK_LESS_THAN || 
+        op == TK_EQUAL;
 }
 
 static char is_assign_op(int op)
@@ -128,6 +129,7 @@ static void do_operation(struct Module *mod, int op)
         case TK_DIV: gen_char(mod, BC_DIV); break;
         case TK_MORE_THAN: gen_char(mod, BC_MORE_THAN); break;
         case TK_LESS_THAN: gen_char(mod, TK_LESS_THAN); break;
+        case TK_EQUAL: gen_char(mod, BC_EQUAL_TO); break;
         case TK_ASSIGN: gen_char(mod, BC_ASSIGN); break;
         default: printf("Error: op not imp\n"); break;
     }
