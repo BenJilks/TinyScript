@@ -20,7 +20,7 @@ struct SymbolType *create_type(struct SymbolTable *table, const char *name)
     return &table->types[table->type_size++];
 }
 
-void create_symbol(struct SymbolTable *table, const char *name, 
+struct Symbol create_symbol(struct SymbolTable *table, const char *name, 
     int location, struct SymbolType *type, int flags)
 {
     struct Symbol symb;
@@ -29,6 +29,7 @@ void create_symbol(struct SymbolTable *table, const char *name,
     symb.type = type;
     symb.flags = flags;
     table->symbs[table->size++] = symb;
+    return symb;
 }
 
 void create_atrr(struct SymbolType *table, const char *name, 

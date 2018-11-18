@@ -9,6 +9,7 @@ struct Tokenizer open_tokenizer(const char *file_path)
 	tk.file = fopen(file_path, "r");
 	tk.buffer = '\0';
 	tk.look = next(&tk);
+    tk.has_error = 0;
 	return tk;
 }
 
@@ -132,6 +133,8 @@ struct Token next(struct Tokenizer *tk)
 			case '-': t.type = TK_SUB; break;
 			case '*': t.type = TK_MUL; break;
 			case '/': t.type = TK_DIV; break;
+            case '>': t.type = TK_MORE_THAN; break;
+            case '<': t.type = TK_LESS_THAN; break;
 			case '.': t.type = TK_IN; break;
             case ':': t.type = TK_OF; break;
 			case '=': t.type = TK_ASSIGN; break;
@@ -153,7 +156,7 @@ struct Token next(struct Tokenizer *tk)
 		if (c == '\'') return read_char_data(tk);
 
 		// Could not decode this token
-		printf("Error: Unexpected token '%c'\n", c);
+		F_ERROR(tk, "Unexpected token '%c'", c);
 	}
 
 	struct Token eof_t;
@@ -167,7 +170,7 @@ struct Token match(struct Tokenizer *tk, const char *name, int type)
 {
 	if (tk->look.type != type)
 	{
-		printf("Error: Expected token '%s', got '%s' instead\n",
+		F_ERROR(tk, "Expected token '%s', got '%s' instead",
 			name, tk->look.data);
 	}
 
@@ -179,6 +182,7 @@ struct Token match(struct Tokenizer *tk, const char *name, int type)
 void error(struct Tokenizer *tk, const char *msg)
 {
 	printf("Error at line %i: %s\n", tk->line_no, msg);
+    tk->has_error = 1;
 }
 
 void close_tokenizer(struct Tokenizer tk)

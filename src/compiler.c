@@ -80,9 +80,34 @@ void delete_module(struct Module mod)
     free(mod.code);
 }
 
+static void parse_block(struct Module *mod, struct Tokenizer *tk);
+static void assign_local(struct Module *mod, struct Node *node)
+{
+    struct Symbol symb;
+    symb = lookup(&mod->table, node->left->s);
+    if (symb.location == -1)
+    {
+        symb = create_symbol(&mod->table, node->left->s, 
+            mod->loc++, NULL, 0);
+    }
+
+    compile_expression(mod, node->right);
+    gen_char(mod, BC_ASSIGN_LOC);
+    gen_int(mod, symb.location);
+    delete_node(node);
+}
+
 static void parse_expression_statement(struct Module *mod, struct Tokenizer *tk)
 {
     struct Node *node = parse_expression(tk);
+    if (node->is_op && node->type == TK_ASSIGN)
+    {
+        if (node->left->type == TK_NAME)
+        {
+            assign_local(mod, node);
+            return;
+        }
+    }
     compile_expression(mod, node);
     delete_node(node);
     gen_char(mod, BC_POP);
@@ -91,12 +116,32 @@ static void parse_expression_statement(struct Module *mod, struct Tokenizer *tk)
 
 static void parse_return(struct Module *mod, struct Tokenizer *tk)
 {
+    struct Node *node;
     match(tk, "return", TK_RETURN);
 
-    struct Node *node = parse_expression(tk);
+    node = parse_expression(tk);
     compile_expression(mod, node);
     delete_node(node);
     gen_char(mod, BC_RETURN);
+}
+
+static void parse_if(struct Module *mod, struct Tokenizer *tk)
+{
+    struct Node *node;
+    int end_addr;
+
+    match(tk, "if", TK_IF);
+    node = parse_expression(tk);
+    compile_expression(mod, node);
+    delete_node(node);
+    
+    end_addr = mod->cp + 1;
+    gen_char(mod, BC_JUMP_IF_NOT);
+    gen_int(mod, 0);
+
+    parse_block(mod, tk);
+    memcpy(mod->code + end_addr, 
+        &mod->cp, 4);
 }
 
 static void parse_statement(struct Module *mod, struct Tokenizer *tk)
@@ -104,6 +149,7 @@ static void parse_statement(struct Module *mod, struct Tokenizer *tk)
     switch (tk->look.type)
     {
         case TK_RETURN: parse_return(mod, tk); break;
+        case TK_IF: parse_if(mod, tk); break;
         default: parse_expression_statement(mod, tk); break;
     }
 }
@@ -283,7 +329,7 @@ void compile_module(struct Module *mod)
             case TK_IMPORT: parse_import(mod, tk); break;
             case TK_WITHIN: parse_import_funcs(mod, tk); break;
             case TK_FUNC: parse_function(mod, tk); break;
-            default: printf("Unexpected token '%s'\n"); break;
+            default: F_ERROR(tk, "Unexpected token '%s'\n"); break;
         }
     }
     

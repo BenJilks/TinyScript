@@ -40,7 +40,7 @@ struct SymbolTable
 struct SymbolTable create_table();
 struct SymbolType *create_type(struct SymbolTable *table, const char *name);
 
-void create_symbol(struct SymbolTable *table, const char *name, 
+struct Symbol create_symbol(struct SymbolTable *table, const char *name, 
     int location, struct SymbolType *type, int flags);
 void create_atrr(struct SymbolType *table, const char *name, 
     int location, struct SymbolType *type, int flags);

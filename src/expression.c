@@ -20,6 +20,11 @@ static char is_object_op(int op)
     return op == TK_IN;
 }
 
+static char is_logic_op(int op)
+{
+    return op == TK_MORE_THAN || op == TK_LESS_THAN;
+}
+
 static char is_assign_op(int op)
 {
     return op == TK_ASSIGN;
@@ -79,7 +84,7 @@ struct Node *parse_data(struct Tokenizer *tk)
         case TK_BOOL: node->b = strcmp(data, "true") ? 0 : 1; break;
         case TK_STRING: strcpy(node->s, data); break;
         case TK_NAME: parse_name(tk, node, data); break;
-        default: printf("Error: Unexpected token '%s', expected expression\n", data);
+        default: F_ERROR(tk, "Unexpected token '%s', expected expression", data);
     }
 
     return node;
@@ -105,7 +110,8 @@ struct Node *parse_data(struct Tokenizer *tk)
 
 PARSE_FUNCTION(parse_term, is_object_op, parse_data);
 PARSE_FUNCTION(parse_factor, is_mul_op, parse_term);
-PARSE_FUNCTION(parse_statement, is_add_op, parse_factor);
+PARSE_FUNCTION(parse_logic, is_add_op, parse_factor);
+PARSE_FUNCTION(parse_statement, is_logic_op, parse_logic);
 
 struct Node *parse_expression(struct Tokenizer *tk)
 {
@@ -120,8 +126,10 @@ static void do_operation(struct Module *mod, int op)
         case TK_SUB: gen_char(mod, BC_SUB); break;
         case TK_MUL: gen_char(mod, BC_MUL); break;
         case TK_DIV: gen_char(mod, BC_DIV); break;
+        case TK_MORE_THAN: gen_char(mod, BC_MORE_THAN); break;
+        case TK_LESS_THAN: gen_char(mod, TK_LESS_THAN); break;
         case TK_ASSIGN: gen_char(mod, BC_ASSIGN); break;
-        default: printf("op not imp\n"); break;
+        default: printf("Error: op not imp\n"); break;
     }
 }
 

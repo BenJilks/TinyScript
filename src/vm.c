@@ -199,51 +199,116 @@ int VM_Link()
     printf("Error: Invalid operation %s %s %s\n", \
         left.type->name, op, right.type->name)
 
-struct VMObject Add(struct VMObject left, struct VMObject right)
-{
-    struct VMObject o;
-    switch(left.type->prim_type)
-    {
-        case PRIM_INT:
-            switch(right.type->prim_type)
-            {
-                case PRIM_INT: o.type = &dt_int; o.i = left.i + right.i; break;
-                case PRIM_FLOAT: o.type = &dt_float; o.f = left.i + right.f; break;
-                case PRIM_CHAR: o.type = &dt_int; o.i = left.i + right.c; break;
-                case PRIM_BOOL: 
-                default: INVALID_OP(left, "+", right); break;
-            }
-            break;
-        
-        case PRIM_FLOAT:
-            switch(right.type->prim_type)
-            {
-                case PRIM_INT: o.type = &dt_float; o.f = left.f + right.i; break;
-                case PRIM_FLOAT: o.type = &dt_float; o.f = left.f + right.f; break;
-                case PRIM_CHAR: o.type = &dt_float; o.f = left.f + right.c; break;
-                case PRIM_BOOL: 
-                default: INVALID_OP(left, "+", right); break;
-            }
-            break;
-        
-        case PRIM_CHAR:
-            switch(right.type->prim_type)
-            {
-                case PRIM_INT: o.type = &dt_int; o.i = left.c + right.i; break;
-                case PRIM_FLOAT: o.type = &dt_float; o.f = left.c + right.f; break;
-                case PRIM_CHAR: o.type = &dt_char; o.c = left.c + right.c; break;
-                case PRIM_BOOL: 
-                default: INVALID_OP(left, "+", right); break;
-            }
-            break;
-        
-        case PRIM_BOOL:
-            INVALID_OP(left, "+", right);
-            break;
+#define OPERATION_FUNC(name, op, op_name) \
+    static struct VMObject name(struct VMObject left, struct VMObject right) \
+    { \
+        struct VMObject o; \
+        switch(left.type->prim_type) \
+        { \
+            case PRIM_INT: \
+                switch(right.type->prim_type) \
+                { \
+                    case PRIM_INT: o.type = &dt_int; o.i = left.i op right.i; break; \
+                    case PRIM_FLOAT: o.type = &dt_float; o.f = left.i op right.f; break; \
+                    case PRIM_CHAR: o.type = &dt_int; o.i = left.i op right.c; break; \
+                    case PRIM_BOOL: \
+                    default: INVALID_OP(left, op_name, right); break; \
+                } \
+                break; \
+             \
+            case PRIM_FLOAT: \
+                switch(right.type->prim_type) \
+                { \
+                    case PRIM_INT: o.type = &dt_float; o.f = left.f op right.i; break; \
+                    case PRIM_FLOAT: o.type = &dt_float; o.f = left.f op right.f; break; \
+                    case PRIM_CHAR: o.type = &dt_float; o.f = left.f op right.c; break; \
+                    case PRIM_BOOL:  \
+                    default: INVALID_OP(left, op_name, right); break; \
+                } \
+                break; \
+             \
+            case PRIM_CHAR: \
+                switch(right.type->prim_type) \
+                { \
+                    case PRIM_INT: o.type = &dt_int; o.i = left.c op right.i; break; \
+                    case PRIM_FLOAT: o.type = &dt_float; o.f = left.c op right.f; break; \
+                    case PRIM_CHAR: o.type = &dt_char; o.c = left.c op right.c; break; \
+                    case PRIM_BOOL:  \
+                    default: INVALID_OP(left, op_name, right); break; \
+                } \
+                break; \
+             \
+            case PRIM_BOOL: \
+                INVALID_OP(left, op_name, right); \
+                break; \
+        } \
+         \
+        return o; \
     }
 
-    return o;
-}
+#define COMP_FUNC(name, op) \
+    static struct VMObject name(struct VMObject left, struct VMObject right) \
+    { \
+        struct VMObject o; \
+        o.type = &dt_bool; \
+         \
+        switch(left.type->prim_type) \
+        { \
+            case PRIM_INT: \
+                switch(right.type->prim_type) \
+                { \
+                    case PRIM_INT: o.b = left.i op right.i; break; \
+                    case PRIM_FLOAT: o.b = left.i op right.f; break; \
+                    case PRIM_CHAR: o.b = left.i op right.c; break; \
+                    case PRIM_BOOL: o.b = left.i op right.b; break; \
+                } \
+                break; \
+             \
+            case PRIM_FLOAT: \
+                switch(right.type->prim_type) \
+                { \
+                    case PRIM_INT: o.b = left.f op right.i; break; \
+                    case PRIM_FLOAT: o.b = left.f op right.f; break; \
+                    case PRIM_CHAR: o.b = left.f op right.c; break; \
+                    case PRIM_BOOL: o.b = left.f op right.b; break; \
+                } \
+                break; \
+             \
+            case PRIM_CHAR: \
+                switch(right.type->prim_type) \
+                { \
+                    case PRIM_INT: o.b = left.c op right.i; break; \
+                    case PRIM_FLOAT: o.b = left.c op right.f; break; \
+                    case PRIM_CHAR: o.b = left.c op right.c; break; \
+                    case PRIM_BOOL: o.b = left.c op right.b; break; \
+                } \
+                break; \
+             \
+            case PRIM_BOOL: \
+                switch(right.type->prim_type) \
+                { \
+                    case PRIM_INT: o.b = left.b op right.i; break; \
+                    case PRIM_FLOAT: o.b = left.b op right.f; break; \
+                    case PRIM_CHAR: o.b = left.b op right.c; break; \
+                    case PRIM_BOOL: o.b = left.b op right.b; break; \
+                } \
+                break; \
+        } \
+        return o; \
+    }
+
+#define OPERATION(bc, op, op_name) \
+    case bc: \
+        stack[sp-2] = op(stack[sp-2], stack[sp-1]); sp--; \
+        LOG("%s\n", op_name); \
+        break
+
+OPERATION_FUNC(Add, +, "+");
+OPERATION_FUNC(Sub, -, "-");
+OPERATION_FUNC(Mul, *, "*");
+OPERATION_FUNC(Div, /, "/");
+COMP_FUNC(MoreThan, >);
+COMP_FUNC(LessThan, <);
 
 // Call a function in a module
 struct VMObject VM_CallFunc(struct VMFunc *func,
@@ -304,6 +369,13 @@ struct VMObject VM_CallFunc(struct VMFunc *func,
                 LOG("Push argument at %i\n", INT(code, pc));
                 pc += 4;
                 break;
+            
+            // ASSIGN_LOC <loc>
+            case BC_ASSIGN_LOC:
+                stack[INT(code, pc)] = stack[--sp];
+                LOG("Assign to loc %i\n", INT(code, pc));
+                pc += 4;
+                break;
 
             // CALL <arg_size> <func_id>
             case BC_CALL:
@@ -330,17 +402,26 @@ struct VMObject VM_CallFunc(struct VMFunc *func,
                 break;
             }
 
+            // JUMP_IF_NOT <to>
+            case BC_JUMP_IF_NOT:
+                LOG("Jump to %i if not\n", INT(code, pc));
+                if (!stack[--sp].b) pc = INT(code, pc);
+                else pc += 4;
+                break;
+
             // POP <amount>
             case BC_POP:
                 sp -= code[pc++];
                 LOG("Pop %i\n", code[pc-1]);
                 break;
             
-            // ADD
-            case BC_ADD:
-                stack[sp-2] = Add(stack[sp-1], stack[sp-2]); sp--;
-                LOG("Add\n");
-                break;
+            // Operations
+            OPERATION(BC_ADD, Add, "Add");
+            OPERATION(BC_SUB, Sub, "Sub");
+            OPERATION(BC_MUL, Mul, "Mul");
+            OPERATION(BC_DIV, Div, "Div");
+            OPERATION(BC_MORE_THAN, MoreThan, "MoreThan");
+            OPERATION(BC_LESS_THAN, LessThan, "LessThan");
             
             // ASSIGN
             case BC_ASSIGN:
@@ -354,7 +435,9 @@ struct VMObject VM_CallFunc(struct VMFunc *func,
                 LOG("Return\n");
                 return stack[sp-1];
 
-            default: printf("Error unkown bytecode %x (%i)\n", bc, bc); not_returned = 0; break;
+            default: 
+                printf("Error unkown bytecode %x (%i)\n", bc, bc);
+                break;
         }
     }
 }

@@ -8,7 +8,7 @@
 static struct Module mods[80];
 static int mod_size;
 
-void LoadFile(const char *file_name)
+int LoadFile(const char *file_name)
 {
     struct Tokenizer tk;
 	struct Module mod;
@@ -27,17 +27,22 @@ void LoadFile(const char *file_name)
 
     mods[mod_size++] = mod;
     close_tokenizer(tk);
+    return tk.has_error;
 }
 
 int main(int argc, char **argv)
 {
-    int i;
+    int i, has_error = 0;
     for (i = 1; i < argc; i++)
-        LoadFile(argv[i]);
+        if(LoadFile(argv[i]))
+            has_error = 1;
     
-    VM_Load_IO();
-    if (!VM_Link())
-	    VM_CallFuncName("main");
+    if (!has_error)
+    {
+        VM_Load_IO();
+        if (!VM_Link())
+	        VM_CallFuncName("main");
+    }
     
     for (i = 0; i < mod_size; i++)
         delete_module(mods[i]);

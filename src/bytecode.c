@@ -39,16 +39,20 @@ void disassemble(char *code, int len)
             case BC_PUSH_STRING: STRING(code, pc); printf("Push string '%s'\n", str); break;
             case BC_PUSH_ARG: printf("Push arg at %i\n", INT(code, pc)); pc += 4; break;
             case BC_PUSH_LOC: printf("Push loc at %i\n", INT(code, pc)); pc += 4; break;
+            case BC_ASSIGN_LOC: printf("Assign to loc %i\n", INT(code, pc)); pc += 4; break;
 
             case BC_CALL: printf("Call with %i args at %i\n", INT(code, pc), INT(code, pc+4)); pc += 8; break;
             case BC_CALL_MOD: printf("Call with %i args in mod %i at %i\n", INT(code, pc), INT(code, pc+4), INT(code, pc+8)); pc += 12; break;
             case BC_RETURN: printf("Return\n"); break;
+            case BC_JUMP_IF_NOT: printf("Jump of not to %i\n", INT(code, pc)); break;
             case BC_POP: printf("Pop %i element(s) from stack\n", code[pc++]); break;
 
             case BC_ADD: printf("Add\n"); break;
             case BC_SUB: printf("Sub\n"); break;
             case BC_MUL: printf("Mul\n"); break;
             case BC_DIV: printf("Div\n"); break;
+            case BC_MORE_THAN: printf("MoreThan\n"); break;
+            case BC_LESS_THAN: printf("LessThan\n"); break;
             case BC_ASSIGN: printf("Assign\n"); break;
         }
     }

@@ -1,8 +1,11 @@
-import maths
 import io
 
-func add(a, b)
-    return a + b
+func fib(i)
+{
+    if i > 2
+        return fib(i - 1) + fib(i - 2)
+    return 1
+}
 
 func main()
-    io:log(maths:inc(20))
+    io:log(fib(40))

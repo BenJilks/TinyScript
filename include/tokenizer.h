@@ -24,6 +24,8 @@ enum TokenType
 	TK_SUB,
 	TK_MUL,
 	TK_DIV,
+    TK_MORE_THAN,
+    TK_LESS_THAN,
 	TK_IN,
 	TK_ASSIGN,
 	TK_NEXT,
@@ -45,6 +47,7 @@ struct Tokenizer
 	char buffer;
 	struct Token look;
 	int line_no;
+    int has_error;
 };
 
 #define F_ERROR(tk, ...) \
