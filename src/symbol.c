@@ -20,22 +20,21 @@ struct SymbolType *create_type(struct SymbolTable *table, const char *name)
     return &table->types[table->type_size++];
 }
 
-struct Symbol create_symbol(struct SymbolTable *table, const char *name, 
-    int location, struct SymbolType *type, int flags)
+struct Symbol *create_symbol(struct SymbolTable *table, const char *name, 
+    int location, int flags)
 {
-    struct Symbol symb;
-    strcpy(symb.name, name);
-    symb.location = location;
-    symb.type = type;
-    symb.flags = flags;
-    table->symbs[table->size++] = symb;
+    struct Symbol *symb = &table->symbs[table->size++];
+    strcpy(symb->name, name);
+    symb->location = location;
+    symb->type = NULL;
+    symb->flags = flags;
     return symb;
 }
 
-void create_atrr(struct SymbolType *table, const char *name, 
-    int location, struct SymbolType *type, int flags)
+struct Symbol *create_atrr(struct SymbolType *table, const char *name, 
+    int location, int flags)
 {
-    create_symbol((struct SymbolTable *)table, name, location, type, flags);
+    return create_symbol((struct SymbolTable *)table, name, location, flags);
 }
 
 struct Symbol lookup(struct SymbolTable *table, const char *name)

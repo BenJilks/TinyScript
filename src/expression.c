@@ -143,9 +143,20 @@ static void call_function(struct Module *mod, struct Node *node, struct Symbol s
     int i;
     for (i = 0; i < node->arg_size; i++)
         compile_expression(mod, node->args[i]);
-    gen_char(mod, BC_CALL);
-    gen_int(mod, node->arg_size);
-    gen_int(mod, symb.location);
+    
+    if (symb.flags & SYMBOL_MOD_FUNC)
+    {
+        gen_char(mod, BC_CALL_MOD);
+        gen_int(mod, node->arg_size);
+        gen_int(mod, symb.module);
+        gen_int(mod, symb.location);
+    }
+    else
+    {
+        gen_char(mod, BC_CALL);
+        gen_int(mod, node->arg_size);
+        gen_int(mod, symb.location);
+    }
 }
 
 static void compile_name(struct Module *mod, struct Node *node, char addr_mode)
@@ -164,6 +175,7 @@ static void compile_name(struct Module *mod, struct Node *node, char addr_mode)
         call_function(mod, node, symb);
         return;
     }
+
 
     // If the symbol is a module
     if (symb.flags & SYMBOL_MODULE)
@@ -219,7 +231,7 @@ void compile_assign_op(struct Module *mod, struct Node *node, char addr_mode)
     {
         const char *name = node->left->s;
         if (lookup(&mod->table, name).location == -1)
-            create_symbol(&mod->table, name, mod->loc++, NULL, 0);
+            create_symbol(&mod->table, name, mod->loc++, 0);
     }
 
     compile_node(mod, node->left, 1);

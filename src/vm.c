@@ -3,13 +3,14 @@
 #include "flags.h"
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 // Define prim types
 static struct VMType dt_int = {"int", PRIM_INT, -1};
 static struct VMType dt_float = {"float", PRIM_FLOAT, -1};
 static struct VMType dt_char = {"char", PRIM_CHAR, -1};
 static struct VMType dt_bool = {"bool", PRIM_BOOL, -1};
-static struct VMType dt_string = {"String", PRIM_OBJECT, 1};
+static struct VMType dt_string = {"String", PRIM_STRING, 1};
 
 #define INT(d, p) *(int*)(d + p)
 #define FLOAT(d, p) *(float*)(d + p)
@@ -18,7 +19,7 @@ static struct VMType dt_string = {"String", PRIM_OBJECT, 1};
 #define STRING(str, d, p) { int l = d[p++]; memcpy(str, d + p, l); \
     str[l] = '\0'; p += l; }
 
-// Currently loaded mods
+// Currently loaded mods and heap data
 static struct VMMod mods[80];
 static int mod_size = 0;
 
@@ -119,6 +120,7 @@ struct VMType *VM_PrimType(int prim)
         case PRIM_FLOAT: return &dt_float;
         case PRIM_CHAR: return &dt_char;
         case PRIM_BOOL: return &dt_bool;
+        case PRIM_STRING: return &dt_string;
     }
     return NULL;
 }
@@ -185,6 +187,63 @@ int VM_Link()
     LOG("Finished linking\n\n");
 
     return has_error;
+}
+
+static struct VMPointer *VM_Alloc(struct VMHeap *heap, void *data)
+{
+    // Find a free space in mem
+    int loc = -1, i;
+    for (i = 0; i < heap->mem_size; i++)
+    {
+        if (heap->mem[i].p == NULL)
+        {
+            loc = i;
+            break;
+        }
+    }
+    
+    // If no free space was found, make a new one
+    if (loc == -1)
+        loc = heap->mem_size++;
+
+    LOG("Alloc mem at %i\n", loc);
+    struct VMPointer *p = &heap->mem[loc];
+    p->p = data;
+    p->counter = 0;
+    return p;
+}
+
+static void VM_CleanUp(struct VMHeap *heap, struct VMObject *stack, int sp)
+{
+    // Scan the stack and count all refs to pointers
+    int i;
+    for (i = 0; i < sp; i++)
+    {
+        struct VMObject o = stack[i];
+        if (o.type->prim_type == PRIM_STRING)
+            o.p->counter++;
+    }
+
+    // If a pointer has no refs, then free the memory
+    for (i = 0; i < heap->mem_size; i++)
+    {
+        struct VMPointer *p = &heap->mem[i];
+        if (p->counter == 0 && p->p != NULL)
+        {
+            LOG("Free mem at %i\n", i);
+            free(p->p);
+            p->p = NULL;
+        }
+        p->counter = 0;
+    }
+}
+
+struct VMHeap VM_CreateHeap(int start_size)
+{
+    struct VMHeap heap;
+    heap.mem = malloc(sizeof(struct VMPointer) * start_size);
+    heap.mem_size = 0;
+    return heap;
 }
 
 #define CREATE_OBJECT(dtype, data, value) \
@@ -312,16 +371,17 @@ COMP_FUNC(LessThan, <);
 COMP_FUNC(EqualTo, ==);
 
 // Call a function in a module
-struct VMObject VM_CallFunc(struct VMFunc *func,
-    struct VMObject *args, int arg_size)
+struct VMObject VM_CallFunc(struct VMFunc *func, int arg_loc, 
+    int arg_size, struct VMObject *stack, struct VMHeap *heap)
 {
     if (func->is_sys)
-        return func->sys_func(args, arg_size);
+        return func->sys_func(stack + arg_loc, arg_size);
     LOG("Calling function %s\n", func->name);
 
-    struct VMObject stack[80];
+    struct VMObject *args = stack + arg_loc;
+    struct VMObject *locs = stack + arg_loc + arg_size;
     register char *code = func->code;
-    register int sp = func->size;
+    register int sp = arg_loc + arg_size + func->size;
     register int pc = 0;
     for (;;)
     {
@@ -354,6 +414,20 @@ struct VMObject VM_CallFunc(struct VMFunc *func,
                 LOG("Push bool %s\n", code[pc - 1] ? "true" : "false");
                 break;
             
+            // PUSH_STRING <string>
+            case BC_PUSH_STRING:
+            {
+                int len = code[pc++];
+                char *str = malloc(len + 1);
+                memcpy(str, code + pc, len);
+                str[len] = '\0';
+                pc += len;
+
+                LOG("Push string '%s'\n", str);
+                CREATE_OBJECT(&dt_string, p, VM_Alloc(heap, str));
+                break;
+            }
+
             // PUSH_ARG <arg>
             case BC_PUSH_ARG:
                 stack[sp++] = args[INT(code, pc)];
@@ -363,14 +437,14 @@ struct VMObject VM_CallFunc(struct VMFunc *func,
             
             // PUSH_LOC <loc>
             case BC_PUSH_LOC:
-                stack[sp++] = stack[INT(code, pc)];
+                stack[sp++] = locs[INT(code, pc)];
                 LOG("Push argument at %i\n", INT(code, pc));
                 pc += 4;
                 break;
             
             // ASSIGN_LOC <loc>
             case BC_ASSIGN_LOC:
-                stack[INT(code, pc)] = stack[--sp];
+                locs[INT(code, pc)] = stack[--sp];
                 LOG("Assign to loc %i\n", INT(code, pc));
                 pc += 4;
                 break;
@@ -381,9 +455,10 @@ struct VMObject VM_CallFunc(struct VMFunc *func,
                 int arg_size = INT(code, pc);
                 LOG("Call function %i\n", INT(code, pc+4));
                 stack[sp-arg_size] = VM_CallFunc(&func->mod->funcs[INT(code, pc+4)], 
-                    &stack[sp - arg_size], arg_size);
+                    sp - arg_size, arg_size, stack, heap);
                 sp -= arg_size - 1;
                 pc += 8;
+                VM_CleanUp(heap, stack, sp);
                 break;
             }
 
@@ -394,7 +469,7 @@ struct VMObject VM_CallFunc(struct VMFunc *func,
                 struct VMSubMod sub = func->mod->sub_mods[INT(code, pc+4)];
                 LOG("Call function %i in mod %s\n", INT(code, pc+8), sub.name);
                 stack[sp-arg_size] = VM_CallFunc(sub.funcs[INT(code, pc+8)], 
-                    &stack[sp - arg_size], arg_size);
+                    sp - arg_size, arg_size, stack, heap);
                 sp -= arg_size - 1;
                 pc += 12;
                 break;
@@ -424,7 +499,7 @@ struct VMObject VM_CallFunc(struct VMFunc *func,
             
             // ASSIGN
             case BC_ASSIGN:
-                stack[stack[sp-2].i] = stack[sp-1];
+                locs[stack[sp-2].i] = stack[sp-1];
                 sp -= 2;
                 LOG("Assign\n");
                 break;
@@ -438,6 +513,7 @@ struct VMObject VM_CallFunc(struct VMFunc *func,
                 printf("Error unkown bytecode %x (%i)\n", code[pc-1], code[pc-1]);
                 break;
         }
+
     }
 }
 
@@ -472,5 +548,12 @@ struct VMObject VM_CallFuncName(const char *func_name)
         struct VMObject zero = {&dt_int, 0};
         return zero;
     }
-    return VM_CallFunc(func, NULL, 0);
+
+    int mem_size = sizeof(struct VMObject) * 100;
+    struct VMObject *stack = malloc(mem_size);
+    struct VMHeap heap = VM_CreateHeap(10);
+    struct VMObject out = VM_CallFunc(func, 0, 0, stack, &heap);
+    VM_CleanUp(&heap, stack, 0);
+    free(stack);
+    return out;
 }

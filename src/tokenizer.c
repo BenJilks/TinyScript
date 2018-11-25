@@ -10,6 +10,7 @@ struct Tokenizer open_tokenizer(const char *file_path)
 	tk.buffer = '\0';
 	tk.look = next(&tk);
     tk.has_error = 0;
+    tk.line_no = 0;
 	return tk;
 }
 
@@ -111,15 +112,10 @@ static struct Token read_char_data(struct Tokenizer *tk)
 	return t;
 }
 
-static struct Token read_multi_char(struct Tokenizer *tk, char c)
+static struct Token read_multi_char(struct Tokenizer *tk, struct Token t)
 {
-    struct Token t;
-    t.type = TK_ASSIGN;
-    t.data[0] = c;
-    t.data[1] = '\0';
-
     char next = read_char(tk);
-    if (next == c)
+    if (next == t.data[0])
     {
         t.data[1] = next;
         t.data[2] = '\0';
@@ -127,7 +123,7 @@ static struct Token read_multi_char(struct Tokenizer *tk, char c)
         return t;
     }
 
-    tk->buffer = c;
+    tk->buffer = next;
     return t;
 }
 
@@ -162,7 +158,7 @@ struct Token next(struct Tokenizer *tk)
 			case ')': t.type = TK_CLOSE_ARG; break;
 			case '{': t.type = TK_OPEN_BLOCK; break;
 			case '}': t.type = TK_CLOSE_BLOCK; break;
-			case '=': return read_multi_char(tk, c);
+			case '=': t.type = TK_ASSIGN; return read_multi_char(tk, t);
 		}
 
 		// If it found a single char token, then return is

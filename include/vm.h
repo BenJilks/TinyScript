@@ -7,6 +7,7 @@ enum PrimType
     PRIM_FLOAT,
     PRIM_CHAR,
     PRIM_BOOL,
+    PRIM_STRING,
     PRIM_OBJECT
 };
 
@@ -17,6 +18,24 @@ struct VMType
     int size;
 };
 
+struct VMObject;
+struct VMPointer
+{
+    int counter;
+    union
+    {
+        void *p;
+        char *str;
+        struct VMObject *arr;
+    };
+};
+
+struct VMHeap
+{
+    struct VMPointer *mem;
+    int mem_size;
+};
+
 struct VMObject
 {
     struct VMType *type;
@@ -25,6 +44,7 @@ struct VMObject
         int i;
         float f;
         char c, b;
+        struct VMPointer *p;
     };
 };
 
@@ -62,10 +82,11 @@ struct VMMod *VM_LoadMod(char *header, char *data);
 struct VMMod *VM_CreateSysMod(const char *name);
 void VM_LoadSysFunc(struct VMMod *mod, SysFunc func, const char *name);
 struct VMType *VM_PrimType(int prim);
+struct VMHeap VM_CreateHeap(int start_size);
 int VM_Link();
 
-struct VMObject VM_CallFunc(struct VMFunc *func, 
-    struct VMObject *args, int arg_size);
+struct VMObject VM_CallFunc(struct VMFunc *func, int arg_loc, 
+    int arg_size, struct VMObject *stack, struct VMHeap *heap);
 struct VMObject VM_CallFuncName(const char *func_name);
 
 #endif // VM_H

@@ -87,8 +87,8 @@ static void assign_local(struct Module *mod, struct Node *node)
     symb = lookup(&mod->table, node->left->s);
     if (symb.location == -1)
     {
-        symb = create_symbol(&mod->table, node->left->s, 
-            mod->loc++, NULL, 0);
+        symb = *create_symbol(&mod->table, node->left->s, 
+            mod->loc++, 0);
     }
 
     compile_expression(mod, node->right);
@@ -177,16 +177,14 @@ static void parse_params(struct Module *mod, struct Tokenizer *tk)
             match(tk, ",", TK_NEXT);
         
         LOG("Param '%s'\n", param.data);
-        create_symbol(&mod->table, param.data, mod->param++, 
-            NULL, SYMBOL_PARAMETER);
+        create_symbol(&mod->table, param.data, mod->param++, SYMBOL_PARAMETER);
     }
     match(tk, ")", TK_CLOSE_ARG);
 }
 
 static struct Function *create_function(struct Module *mod, const char *name)
 {
-    create_symbol(&mod->table, name, mod->func_size, 
-        NULL, SYMBOL_FUNCTION);
+    create_symbol(&mod->table, name, mod->func_size, SYMBOL_FUNCTION);
 
     struct Function *func = &mod->funcs[mod->func_size++];
     strcpy(func->name, name);
@@ -223,7 +221,7 @@ static void parse_import(struct Module *mod, struct Tokenizer *tk)
     struct Token name;
     match(tk, "import", TK_IMPORT);
     name = match(tk, "Name", TK_NAME);
-    create_symbol(&mod->table, name.data, mod->mod_size, NULL, SYMBOL_MODULE);
+    create_symbol(&mod->table, name.data, mod->mod_size, SYMBOL_MODULE);
     mod->mods[mod->mod_size++] = create_sub_mod(name.data);
 }
 
@@ -231,6 +229,7 @@ static void parse_import_funcs(struct Module *mod, struct Tokenizer *tk)
 {
     struct Token mod_name, func_name;
     struct SubModule sub;
+    struct Symbol *symb;
 
     match(tk, "within", TK_WITHIN);
     mod_name = match(tk, "Name", TK_NAME);
@@ -240,6 +239,10 @@ static void parse_import_funcs(struct Module *mod, struct Tokenizer *tk)
     for(;;)
     {
         func_name = match(tk, "Name", TK_NAME);
+        symb = create_symbol(&mod->table, func_name.data, 
+            sub.func_size, SYMBOL_FUNCTION | SYMBOL_MOD_FUNC);
+        symb->location = mod->mod_size;
+
         strcpy(sub.func_names[sub.func_size++], func_name.data);
         if (tk->look.type != TK_NEXT)
             break;

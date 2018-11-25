@@ -15,6 +15,8 @@ static char *ToStr(struct VMObject obj)
         case PRIM_FLOAT: sprintf(str, "%.6g", obj.f); break;
         case PRIM_CHAR: sprintf(str, "%c", obj.c); break;
         case PRIM_BOOL: sprintf(str, "%s", obj.c ? "true" : "false"); break;
+        case PRIM_STRING: sprintf(str, "%s", obj.p->str); break;
+        case PRIM_OBJECT: sprintf(str, "<%s at 0x%x>", obj.type->name, obj.p->p); break;
     }
     return str;
 }

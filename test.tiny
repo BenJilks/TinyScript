@@ -1,11 +1,13 @@
-import io
+within io import log
 
-func fib(i)
+func test()
 {
-    if i == 0 return 0
-    if i == 1 return 1
-    return fib(i - 1) + fib(i - 2)
+    msg = "Howwo, World!"
+    log(msg)
 }
 
 func main()
-    io:log(fib(40))
+{
+    test()
+    log("This is test ", 21)
+}

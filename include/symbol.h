@@ -2,16 +2,17 @@
 #define SYMBOL_H
 
 // Symbol flags
-#define SYMBOL_FUNCTION     0b1000
-#define SYMBOL_SYSTEM       0b0100
-#define SYMBOL_PARAMETER    0b0010
-#define SYMBOL_MODULE       0b0001
+#define SYMBOL_FUNCTION     0b10000
+#define SYMBOL_SYSTEM       0b01000
+#define SYMBOL_PARAMETER    0b00100
+#define SYMBOL_MODULE       0b00010
+#define SYMBOL_MOD_FUNC     0b00001
 
 struct SymbolType;
 struct Symbol
 {
     char name[80];
-    int location;
+    int location, module;
     struct SymbolType *type;
     int flags;
 };
@@ -40,10 +41,10 @@ struct SymbolTable
 struct SymbolTable create_table();
 struct SymbolType *create_type(struct SymbolTable *table, const char *name);
 
-struct Symbol create_symbol(struct SymbolTable *table, const char *name, 
-    int location, struct SymbolType *type, int flags);
-void create_atrr(struct SymbolType *table, const char *name, 
-    int location, struct SymbolType *type, int flags);
+struct Symbol *create_symbol(struct SymbolTable *table, const char *name, 
+    int location, int flags);
+struct Symbol *create_atrr(struct SymbolType *table, const char *name, 
+    int location, int flags);
 
 struct Symbol lookup(struct SymbolTable *table, const char *name);
 struct Symbol lookup_attr(struct SymbolType *table, const char *name);
