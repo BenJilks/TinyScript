@@ -4,6 +4,7 @@
 #include "bytecode.h"
 #include "vm.h"
 #include "io.h"
+#include "flags.h"
 
 static struct Module mods[80];
 static int mod_size;

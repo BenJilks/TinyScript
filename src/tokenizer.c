@@ -37,6 +37,8 @@ static int check_keyword(char *data)
     else if(!strcmp(data, "import")) return TK_IMPORT;
     else if(!strcmp(data, "within")) return TK_WITHIN;
 	else if(!strcmp(data, "if")) return TK_IF;
+    else if(!strcmp(data, "else")) return TK_ELSE;
+    else if(!strcmp(data, "elif")) return TK_ELSE_IF;
 	else if(!strcmp(data, "for")) return TK_FOR;
 	else if(!strcmp(data, "true")) return TK_BOOL;
 	else if(!strcmp(data, "false")) return TK_BOOL;

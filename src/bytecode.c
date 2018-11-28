@@ -44,7 +44,8 @@ void disassemble(char *code, int len)
             case BC_CALL: printf("Call with %i args at %i\n", INT(code, pc), INT(code, pc+4)); pc += 8; break;
             case BC_CALL_MOD: printf("Call with %i args in mod %i at %i\n", INT(code, pc), INT(code, pc+4), INT(code, pc+8)); pc += 12; break;
             case BC_RETURN: printf("Return\n"); break;
-            case BC_JUMP_IF_NOT: printf("Jump of not to %i\n", INT(code, pc)); break;
+            case BC_JUMP_IF_NOT: printf("Jump of not to %i\n", INT(code, pc)); pc += 4; break;
+            case BC_JUMP: printf("Jump to %i\n", INT(code, pc)); pc += 4; break;
             case BC_POP: printf("Pop %i element(s) from stack\n", code[pc++]); break;
 
             case BC_ADD: printf("Add\n"); break;

@@ -2,12 +2,16 @@ within io import log
 
 func test()
 {
-    msg = "Howwo, World!"
-    log(msg)
+    log("test")
 }
 
 func main()
 {
-    test()
-    log("This is test ", 21)
+    x = 3
+    if x > 20
+        log("Yes")
+    elif x > 10
+        log("Ok")
+    else
+        log("No")
 }

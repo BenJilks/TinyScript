@@ -481,6 +481,12 @@ struct VMObject VM_CallFunc(struct VMFunc *func, int arg_loc,
                 if (!stack[--sp].b) pc = INT(code, pc);
                 else pc += 4;
                 break;
+            
+            // JUMP <to>
+            case BC_JUMP:
+                LOG("Jump to %i\n", INT(code, pc));
+                pc = INT(code, pc);
+                break;
 
             // POP <amount>
             case BC_POP:

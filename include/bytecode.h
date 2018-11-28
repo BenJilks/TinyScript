@@ -16,6 +16,7 @@ enum Bytecode
     BC_CALL_MOD,
     BC_RETURN,
     BC_JUMP_IF_NOT,
+    BC_JUMP,
     BC_POP,
 
     BC_ADD,

@@ -11,6 +11,8 @@ enum TokenType
     TK_IMPORT,
     TK_WITHIN,
 	TK_IF,
+    TK_ELSE,
+    TK_ELSE_IF,
 	TK_FOR,
     TK_OF,
 

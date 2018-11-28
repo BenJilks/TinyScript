@@ -4,6 +4,7 @@
 #include "tokenizer.h"
 #include "symbol.h"
 #define BUFFER_SIZE 100
+#define MAX_LABELS 100
 
 struct Function
 {
@@ -19,18 +20,33 @@ struct SubModule
     int func_size;
 };
 
+struct Label
+{
+    int uses[80];
+    int use_count;
+    int addr;
+};
+
 struct Module
 {
+    // Module data
     char name[80];
-    int loc, param;
     struct SymbolTable table;
     struct Tokenizer *tk;
 
-    struct Function funcs[80];
-    struct SubModule mods[80];
+    // Current function
+    struct Label labels[MAX_LABELS];
+    int label_counter;
+    int loc, param, start_addr;
+
+    // Final output
     char *code;
     char *header;
     int cp, cbuffer;
+    
+    // Module data
+    struct Function funcs[80];
+    struct SubModule mods[80];
     int func_size, mod_size;
 };
 

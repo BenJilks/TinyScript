@@ -18,6 +18,7 @@ struct Module create_module(const char *name, struct Tokenizer *tk)
     mod.func_size = 0;
     mod.mod_size = 0;
     mod.tk = tk;
+    mod.label_counter = 0;
     return mod;
 }
 
@@ -75,6 +76,50 @@ void gen_string(struct Module *mod, const char *str)
     mod->cp += size + 1;
 }
 
+// Allocate a new label id
+int create_label(struct Module *mod)
+{
+    int id = mod->label_counter++;
+    mod->labels[id].use_count = 0;
+    mod->labels[id].addr = -1;
+    return id;
+}
+
+// Reserve a place for the address to be placed and mark it
+void gen_label(struct Module *mod, int id)
+{
+    struct Label *label;
+    label = &mod->labels[id];
+    label->uses[label->use_count++] = mod->cp;
+    gen_int(mod, 0);
+}
+
+// Assign the address of a label
+void assign_label(struct Module *mod, int id)
+{
+    struct Label *label;
+    label = &mod->labels[id];
+    label->addr = mod->cp;
+}
+
+// Gen the code for all currently used labels
+void finish_labels(struct Module *mod)
+{
+    struct Label label;
+    int i, j, addr;
+
+    for (i = 0; i < mod->label_counter; i++)
+    {
+        label = mod->labels[i];
+        addr = label.addr - mod->start_addr;
+
+        for (j = 0; j < label.use_count; j++)
+            memcpy(mod->code + label.uses[j], 
+                &addr, sizeof(int));
+    }
+    mod->label_counter = 0;
+}
+
 void delete_module(struct Module mod)
 {
     free(mod.code);
@@ -125,23 +170,52 @@ static void parse_return(struct Module *mod, struct Tokenizer *tk)
     gen_char(mod, BC_RETURN);
 }
 
-static void parse_if(struct Module *mod, struct Tokenizer *tk)
+static void parse_push(struct Module *mod, struct Tokenizer *tk)
 {
     struct Node *node;
-    int end_addr;
 
-    match(tk, "if", TK_IF);
     node = parse_expression(tk);
     compile_expression(mod, node);
     delete_node(node);
-    
-    end_addr = mod->cp + 1;
-    gen_char(mod, BC_JUMP_IF_NOT);
-    gen_int(mod, 0);
+}
 
+static void parse_if(struct Module *mod, struct Tokenizer *tk)
+{
+    int l_last, else_type;
+    int l_next = create_label(mod);
+    int l_end = create_label(mod);
+    int else_count = 0;
+
+    match(tk, "if", TK_IF);
+    parse_push(mod, tk);
+    gen_char(mod, BC_JUMP_IF_NOT);
+    gen_label(mod, l_next);
     parse_block(mod, tk);
-    memcpy(mod->code + end_addr, 
-        &mod->cp, 4);
+
+    else_type = tk->look.type;
+    while (else_type == TK_ELSE_IF || else_type == TK_ELSE)
+    {
+        l_last = l_next;
+        l_next = create_label(mod);
+        gen_char(mod, BC_JUMP);
+        gen_label(mod, l_end);
+
+        assign_label(mod, l_last);
+        tk->look = next(tk);
+        if (else_type == TK_ELSE_IF)
+        {
+            parse_push(mod, tk);
+            gen_char(mod, BC_JUMP_IF_NOT);
+            gen_label(mod, l_next);
+        }
+        parse_block(mod, tk);
+        
+        else_type = tk->look.type;
+        else_count++;
+    }
+
+    assign_label(mod, l_end);
+    assign_label(mod, l_next);
 }
 
 static void parse_statement(struct Module *mod, struct Tokenizer *tk)
@@ -198,6 +272,7 @@ void parse_function(struct Module *mod, struct Tokenizer *tk)
     struct Function *func;
     mod->loc = 0;
     mod->param = 0;
+    mod->start_addr = mod->cp;
 
     match(tk, "func", TK_FUNC);
     name = match(tk, "Name", TK_NAME);
@@ -214,6 +289,8 @@ void parse_function(struct Module *mod, struct Tokenizer *tk)
     gen_char(mod, BC_RETURN);
     func->size = mod->loc;
     LOG("\n");
+
+    finish_labels(mod);
 }
 
 static void parse_import(struct Module *mod, struct Tokenizer *tk)
