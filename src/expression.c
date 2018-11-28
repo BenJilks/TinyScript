@@ -128,7 +128,7 @@ static void do_operation(struct Module *mod, int op)
         case TK_MUL: gen_char(mod, BC_MUL); break;
         case TK_DIV: gen_char(mod, BC_DIV); break;
         case TK_MORE_THAN: gen_char(mod, BC_MORE_THAN); break;
-        case TK_LESS_THAN: gen_char(mod, TK_LESS_THAN); break;
+        case TK_LESS_THAN: gen_char(mod, BC_LESS_THAN); break;
         case TK_EQUAL: gen_char(mod, BC_EQUAL_TO); break;
         case TK_ASSIGN: gen_char(mod, BC_ASSIGN); break;
         default: printf("Error: op not imp\n"); break;

@@ -39,7 +39,11 @@ static int check_keyword(char *data)
 	else if(!strcmp(data, "if")) return TK_IF;
     else if(!strcmp(data, "else")) return TK_ELSE;
     else if(!strcmp(data, "elif")) return TK_ELSE_IF;
+    else if(!strcmp(data, "while")) return TK_WHILE;
 	else if(!strcmp(data, "for")) return TK_FOR;
+    else if(!strcmp(data, "break")) return TK_BREAK;
+    else if(!strcmp(data, "continue")) return TK_CONTINUE;
+    else if(!strcmp(data, "to")) return TK_TO;
 	else if(!strcmp(data, "true")) return TK_BOOL;
 	else if(!strcmp(data, "false")) return TK_BOOL;
 	return TK_NAME;

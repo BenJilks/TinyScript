@@ -557,7 +557,7 @@ struct VMObject VM_CallFuncName(const char *func_name)
 
     int mem_size = sizeof(struct VMObject) * 100;
     struct VMObject *stack = malloc(mem_size);
-    struct VMHeap heap = VM_CreateHeap(10);
+    struct VMHeap heap = VM_CreateHeap(100);
     struct VMObject out = VM_CallFunc(func, 0, 0, stack, &heap);
     VM_CleanUp(&heap, stack, 0);
     free(stack);

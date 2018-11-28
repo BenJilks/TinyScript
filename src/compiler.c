@@ -125,8 +125,8 @@ void delete_module(struct Module mod)
     free(mod.code);
 }
 
-static void parse_block(struct Module *mod, struct Tokenizer *tk);
-static void assign_local(struct Module *mod, struct Node *node)
+static void parse_block(struct Module *mod, struct Tokenizer *tk, int l_start, int l_end);
+static struct Symbol assign_local(struct Module *mod, struct Node *node)
 {
     struct Symbol symb;
     symb = lookup(&mod->table, node->left->s);
@@ -140,6 +140,7 @@ static void assign_local(struct Module *mod, struct Node *node)
     gen_char(mod, BC_ASSIGN_LOC);
     gen_int(mod, symb.location);
     delete_node(node);
+    return symb;
 }
 
 static void parse_expression_statement(struct Module *mod, struct Tokenizer *tk)
@@ -179,66 +180,141 @@ static void parse_push(struct Module *mod, struct Tokenizer *tk)
     delete_node(node);
 }
 
-static void parse_if(struct Module *mod, struct Tokenizer *tk)
+static void parse_if(struct Module *mod, struct Tokenizer *tk, int ll_start, int ll_end)
 {
     int l_last, else_type;
     int l_next = create_label(mod);
     int l_end = create_label(mod);
-    int else_count = 0;
 
+    // Parse and gen if statement header
     match(tk, "if", TK_IF);
     parse_push(mod, tk);
     gen_char(mod, BC_JUMP_IF_NOT);
     gen_label(mod, l_next);
-    parse_block(mod, tk);
+    parse_block(mod, tk, ll_start, ll_end);
 
+    // While there is anouther else of elif statement
     else_type = tk->look.type;
     while (else_type == TK_ELSE_IF || else_type == TK_ELSE)
     {
+        // Finish last statement, jump out of if
         l_last = l_next;
         l_next = create_label(mod);
         gen_char(mod, BC_JUMP);
         gen_label(mod, l_end);
 
+        // Jump to here
         assign_label(mod, l_last);
         tk->look = next(tk);
         if (else_type == TK_ELSE_IF)
         {
+            // If elif, jump to next if condition not met
             parse_push(mod, tk);
             gen_char(mod, BC_JUMP_IF_NOT);
             gen_label(mod, l_next);
         }
-        parse_block(mod, tk);
         
+        // Parse else block
+        parse_block(mod, tk, ll_start, ll_end);
         else_type = tk->look.type;
-        else_count++;
     }
 
+    // Set the next jump and ending labels to 
+    // the end of the statement
     assign_label(mod, l_end);
     assign_label(mod, l_next);
 }
 
-static void parse_statement(struct Module *mod, struct Tokenizer *tk)
+static void parse_while(struct Module *mod, struct Tokenizer *tk)
+{
+    int l_start = create_label(mod);
+    int l_end = create_label(mod);
+    assign_label(mod, l_start);
+
+    match(tk, "while", TK_WHILE);
+    parse_push(mod, tk);
+    gen_char(mod, BC_JUMP_IF_NOT);
+    gen_label(mod, l_end);
+
+    parse_block(mod, tk, l_start, l_end);
+    gen_char(mod, BC_JUMP);
+    gen_label(mod, l_start);
+
+    assign_label(mod, l_end);
+}
+
+static void parse_for(struct Module *mod, struct Tokenizer *tk)
+{
+    int l_start = create_label(mod);
+    int l_end = create_label(mod);
+    struct Node *node;
+    struct Symbol symb;
+
+    match(tk, "for", TK_FOR);
+    node = parse_expression(tk);
+    symb = assign_local(mod, node);
+
+    assign_label(mod, l_start);
+    match(tk, "to", TK_TO);
+    gen_char(mod, BC_PUSH_LOC);
+    gen_int(mod, symb.location);
+    parse_push(mod, tk);
+    gen_char(mod, BC_LESS_THAN);
+    gen_char(mod, BC_JUMP_IF_NOT);
+    gen_label(mod, l_end);
+
+    parse_block(mod, tk, l_start, l_end);
+    gen_char(mod, BC_PUSH_LOC);
+    gen_int(mod, symb.location);
+    gen_char(mod, BC_PUSH_INT);
+    gen_int(mod, 1);
+    gen_char(mod, BC_ADD);
+    gen_char(mod, BC_ASSIGN_LOC);
+    gen_int(mod, symb.location);
+    gen_char(mod, BC_JUMP);
+    gen_label(mod, l_start);
+    assign_label(mod, l_end);
+}
+
+static void parse_break(struct Module *mod, struct Tokenizer *tk, int l_start, int l_end)
+{
+    match(tk, "break", TK_BREAK);
+    gen_char(mod, BC_JUMP);
+    gen_label(mod, l_end);
+}
+
+static void parse_continue(struct Module *mod, struct Tokenizer *tk, int l_start, int l_end)
+{
+    match(tk, "continue", TK_CONTINUE);
+    gen_char(mod, BC_JUMP);
+    gen_label(mod, l_start);
+}
+
+static void parse_statement(struct Module *mod, struct Tokenizer *tk, int l_start, int l_end)
 {
     switch (tk->look.type)
     {
         case TK_RETURN: parse_return(mod, tk); break;
-        case TK_IF: parse_if(mod, tk); break;
+        case TK_IF: parse_if(mod, tk, l_start, l_end); break;
+        case TK_WHILE: parse_while(mod, tk); break;
+        case TK_FOR: parse_for(mod, tk); break;
+        case TK_BREAK: parse_break(mod, tk, l_start, l_end); break;
+        case TK_CONTINUE: parse_continue(mod, tk, l_start, l_end); break;
         default: parse_expression_statement(mod, tk); break;
     }
 }
 
-static void parse_block(struct Module *mod, struct Tokenizer *tk)
+static void parse_block(struct Module *mod, struct Tokenizer *tk, int l_start, int l_end)
 {
     if (tk->look.type == TK_OPEN_BLOCK)
     {
         match(tk, "{", TK_OPEN_BLOCK);
         while (tk->look.type != TK_CLOSE_BLOCK)
-            parse_statement(mod, tk);
+            parse_statement(mod, tk, l_start, l_end);
         match(tk, "}", TK_CLOSE_BLOCK);
     }
     else
-        parse_statement(mod, tk);
+        parse_statement(mod, tk, l_start, l_end);
 }
 
 static void parse_params(struct Module *mod, struct Tokenizer *tk)
@@ -281,7 +357,7 @@ void parse_function(struct Module *mod, struct Tokenizer *tk)
     
     push_scope(&mod->table);
     parse_params(mod, tk);
-    parse_block(mod, tk);
+    parse_block(mod, tk, -1, -1);
     pop_scope(&mod->table);
 
     gen_char(mod, BC_PUSH_INT);

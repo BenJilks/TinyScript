@@ -7,11 +7,6 @@ func test()
 
 func main()
 {
-    x = 3
-    if x > 20
-        log("Yes")
-    elif x > 10
-        log("Ok")
-    else
-        log("No")
+    for i = 0 to 21
+        log(i)
 }

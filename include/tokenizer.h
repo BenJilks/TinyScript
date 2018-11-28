@@ -13,7 +13,11 @@ enum TokenType
 	TK_IF,
     TK_ELSE,
     TK_ELSE_IF,
+    TK_WHILE,
 	TK_FOR,
+    TK_BREAK,
+    TK_CONTINUE,
+    TK_TO,
     TK_OF,
 
 	TK_INT,
