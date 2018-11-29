@@ -55,6 +55,7 @@ void disassemble(char *code, int len)
             case BC_MORE_THAN: printf("MoreThan\n"); break;
             case BC_LESS_THAN: printf("LessThan\n"); break;
             case BC_ASSIGN: printf("Assign\n"); break;
+            case BC_INC_LOC: printf("Inc %i by %i\n", INT(code, pc), INT(code, pc+4)); pc += 8; break;
         }
     }
 }

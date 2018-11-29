@@ -510,6 +510,20 @@ struct VMObject VM_CallFunc(struct VMFunc *func, int arg_loc,
                 LOG("Assign\n");
                 break;
             
+            // INC_LOC <loc> <by>
+            case BC_INC_LOC:
+            {
+                struct VMObject *loc = &locs[INT(code, pc)];
+                switch(loc->type->prim_type)
+                {
+                    case PRIM_INT: loc->i += INT(code, pc+4); break;
+                    case PRIM_FLOAT: loc->f += INT(code, pc+4); break;
+                    case PRIM_CHAR: loc->c += INT(code, pc+4); break;
+                    case PRIM_BOOL: printf("Error: Cannot increment bool\n"); break;
+                }
+                pc += 4;
+            }
+            
             // RETURN
             case BC_RETURN:
                 LOG("Return\n");

@@ -26,7 +26,8 @@ enum Bytecode
     BC_MORE_THAN,
     BC_LESS_THAN,
     BC_EQUAL_TO,
-    BC_ASSIGN
+    BC_ASSIGN,
+    BC_INC_LOC
 };
 
 void decode_header(char *header);
