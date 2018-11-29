@@ -250,10 +250,12 @@ static void parse_for(struct Module *mod, struct Tokenizer *tk)
     struct Node *node;
     struct Symbol symb;
 
+    // Compile assign of local
     match(tk, "for", TK_FOR);
     node = parse_expression(tk);
     symb = assign_local(mod, node);
 
+    // Jump to end if not parsed max value
     assign_label(mod, l_start);
     match(tk, "to", TK_TO);
     gen_char(mod, BC_PUSH_LOC);
@@ -263,14 +265,11 @@ static void parse_for(struct Module *mod, struct Tokenizer *tk)
     gen_char(mod, BC_JUMP_IF_NOT);
     gen_label(mod, l_end);
 
+    // Increase local by one and jump to start
     parse_block(mod, tk, l_start, l_end);
-    gen_char(mod, BC_PUSH_LOC);
+    gen_char(mod, BC_INC_LOC);
     gen_int(mod, symb.location);
-    gen_char(mod, BC_PUSH_INT);
     gen_int(mod, 1);
-    gen_char(mod, BC_ADD);
-    gen_char(mod, BC_ASSIGN_LOC);
-    gen_int(mod, symb.location);
     gen_char(mod, BC_JUMP);
     gen_label(mod, l_start);
     assign_label(mod, l_end);

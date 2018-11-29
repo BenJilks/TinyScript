@@ -521,7 +521,8 @@ struct VMObject VM_CallFunc(struct VMFunc *func, int arg_loc,
                     case PRIM_CHAR: loc->c += INT(code, pc+4); break;
                     case PRIM_BOOL: printf("Error: Cannot increment bool\n"); break;
                 }
-                pc += 4;
+                pc += 8;
+                break;
             }
             
             // RETURN
