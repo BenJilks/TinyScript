@@ -23,7 +23,7 @@ struct SymbolType
     int size;
 
     char name[80];
-    int id;
+    int id, attr_size, method_size;
 };
 
 struct SymbolTable
@@ -48,6 +48,7 @@ struct Symbol *create_atrr(struct SymbolType *table, const char *name,
 
 struct Symbol lookup(struct SymbolTable *table, const char *name);
 struct Symbol lookup_attr(struct SymbolType *table, const char *name);
+struct SymbolType *lookup_type(struct SymbolTable *table, const char *name);
 
 void push_scope(struct SymbolTable *table);
 void pop_scope(struct SymbolTable *table);

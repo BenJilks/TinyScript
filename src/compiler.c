@@ -333,27 +333,21 @@ static void parse_params(struct Module *mod, struct Tokenizer *tk)
 
 static struct Function *create_function(struct Module *mod, const char *name)
 {
-    create_symbol(&mod->table, name, mod->func_size, SYMBOL_FUNCTION);
-
     struct Function *func = &mod->funcs[mod->func_size++];
     strcpy(func->name, name);
     func->start = mod->cp;
     return func;
 }
 
-void parse_function(struct Module *mod, struct Tokenizer *tk)
+void start_new_function(struct Module *mod)
 {
-    struct Token name;
-    struct Function *func;
     mod->loc = 0;
     mod->param = 0;
     mod->start_addr = mod->cp;
+}
 
-    match(tk, "func", TK_FUNC);
-    name = match(tk, "Name", TK_NAME);
-    func = create_function(mod, name.data);
-    LOG("Function of name '%s'\n", name.data);
-    
+void parse_function_body(struct Module *mod, struct Tokenizer *tk)
+{
     push_scope(&mod->table);
     parse_params(mod, tk);
     parse_block(mod, tk, -1, -1);
@@ -362,10 +356,75 @@ void parse_function(struct Module *mod, struct Tokenizer *tk)
     gen_char(mod, BC_PUSH_INT);
     gen_int(mod, 0);
     gen_char(mod, BC_RETURN);
-    func->size = mod->loc;
-    LOG("\n");
+}
 
+void parse_function(struct Module *mod, struct Tokenizer *tk)
+{
+    struct Token name;
+    struct Function *func;
+    start_new_function(mod);
+
+    match(tk, "func", TK_FUNC);
+    name = match(tk, "Name", TK_NAME);
+    func = create_function(mod, name.data);
+    create_symbol(&mod->table, name.data, mod->func_size-1, SYMBOL_FUNCTION);
+    LOG("Function of name '%s'\n", name.data);
+    
+    parse_function_body(mod, tk);
+    func->size = mod->loc;
     finish_labels(mod);
+    LOG("\n");
+}
+
+static void parse_attr(struct SymbolType *type, struct Tokenizer *tk)
+{
+    struct Token attr;
+
+    attr = match(tk, "Name", TK_NAME);
+    create_atrr(type, attr.data, type->attr_size++, 0);
+    LOG("Attr '%s'\n", attr.data);
+}
+
+static void parse_method(struct SymbolType *type, struct Module *mod, struct Tokenizer *tk)
+{
+    struct Token name;
+    struct Function *func;
+    start_new_function(mod);
+
+    match(tk, "func", TK_FUNC);
+    name = match(tk, "Name", TK_NAME);
+    func = create_function(mod, name.data);
+    create_atrr(type, name.data, mod->func_size-1, SYMBOL_FUNCTION);
+    LOG("Method of name '%s'\n", name.data);
+
+    parse_function_body(mod, tk);
+    func->size = mod->loc;
+    finish_labels(mod);
+    LOG("\n");
+}
+
+static void parse_class(struct Module *mod, struct Tokenizer *tk)
+{
+    struct Token name;
+    struct SymbolType *type;
+    
+    match(tk, "class", TK_CLASS);
+    name = match(tk, "Name", TK_NAME);
+    type = create_type(&mod->table, name.data);
+    LOG("Class named '%s'\n", name.data);
+
+    match(tk, "{", TK_OPEN_BLOCK);
+    while (tk->look.type != TK_CLOSE_BLOCK)
+    {
+        switch(tk->look.type)
+        {
+            case TK_NAME: parse_attr(type, tk); break;
+            case TK_FUNC: parse_method(type, mod, tk); break;
+            default: F_ERROR(tk, "Unexpected token '%s' in class '%s' body", 
+                tk->look.data, name.data); tk->look = next(tk); break;
+        }
+    }
+    match(tk, "}", TK_CLOSE_BLOCK);
 }
 
 static void parse_import(struct Module *mod, struct Tokenizer *tk)
@@ -413,7 +472,15 @@ static int calc_header_size(struct Module *mod)
     {
         struct Function func = mod->funcs[i];
         size += strlen(func.name) + 1; // Function name
-        size += 4;                     // start location
+        size += 8;                     // Start location and size
+    }
+
+    size += 4; // Type length
+    for (i = 0; i < mod->table.type_size; i++)
+    {
+        struct SymbolType type = mod->table.types[i];
+        size += strlen(type.name) + 1; // Type name
+        size += 4;                     // Type size
     }
 
     size += 4; // Mod length
@@ -458,6 +525,15 @@ void write_header(struct Module *mod)
         WRITE_INT(func.size, mod->header, hp);
     }
 
+    // Write type data
+    WRITE_INT(mod->table.type_size, mod->header, hp);
+    for (i = 0; i < mod->table.type_size; i++)
+    {
+        struct SymbolType type = mod->table.types[i];
+        WRITE_STRING(type.name, mod->header, hp);
+        WRITE_INT(type.size, mod->header, hp);
+    }
+
     // Write mod data
     WRITE_INT(mod->mod_size, mod->header, hp);
     for (i = 0; i < mod->mod_size; i++)
@@ -484,6 +560,7 @@ void compile_module(struct Module *mod)
             case TK_IMPORT: parse_import(mod, tk); break;
             case TK_WITHIN: parse_import_funcs(mod, tk); break;
             case TK_FUNC: parse_function(mod, tk); break;
+            case TK_CLASS: parse_class(mod, tk); break;
             default: F_ERROR(tk, "Unexpected token '%s'\n"); break;
         }
     }

@@ -16,6 +16,7 @@ struct SymbolType *create_type(struct SymbolTable *table, const char *name)
     strcpy(type.name, name);
     type.size = 0;
     type.id = table->type_size;
+    type.attr_size = 0;
     table->types[table->type_size] = type;
     return &table->types[table->type_size++];
 }
@@ -57,6 +58,15 @@ struct Symbol lookup(struct SymbolTable *table, const char *name)
 struct Symbol lookup_attr(struct SymbolType *table, const char *name)
 {
     return lookup((struct SymbolTable *)table, name);
+}
+
+struct SymbolType *lookup_type(struct SymbolTable *table, const char *name)
+{
+    int i;
+    for (i = 0; i < table->type_size; i++)
+        if (!strcmp(table->types[i].name, name))
+            return &table->types[i];
+    return NULL;
 }
 
 void push_scope(struct SymbolTable *table)

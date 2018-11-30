@@ -65,8 +65,24 @@ struct VMMod *VM_LoadMod(char *header, char *data)
         func.mod = mod;
         func.is_sys = 0;
         mod->funcs[i] = func;
+        
         LOG("   - Loaded function '%s' at %i of size %i\n", 
             func.name, func.code - data, func.size);
+    }
+
+    // Load mod types
+    mod->type_size = INT(header, pc); NEXT_INT(pc);
+    LOG("Loading %i types\n", mod->type_size);
+    for (i = 0; i < mod->type_size; i++)
+    {
+        struct VMType type;
+        STRING(type.name, header, pc);
+        type.size = INT(header, pc); NEXT_INT(pc);
+        type.prim_type = PRIM_OBJECT;
+        mod->types[i] = type;
+
+        LOG("   - Loaded type '%s' of size %i\n", 
+            type.name, type.size);
     }
 
     // Load the other mods this mod uses
@@ -397,7 +413,7 @@ struct VMObject VM_CallFunc(struct VMFunc *func, int arg_loc,
             
             // PUSH_FLOAT <float>
             case BC_PUSH_FLOAT: 
-                CREATE_OBJECT(&dt_float, f, FLOAT(code, pc)); 
+                CREATE_OBJECT(&dt_float, f, FLOAT(code, pc));
                 LOG("Push float %d\n", FLOAT(code, pc)); 
                 NEXT_FLOAT(pc); 
                 break;
@@ -442,6 +458,18 @@ struct VMObject VM_CallFunc(struct VMFunc *func, int arg_loc,
                 pc += 4;
                 break;
             
+            // CREATE_OBJECT <id>
+            case BC_CREATE_OBJECT:
+            {
+                struct VMType *type = &func->mod->types[INT(code, pc)];
+                LOG("Create new object '%s' of size %i\n", type->name, type->size);
+                
+                void *data = malloc(sizeof(struct VMObject) * type->size);
+                CREATE_OBJECT(type, p, VM_Alloc(heap, data));
+                pc += 4;
+                break;
+            }
+
             // ASSIGN_LOC <loc>
             case BC_ASSIGN_LOC:
                 locs[INT(code, pc)] = stack[--sp];

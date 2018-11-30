@@ -66,15 +66,17 @@ struct VMSubMod
     char name[80];
     char func_names[80][80];
     struct VMFunc *funcs[80];
-    int func_size;
+    struct VMType *types[80];
+    int func_size, type_size;
 };
 
 struct VMMod
 {
     char name[80];
     struct VMFunc funcs[80];
+    struct VMType types[80];
     struct VMSubMod sub_mods[80];
-    int func_size, sub_size;
+    int func_size, type_size, sub_size;
     char *data;
 };
 

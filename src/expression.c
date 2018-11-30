@@ -159,12 +159,28 @@ static void call_function(struct Module *mod, struct Node *node, struct Symbol s
     }
 }
 
+static void compile_create_object(struct Module *mod, struct Node *node, struct SymbolType *type)
+{
+    gen_char(mod, BC_CREATE_OBJECT);
+    gen_int(mod, type->id);
+}
+
 static void compile_name(struct Module *mod, struct Node *node, char addr_mode)
 {
-    const char *name = node->s;
-    struct Symbol symb = lookup(&mod->table, name);
+    const char *name;
+    struct Symbol symb;
+    struct SymbolType *type;
+
+    name = node->s;
+    symb = lookup(&mod->table, name);
+    type = lookup_type(&mod->table, name);
     if (symb.location == -1)
     {
+        if (type != NULL)
+        {
+            compile_create_object(mod, node, type);
+            return;
+        }
         F_ERROR(mod->tk, "Could not find symbol '%s'", name);
         return;
     }
@@ -175,7 +191,6 @@ static void compile_name(struct Module *mod, struct Node *node, char addr_mode)
         call_function(mod, node, symb);
         return;
     }
-
 
     // If the symbol is a module
     if (symb.flags & SYMBOL_MODULE)

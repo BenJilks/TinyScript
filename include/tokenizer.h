@@ -7,6 +7,7 @@ enum TokenType
 {
 	TK_NAME,
 	TK_FUNC,
+	TK_CLASS,
     TK_RETURN,
     TK_IMPORT,
     TK_WITHIN,

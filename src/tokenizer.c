@@ -33,6 +33,7 @@ static char read_char(struct Tokenizer *tk)
 static int check_keyword(char *data)
 {
 	if (!strcmp(data, "func")) return TK_FUNC;
+	else if(!strcmp(data, "class")) return TK_CLASS;
     else if(!strcmp(data, "return")) return TK_RETURN;
     else if(!strcmp(data, "import")) return TK_IMPORT;
     else if(!strcmp(data, "within")) return TK_WITHIN;

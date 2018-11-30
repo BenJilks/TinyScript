@@ -1,12 +1,16 @@
 within io import log
 
-func test()
+class Cat
 {
-    log("test")
+    name
+    colour
+
+    func Cat(msg)
+        log("Message: ", msg)
 }
 
 func main()
 {
-    for i = 0 to 21
-        log(i)
+    idk : int = 0
+    log(idk)
 }
