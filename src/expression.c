@@ -49,6 +49,7 @@ void parse_name(struct Tokenizer *tk, struct Node *node, const char *data)
     if (tk->look.type == TK_OF)
     {
         match(tk, ":", TK_OF);
+        node->has_from = 1;
         func_name = match(tk, "Name", TK_NAME);
         strcpy(node->mod_func, func_name.data);
     }
@@ -74,6 +75,7 @@ struct Node *parse_data(struct Tokenizer *tk)
     node->type = token.type;
     node->is_op = 0;
     node->arg_size = 0;
+    node->has_from = 0;
     tk->look = next(tk);
     
     char *data = token.data;
@@ -85,6 +87,10 @@ struct Node *parse_data(struct Tokenizer *tk)
         case TK_BOOL: node->b = strcmp(data, "true") ? 0 : 1; break;
         case TK_STRING: strcpy(node->s, data); break;
         case TK_NAME: parse_name(tk, node, data); break;
+        case TK_OPEN_ARG: 
+            free(node); node = parse_expression(tk); 
+            match(tk, ")", TK_CLOSE_ARG); 
+            break;
         default: F_ERROR(tk, "Unexpected token '%s', expected expression", data);
     }
 
@@ -242,11 +248,27 @@ static void compile_term(struct Module *mod, struct Node *node, char addr_mode)
 
 void compile_assign_op(struct Module *mod, struct Node *node, char addr_mode)
 {
+    struct Symbol *symb;
+    const char *name, *type_name;
+
     if (node->left->type == TK_NAME)
     {
-        const char *name = node->left->s;
+        name = node->left->s;
+        type_name = node->left->mod_func;
         if (lookup(&mod->table, name).location == -1)
-            create_symbol(&mod->table, name, mod->loc++, 0);
+        {
+            // Create new local var
+            symb = create_symbol(&mod->table, name, mod->loc++, 0);
+
+            // Set static type, if exists
+            if (node->left->has_from)
+            {
+                symb->type = lookup_type(&mod->table, type_name);
+                LOG("Assigned static type '%s'\n", type_name);
+                if (symb->type == NULL)
+                    printf("Error: Type '%s' could not be found\n", type_name);
+            }
+        }
     }
 
     compile_node(mod, node->left, 1);

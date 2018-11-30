@@ -7,6 +7,11 @@ struct SymbolTable create_table()
     table.size = 0;
     table.scope_pointer = 0;
     table.type_size = 0;
+
+    create_type(&table, "int");
+    create_type(&table, "float");
+    create_type(&table, "char");
+    create_type(&table, "bool");
     return table;
 }
 

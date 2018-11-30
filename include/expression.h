@@ -20,7 +20,7 @@ struct Node
     };
     char mod_func[80];
     struct Node *args[80];
-    int arg_size;
+    int arg_size, has_from;
 };
 
 struct Node *parse_expression(struct Tokenizer *tk);

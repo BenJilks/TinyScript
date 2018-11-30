@@ -128,12 +128,24 @@ void delete_module(struct Module mod)
 static void parse_block(struct Module *mod, struct Tokenizer *tk, int l_start, int l_end);
 static struct Symbol assign_local(struct Module *mod, struct Node *node)
 {
-    struct Symbol symb;
+    struct Symbol symb, *new_symb;
+    const char *type_name = node->left->mod_func;
+
     symb = lookup(&mod->table, node->left->s);
     if (symb.location == -1)
     {
-        symb = *create_symbol(&mod->table, node->left->s, 
+        new_symb = create_symbol(&mod->table, node->left->s, 
             mod->loc++, 0);
+        
+        // Set static type, if exists
+        if (node->left->has_from)
+        {
+            new_symb->type = lookup_type(&mod->table, type_name);
+            LOG("Assigned static type '%s'\n", type_name);
+            if (new_symb->type == NULL)
+                printf("Error: Type '%s' could not be found\n", type_name);
+        }
+        symb = *new_symb;
     }
 
     compile_expression(mod, node->right);
@@ -316,17 +328,37 @@ static void parse_block(struct Module *mod, struct Tokenizer *tk, int l_start, i
         parse_statement(mod, tk, l_start, l_end);
 }
 
+static void parse_static_type(struct Symbol *symb, struct Module *mod, struct Tokenizer *tk)
+{
+    struct Token type_name;
+    match(tk, ":", TK_OF);
+    type_name = match(tk, "Type", TK_NAME);
+    
+    symb->type = lookup_type(&mod->table, type_name.data);
+    LOG("Assigned static type '%s'\n", type_name.data);
+    if (symb->type == NULL)
+        F_ERROR(tk, "Could not find type '%s'", type_name.data);
+}
+
 static void parse_params(struct Module *mod, struct Tokenizer *tk)
 {
+    struct Token param;
+    struct Symbol *symb;
+
     match(tk, "(", TK_OPEN_ARG);
     while (tk->look.type != TK_CLOSE_ARG)
     {
-        struct Token param = match(tk, "Param", TK_NAME);
+        param = match(tk, "Param", TK_NAME);
+        symb = create_symbol(&mod->table, param.data, 
+            mod->param++, SYMBOL_PARAMETER);
+        LOG("Param '%s'\n", param.data);
+        
+        // If the parm has a static type
+        if (tk->look.type == TK_OF)
+            parse_static_type(symb, mod, tk);
+
         if (tk->look.type != TK_CLOSE_ARG)
             match(tk, ",", TK_NEXT);
-        
-        LOG("Param '%s'\n", param.data);
-        create_symbol(&mod->table, param.data, mod->param++, SYMBOL_PARAMETER);
     }
     match(tk, ")", TK_CLOSE_ARG);
 }
@@ -376,13 +408,17 @@ void parse_function(struct Module *mod, struct Tokenizer *tk)
     LOG("\n");
 }
 
-static void parse_attr(struct SymbolType *type, struct Tokenizer *tk)
+static void parse_attr(struct SymbolType *type, struct Module *mod, struct Tokenizer *tk)
 {
     struct Token attr;
+    struct Symbol *symb;
 
     attr = match(tk, "Name", TK_NAME);
-    create_atrr(type, attr.data, type->attr_size++, 0);
+    symb = create_atrr(type, attr.data, type->attr_size++, 0);
     LOG("Attr '%s'\n", attr.data);
+
+    if (tk->look.type == TK_OF)
+        parse_static_type(symb, mod, tk);
 }
 
 static void parse_method(struct SymbolType *type, struct Module *mod, struct Tokenizer *tk)
@@ -418,7 +454,7 @@ static void parse_class(struct Module *mod, struct Tokenizer *tk)
     {
         switch(tk->look.type)
         {
-            case TK_NAME: parse_attr(type, tk); break;
+            case TK_NAME: parse_attr(type, mod, tk); break;
             case TK_FUNC: parse_method(type, mod, tk); break;
             default: F_ERROR(tk, "Unexpected token '%s' in class '%s' body", 
                 tk->look.data, name.data); tk->look = next(tk); break;

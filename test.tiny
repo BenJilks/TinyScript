@@ -2,15 +2,18 @@ within io import log
 
 class Cat
 {
-    name
-    colour
+    name : int
+    colour : Cat
 
     func Cat(msg)
         log("Message: ", msg)
 }
 
+func test(cat : Cat)
+    log(cat)
+
 func main()
 {
-    idk : int = 0
-    log(idk)
+    idk : Cat = Cat()
+    test(idk)
 }
