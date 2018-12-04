@@ -134,6 +134,12 @@ static struct Token read_multi_char(struct Tokenizer *tk, struct Token t)
     return t;
 }
 
+static void read_comment(struct Tokenizer *tk)
+{
+	while (read_char(tk) != '\n')
+		continue;
+}
+
 // Read the next token in the file and return it
 struct Token next(struct Tokenizer *tk)
 {
@@ -165,6 +171,7 @@ struct Token next(struct Tokenizer *tk)
 			case ')': t.type = TK_CLOSE_ARG; break;
 			case '{': t.type = TK_OPEN_BLOCK; break;
 			case '}': t.type = TK_CLOSE_BLOCK; break;
+			case '#': read_comment(tk); continue;
 			case '=': t.type = TK_ASSIGN; return read_multi_char(tk, t);
 		}
 

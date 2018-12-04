@@ -1,9 +1,15 @@
 within io import log
 
+class Vec2
+{
+    x y
+}
+
 class Cat
 {
     name : int
     colour : Cat
+    pos : Vec2
 
     func Cat(msg)
         log("Message: ", msg)
@@ -14,6 +20,6 @@ func test(cat : Cat)
 
 func main()
 {
-    idk : Cat = Cat()
-    test(idk)
+    idk = Cat()
+    log(idk.Cat:pos)
 }
