@@ -1,7 +1,7 @@
 #ifndef FLAGS_H
 #define FLAGS_H
 
-#define DEBUG 0
+#define DEBUG 1
 
 #if DEBUG
 #define LOG(...) printf(__VA_ARGS__)

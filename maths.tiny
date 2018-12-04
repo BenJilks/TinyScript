@@ -1,4 +1,7 @@
-import test
 
-func inc(x)
-    return test:add(x, 1)
+func fib(i)
+{
+    if i > 2
+        return fib(i - 1) + fib(i - 2)
+    return 1
+}

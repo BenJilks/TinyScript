@@ -488,7 +488,7 @@ static void parse_import_funcs(struct Module *mod, struct Tokenizer *tk)
         func_name = match(tk, "Name", TK_NAME);
         symb = create_symbol(&mod->table, func_name.data, 
             sub.func_size, SYMBOL_FUNCTION | SYMBOL_MOD_FUNC);
-        symb->location = mod->mod_size;
+        symb->module = mod->mod_size;
 
         strcpy(sub.func_names[sub.func_size++], func_name.data);
         if (tk->look.type != TK_NEXT)
