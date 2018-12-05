@@ -246,22 +246,22 @@ static void compile_term(struct Module *mod, struct Node *node, char addr_mode)
     }
 }
 
-void compile_assign_op(struct Module *mod, struct Node *node, char addr_mode)
+static void check_var_exists(struct Module *mod, struct Node *node)
 {
     struct Symbol *symb;
     const char *name, *type_name;
 
-    if (node->left->type == TK_NAME)
+    if (node->type == TK_NAME)
     {
-        name = node->left->s;
-        type_name = node->left->mod_func;
+        name = node->s;
+        type_name = node->mod_func;
         if (lookup(&mod->table, name).location == -1)
         {
             // Create new local var
             symb = create_symbol(&mod->table, name, mod->loc++, 0);
 
             // Set static type, if exists
-            if (node->left->has_from)
+            if (node->has_from)
             {
                 symb->type = lookup_type(&mod->table, type_name);
                 LOG("Assigned static type '%s'\n", type_name);
@@ -270,29 +270,45 @@ void compile_assign_op(struct Module *mod, struct Node *node, char addr_mode)
             }
         }
     }
+}
+
+void compile_assign_op(struct Module *mod, struct Node *node, char addr_mode)
+{
+    check_var_exists(mod, node->left);
 
     compile_node(mod, node->left, 1);
     compile_node(mod, node->right, addr_mode);
     do_operation(mod, node->type);
 }
 
+void compile_in_op(struct Module *mod, struct Node *node, char addr_mode)
+{
+    compile_node(mod, node->left, addr_mode);
+    compile_node(mod, node->right, addr_mode);
+    do_operation(mod, node->type);
+}
+
+void compile_op(struct Module *mod, struct Node *node, char addr_mode)
+{
+    switch(node->type)
+    {
+        case TK_ASSIGN: compile_assign_op(mod, node, addr_mode); break;
+        case TK_IN: compile_in_op(mod, node, addr_mode); break;
+        
+        default:
+            compile_node(mod, node->left, addr_mode);
+            compile_node(mod, node->right, addr_mode);
+            do_operation(mod, node->type);
+            break;
+    }
+}
+
 void compile_node(struct Module *mod, struct Node *node, char addr_mode)
 {
     if (node->is_op)
-    {
-        if (node->type == TK_ASSIGN)
-        {
-            compile_assign_op(mod, node, addr_mode);
-            return;
-        }
-
-        compile_node(mod, node->left, addr_mode);
-        compile_node(mod, node->right, addr_mode);
-        do_operation(mod, node->type);
-        return;
-    }
-
-    compile_term(mod, node, addr_mode);
+        compile_op(mod, node, addr_mode);
+    else
+        compile_term(mod, node, addr_mode);
 }
 
 void compile_expression(struct Module *mod, struct Node *node)

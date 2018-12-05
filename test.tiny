@@ -1,5 +1,4 @@
 within io import log
-within maths import fib
 
 class Vec2
 {
@@ -21,7 +20,6 @@ func test(cat : Cat)
 
 func main()
 {
-#    idk = Cat()
-#    log(idk.Cat:pos)
-    log(fib(5))
+    idk = Cat()
+    log(idk.Cat:pos)
 }
