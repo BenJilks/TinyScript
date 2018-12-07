@@ -24,7 +24,7 @@ struct Node
 };
 
 struct Node *parse_expression(struct Tokenizer *tk);
-void compile_node(struct Module *mod, struct Node *node, char addr_mode);
+struct SymbolType *compile_node(struct Module *mod, struct Node *node, char addr_mode);
 void compile_expression(struct Module *mod, struct Node *node);
 void delete_node(struct Node *node);
 

@@ -9,10 +9,11 @@ enum Bytecode
     BC_PUSH_BOOL,
     BC_PUSH_STRING,
     BC_PUSH_ARG,
+    BC_CREATE_OBJECT,
     BC_PUSH_LOC,
     BC_PUSH_ATTR,
-    BC_CREATE_OBJECT,
     BC_ASSIGN_LOC,
+    BC_ASSIGN_ATTR,
 
     BC_CALL,
     BC_CALL_MOD,

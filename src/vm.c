@@ -458,11 +458,11 @@ struct VMObject VM_CallFunc(struct VMFunc *func, int arg_loc,
                 pc += 4;
                 break;
             
-            // PUSH_ATTR
+            // PUSH_ATTR <id>
             case BC_PUSH_ATTR:
-                stack[sp-2] = stack[sp-2].p->arr[stack[sp-1].i];
-                LOG("Push attr %i of %s object\n", stack[sp-1].i, stack[sp-2].type->name);
-                sp--;
+                LOG("Push attr %i of %s object\n", INT(code, pc), stack[sp-1].type->name);
+                stack[sp-1] = stack[sp-1].p->arr[INT(code, pc)];
+                pc += 4;
                 break;
             
             // CREATE_OBJECT <id>
@@ -482,6 +482,13 @@ struct VMObject VM_CallFunc(struct VMFunc *func, int arg_loc,
                 locs[INT(code, pc)] = stack[--sp];
                 LOG("Assign to loc %i\n", INT(code, pc));
                 pc += 4;
+                break;
+            
+            // ASSIGN_ATTR <id>
+            case BC_ASSIGN_ATTR:
+                LOG("Assign attr %i of %s object\n", INT(code, pc), stack[sp-2].type->name);
+                stack[sp-2].p->arr[INT(code, pc)] = stack[sp-1];
+                sp--; pc += 4;
                 break;
 
             // CALL <arg_size> <func_id>

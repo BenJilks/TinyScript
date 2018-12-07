@@ -20,6 +20,12 @@ func test(cat : Cat)
 
 func main()
 {
-    idk = Cat()
-    log(idk.Cat:pos)
+    idk : Cat = Cat()
+    
+    idk.pos = Vec2()
+    idk.pos.x = 21
+    idk.name = "my name jeff"
+
+    log(idk.pos.x)
+    log(idk.name)
 }

@@ -141,7 +141,7 @@ static void do_operation(struct Module *mod, int op)
     }
 }
 
-static void call_function(struct Module *mod, struct Node *node, struct Symbol symb)
+static struct SymbolType *call_function(struct Module *mod, struct Node *node, struct Symbol symb)
 {
     LOG("call function '%s' at %i with %i args\n", 
             symb.name, symb.location, node->arg_size);
@@ -163,15 +163,18 @@ static void call_function(struct Module *mod, struct Node *node, struct Symbol s
         gen_int(mod, node->arg_size);
         gen_int(mod, symb.location);
     }
+
+    return symb.type;
 }
 
-static void compile_create_object(struct Module *mod, struct Node *node, struct SymbolType *type)
+static struct SymbolType *compile_create_object(struct Module *mod, struct Node *node, struct SymbolType *type)
 {
     gen_char(mod, BC_CREATE_OBJECT);
     gen_int(mod, type->id);
+    return type;
 }
 
-static void compile_name(struct Module *mod, struct Node *node, char addr_mode)
+static struct SymbolType *compile_name(struct Module *mod, struct Node *node, char addr_mode)
 {
     const char *name;
     struct Symbol symb;
@@ -183,20 +186,15 @@ static void compile_name(struct Module *mod, struct Node *node, char addr_mode)
     if (symb.location == -1)
     {
         if (type != NULL)
-        {
-            compile_create_object(mod, node, type);
-            return;
-        }
+            return compile_create_object(mod, node, type);
+        
         F_ERROR(mod->tk, "Could not find symbol '%s'", name);
-        return;
+        return NULL;
     }
 
     // If the symbol is a funtion
     if (symb.flags & SYMBOL_FUNCTION)
-    {
-        call_function(mod, node, symb);
-        return;
-    }
+        return call_function(mod, node, symb);
 
     // If the symbol is a module
     if (symb.flags & SYMBOL_MODULE)
@@ -212,7 +210,7 @@ static void compile_name(struct Module *mod, struct Node *node, char addr_mode)
         gen_int(mod, node->arg_size);
         gen_int(mod, symb.location);
         gen_int(mod, loc);
-        return;
+        return symb.type;
     }
 
     if (addr_mode)
@@ -231,9 +229,11 @@ static void compile_name(struct Module *mod, struct Node *node, char addr_mode)
         gen_int(mod, symb.location);
         LOG("push value of '%s' at %i\n", name, symb.location);
     }
+
+    return symb.type;
 }
 
-static void compile_term(struct Module *mod, struct Node *node, char addr_mode)
+static struct SymbolType *compile_term(struct Module *mod, struct Node *node, char addr_mode)
 {
     switch (node->type)
     {
@@ -242,8 +242,9 @@ static void compile_term(struct Module *mod, struct Node *node, char addr_mode)
         case TK_CHAR: gen_char(mod, BC_PUSH_CHAR); gen_char(mod, node->c); break;
         case TK_BOOL: gen_char(mod, BC_PUSH_BOOL); gen_char(mod, node->b); break;
         case TK_STRING: gen_char(mod, BC_PUSH_STRING); gen_string(mod, node->s); break;
-        case TK_NAME: compile_name(mod, node, addr_mode); break;
+        case TK_NAME: return compile_name(mod, node, addr_mode);
     }
+    return NULL;
 }
 
 static void check_var_exists(struct Module *mod, struct Node *node)
@@ -272,43 +273,103 @@ static void check_var_exists(struct Module *mod, struct Node *node)
     }
 }
 
-void compile_assign_op(struct Module *mod, struct Node *node, char addr_mode)
+static struct Symbol find_attr(struct Module *mod, struct SymbolType *stype, struct Node *node)
 {
+    char *type_name = node->s;
+    char *attr_name = node->mod_func;
+    struct SymbolType *type;
+    struct Symbol attr;
+    attr.location = -1;
+
+    // Find type
+    if (node->has_from)
+    {
+        type = lookup_type(&mod->table, type_name);
+        if (type == NULL)
+        {
+            printf("Error: Unknown type '%s'\n", type_name);
+            return attr;
+        }
+    }
+    else
+    {
+        type = stype;
+        attr_name = type_name;
+        type_name = type->name;
+        if (type == NULL)
+        {
+            printf("Error: Symbol does not have a static type");
+            return attr;
+        }
+    }
+
+    // Find attr in type
+    attr = lookup_attr(type, attr_name);
+    if (attr.location == -1)
+    {
+        printf("Error: No member '%s' in type '%s'\n", 
+            attr_name, type_name);
+        return attr;
+    }
+
+    return attr;
+}
+
+static struct SymbolType *compile_assign_op(struct Module *mod, struct Node *node, char addr_mode)
+{
+    struct Symbol attr;
+    struct SymbolType *type;
     check_var_exists(mod, node->left);
 
+    if (node->left->type == TK_IN)
+    {
+        type = compile_node(mod, node->left->left, addr_mode);
+        attr = find_attr(mod, type, node->left->right);
+        compile_node(mod, node->right, addr_mode);
+        gen_char(mod, BC_ASSIGN_ATTR);
+        gen_int(mod, attr.location);
+        return NULL;
+    }
+    
     compile_node(mod, node->left, 1);
     compile_node(mod, node->right, addr_mode);
     do_operation(mod, node->type);
+    return NULL;
 }
 
-void compile_in_op(struct Module *mod, struct Node *node, char addr_mode)
+static struct SymbolType *compile_in_op(struct Module *mod, struct Node *node, char addr_mode)
 {
-    compile_node(mod, node->left, addr_mode);
-    compile_node(mod, node->right, addr_mode);
-    do_operation(mod, node->type);
+    struct Symbol attr;
+    struct SymbolType *type;
+    type = compile_node(mod, node->left, addr_mode);
+
+    attr = find_attr(mod, type, node->right);
+    gen_char(mod, BC_PUSH_ATTR);
+    gen_int(mod, attr.location);
+    return attr.type;
 }
 
-void compile_op(struct Module *mod, struct Node *node, char addr_mode)
+static struct SymbolType *compile_op(struct Module *mod, struct Node *node, char addr_mode)
 {
     switch(node->type)
     {
-        case TK_ASSIGN: compile_assign_op(mod, node, addr_mode); break;
-        case TK_IN: compile_in_op(mod, node, addr_mode); break;
+        case TK_ASSIGN: return compile_assign_op(mod, node, addr_mode);
+        case TK_IN: return compile_in_op(mod, node, addr_mode);
         
         default:
             compile_node(mod, node->left, addr_mode);
             compile_node(mod, node->right, addr_mode);
             do_operation(mod, node->type);
-            break;
+            return NULL;
     }
 }
 
-void compile_node(struct Module *mod, struct Node *node, char addr_mode)
+struct SymbolType *compile_node(struct Module *mod, struct Node *node, char addr_mode)
 {
     if (node->is_op)
-        compile_op(mod, node, addr_mode);
+        return compile_op(mod, node, addr_mode);
     else
-        compile_term(mod, node, addr_mode);
+        return compile_term(mod, node, addr_mode);
 }
 
 void compile_expression(struct Module *mod, struct Node *node)

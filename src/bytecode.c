@@ -38,10 +38,11 @@ void disassemble(char *code, int len)
             case BC_PUSH_BOOL: printf("Push bool %s\n", code[pc++] ? "true" : "false"); break;
             case BC_PUSH_STRING: STRING(code, pc); printf("Push string '%s'\n", str); break;
             case BC_PUSH_ARG: printf("Push arg at %i\n", INT(code, pc)); pc += 4; break;
-            case BC_PUSH_LOC: printf("Push loc at %i\n", INT(code, pc)); pc += 4; break;
-            case BC_PUSH_ATTR: printf("Push attr\n"); break;
             case BC_CREATE_OBJECT: printf("Create new object %i\n", INT(code, pc)); pc += 4; break;
+            case BC_PUSH_LOC: printf("Push loc at %i\n", INT(code, pc)); pc += 4; break;
+            case BC_PUSH_ATTR: printf("Push attr at %i\n", INT(code, pc)); pc += 4; break;
             case BC_ASSIGN_LOC: printf("Assign to loc %i\n", INT(code, pc)); pc += 4; break;
+            case BC_ASSIGN_ATTR: printf("Assign to attr at %i\n", INT(code, pc)); pc += 4; break;
 
             case BC_CALL: printf("Call with %i args at %i\n", INT(code, pc), INT(code, pc+4)); pc += 8; break;
             case BC_CALL_MOD: printf("Call with %i args in mod %i at %i\n", INT(code, pc), INT(code, pc+4), INT(code, pc+8)); pc += 12; break;
