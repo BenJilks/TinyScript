@@ -14,6 +14,7 @@ enum Bytecode
     BC_PUSH_ATTR,
     BC_ASSIGN_LOC,
     BC_ASSIGN_ATTR,
+    BC_DUP_LAST,
 
     BC_CALL,
     BC_CALL_MOD,

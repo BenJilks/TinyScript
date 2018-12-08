@@ -43,6 +43,7 @@ void disassemble(char *code, int len)
             case BC_PUSH_ATTR: printf("Push attr at %i\n", INT(code, pc)); pc += 4; break;
             case BC_ASSIGN_LOC: printf("Assign to loc %i\n", INT(code, pc)); pc += 4; break;
             case BC_ASSIGN_ATTR: printf("Assign to attr at %i\n", INT(code, pc)); pc += 4; break;
+            case BC_DUP_LAST: printf("Dup last stack object\n"); break;
 
             case BC_CALL: printf("Call with %i args at %i\n", INT(code, pc), INT(code, pc+4)); pc += 8; break;
             case BC_CALL_MOD: printf("Call with %i args in mod %i at %i\n", INT(code, pc), INT(code, pc+4), INT(code, pc+8)); pc += 12; break;

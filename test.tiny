@@ -3,29 +3,19 @@ within io import log
 class Vec2
 {
     x y
+
+    func Vec2(x, y)
+    {
+        self.x = x
+        self.y = y
+    }
+
+    func Print()
+        log(self.x, ", ", self.y)
 }
-
-class Cat
-{
-    name : int
-    colour : Cat
-    pos : Vec2
-
-    func Cat(msg)
-        log("Message: ", msg)
-}
-
-func test(cat : Cat)
-    log(cat)
 
 func main()
 {
-    idk : Cat = Cat()
-    
-    idk.pos = Vec2()
-    idk.pos.x = 21
-    idk.name = "my name jeff"
-
-    log(idk.pos.x)
-    log(idk.name)
+    vec : Vec2 = Vec2(1, 2)
+    vec.Print()
 }

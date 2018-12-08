@@ -141,7 +141,7 @@ static void do_operation(struct Module *mod, int op)
     }
 }
 
-static struct SymbolType *call_function(struct Module *mod, struct Node *node, struct Symbol symb)
+static struct SymbolType *call_function(struct Module *mod, struct Node *node, struct Symbol symb, int extra)
 {
     LOG("call function '%s' at %i with %i args\n", 
             symb.name, symb.location, node->arg_size);
@@ -153,14 +153,14 @@ static struct SymbolType *call_function(struct Module *mod, struct Node *node, s
     if (symb.flags & SYMBOL_MOD_FUNC)
     {
         gen_char(mod, BC_CALL_MOD);
-        gen_int(mod, node->arg_size);
+        gen_int(mod, node->arg_size + extra);
         gen_int(mod, symb.module);
         gen_int(mod, symb.location);
     }
     else
     {
         gen_char(mod, BC_CALL);
-        gen_int(mod, node->arg_size);
+        gen_int(mod, node->arg_size + extra);
         gen_int(mod, symb.location);
     }
 
@@ -169,8 +169,18 @@ static struct SymbolType *call_function(struct Module *mod, struct Node *node, s
 
 static struct SymbolType *compile_create_object(struct Module *mod, struct Node *node, struct SymbolType *type)
 {
+    struct Symbol constructor;
     gen_char(mod, BC_CREATE_OBJECT);
     gen_int(mod, type->id);
+
+    constructor = lookup_attr(type, type->name);
+    if (constructor.location != -1)
+    {
+        gen_char(mod, BC_DUP_LAST);
+        call_function(mod, node, constructor, 1);
+        gen_char(mod, BC_POP);
+        gen_char(mod, 1);
+    }
     return type;
 }
 
@@ -194,7 +204,7 @@ static struct SymbolType *compile_name(struct Module *mod, struct Node *node, ch
 
     // If the symbol is a funtion
     if (symb.flags & SYMBOL_FUNCTION)
-        return call_function(mod, node, symb);
+        return call_function(mod, node, symb, 0);
 
     // If the symbol is a module
     if (symb.flags & SYMBOL_MODULE)
@@ -341,11 +351,18 @@ static struct SymbolType *compile_in_op(struct Module *mod, struct Node *node, c
 {
     struct Symbol attr;
     struct SymbolType *type;
-    type = compile_node(mod, node->left, addr_mode);
 
+    type = compile_node(mod, node->left, addr_mode);
     attr = find_attr(mod, type, node->right);
-    gen_char(mod, BC_PUSH_ATTR);
-    gen_int(mod, attr.location);
+    if (attr.flags & SYMBOL_FUNCTION)
+    {
+        call_function(mod, node->right, attr, 1);
+    }
+    else
+    {
+        gen_char(mod, BC_PUSH_ATTR);
+        gen_int(mod, attr.location);
+    }
     return attr.type;
 }
 

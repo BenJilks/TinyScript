@@ -491,6 +491,12 @@ struct VMObject VM_CallFunc(struct VMFunc *func, int arg_loc,
                 sp--; pc += 4;
                 break;
 
+            // DUP_LAST
+            case BC_DUP_LAST:
+                LOG("Dup last object on stack\n");
+                stack[sp] = stack[sp - 1]; sp++;
+                break;
+
             // CALL <arg_size> <func_id>
             case BC_CALL:
             {
@@ -500,7 +506,7 @@ struct VMObject VM_CallFunc(struct VMFunc *func, int arg_loc,
                     sp - arg_size, arg_size, stack, heap);
                 sp -= arg_size - 1;
                 pc += 8;
-                VM_CleanUp(heap, stack, sp);
+                //VM_CleanUp(heap, stack, sp);
                 break;
             }
 

@@ -380,10 +380,8 @@ void start_new_function(struct Module *mod)
 
 void parse_function_body(struct Module *mod, struct Tokenizer *tk)
 {
-    push_scope(&mod->table);
     parse_params(mod, tk);
     parse_block(mod, tk, -1, -1);
-    pop_scope(&mod->table);
 
     gen_char(mod, BC_PUSH_INT);
     gen_int(mod, 0);
@@ -402,7 +400,9 @@ void parse_function(struct Module *mod, struct Tokenizer *tk)
     create_symbol(&mod->table, name.data, mod->func_size-1, SYMBOL_FUNCTION);
     LOG("Function of name '%s'\n", name.data);
     
+    push_scope(&mod->table);
     parse_function_body(mod, tk);
+    pop_scope(&mod->table);
     func->size = mod->loc;
     finish_labels(mod);
     LOG("\n");
@@ -421,6 +421,14 @@ static void parse_attr(struct SymbolType *type, struct Module *mod, struct Token
         parse_static_type(symb, mod, tk);
 }
 
+static void create_self(struct Module *mod, struct SymbolType *type)
+{
+    struct Symbol *symb;
+    symb = create_symbol(&mod->table, "self", 
+        mod->param++, SYMBOL_PARAMETER);
+    symb->type = type;
+}
+
 static void parse_method(struct SymbolType *type, struct Module *mod, struct Tokenizer *tk)
 {
     struct Token name;
@@ -433,7 +441,10 @@ static void parse_method(struct SymbolType *type, struct Module *mod, struct Tok
     create_atrr(type, name.data, mod->func_size-1, SYMBOL_FUNCTION);
     LOG("Method of name '%s'\n", name.data);
 
+    push_scope(&mod->table);
+    create_self(mod, type);
     parse_function_body(mod, tk);
+    pop_scope(&mod->table);
     func->size = mod->loc;
     finish_labels(mod);
     LOG("\n");
