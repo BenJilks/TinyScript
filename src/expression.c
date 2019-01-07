@@ -41,19 +41,8 @@ static struct Node *parse_operation(struct Node *left, int op, struct Node *righ
     return node;
 }
 
-void parse_name(struct Tokenizer *tk, struct Node *node, const char *data)
+void parse_args(struct Tokenizer *tk, struct Node *node)
 {
-    struct Token func_name;
-
-    strcpy(node->s, data);
-    if (tk->look.type == TK_OF)
-    {
-        match(tk, ":", TK_OF);
-        node->has_from = 1;
-        func_name = match(tk, "Name", TK_NAME);
-        strcpy(node->mod_func, func_name.data);
-    }
-
     if (tk->look.type == TK_OPEN_ARG)
     {
         match(tk, "(", TK_OPEN_ARG);
@@ -66,6 +55,35 @@ void parse_name(struct Tokenizer *tk, struct Node *node, const char *data)
         }
         match(tk, ")", TK_CLOSE_ARG);
     }
+}
+
+void parse_static_type(struct Tokenizer *tk, struct Node *node)
+{
+    struct Token func_name;
+
+    if (tk->look.type == TK_OF)
+    {
+        match(tk, ":", TK_OF);
+        node->has_from = 1;
+        func_name = match(tk, "Name", TK_NAME);
+        strcpy(node->mod_func, func_name.data);
+    }
+}
+
+void parse_name(struct Tokenizer *tk, struct Node *node, const char *data)
+{
+    strcpy(node->s, data);
+    parse_static_type(tk, node);
+    parse_args(tk, node);
+}
+
+void parse_new(struct Tokenizer *tk, struct Node *node)
+{
+    struct Token type_name;
+
+    type_name = match(tk, "Name", TK_NAME);
+    strcpy(node->s, type_name.data);
+    parse_args(tk, node);
 }
 
 struct Node *parse_data(struct Tokenizer *tk)
@@ -87,6 +105,7 @@ struct Node *parse_data(struct Tokenizer *tk)
         case TK_BOOL: node->b = strcmp(data, "true") ? 0 : 1; break;
         case TK_STRING: strcpy(node->s, data); break;
         case TK_NAME: parse_name(tk, node, data); break;
+        case TK_NEW: parse_new(tk, node); break;
         case TK_OPEN_ARG: 
             free(node); node = parse_expression(tk); 
             match(tk, ")", TK_CLOSE_ARG); 
@@ -150,7 +169,7 @@ static struct SymbolType *call_function(struct Module *mod, struct Node *node, s
     for (i = 0; i < node->arg_size; i++)
         compile_expression(mod, node->args[i]);
     
-    if (symb.flags & SYMBOL_MOD_FUNC)
+    if (symb.flags & SYMBOL_EXTERNAL)
     {
         gen_char(mod, BC_CALL_MOD);
         gen_int(mod, node->arg_size + extra);
@@ -167,12 +186,83 @@ static struct SymbolType *call_function(struct Module *mod, struct Node *node, s
     return symb.type;
 }
 
-static struct SymbolType *compile_create_object(struct Module *mod, struct Node *node, struct SymbolType *type)
+// Copy the name of a method in the formate "<type>.<method>"
+void copy_method_name(char *to, char *type_name, char *method)
+{
+    strcpy(to, type_name);
+    strcpy(to + strlen(type_name), ".");
+    strcpy(to + strlen(type_name) + 1, method);
+}
+
+static struct SymbolType *check_external_type(struct Module *mod, const char *type_name)
+{
+    struct Symbol symb, *attr;
+    struct SubType sub_type;
+    struct SubModule *sub;
+    struct SymbolType *type;
+
+    symb = lookup(&mod->table, type_name);
+    if (symb.flags & SYMBOL_UNKOWN)
+    {
+        // Create the new type
+        sub = &mod->mods[symb.module];
+        type = create_type(&mod->table, type_name, TYPE_EXTERNAL);
+        type->module = symb.module;
+        type->id = sub->type_size;
+
+        // Create the sub type in the sub module
+        strcpy(sub_type.name, symb.name);
+        sub_type.attr_size = 0;
+        sub->types[sub->type_size++] = sub_type;
+
+        // Create constructor symbol
+        copy_method_name(sub->func_names[sub->func_size], type->name, type->name);
+        attr = create_atrr(type, type->name, sub->func_size++, 
+            SYMBOL_EXTERNAL | SYMBOL_FUNCTION);
+        attr->module = type->module;
+
+        // Delete the old symbol
+        delete_symbol(&mod->table, type_name);
+        LOG("External '%s' is a type\n", symb.name);
+        return type;
+    }
+
+    // Could not find an external type
+    return NULL;
+}
+
+static struct SymbolType *compile_create_object(struct Module *mod, struct Node *node)
 {
     struct Symbol constructor;
-    gen_char(mod, BC_CREATE_OBJECT);
-    gen_int(mod, type->id);
+    struct SymbolType *type;
+    struct SubModule *sub;
 
+    // Find object type
+    type = lookup_type(&mod->table, node->s);
+    if (type == NULL)
+    {
+        type = check_external_type(mod, node->s);
+        if (type == NULL)
+        {
+            printf("Error: Uknown type '%s'\n", node->s);
+            return NULL;
+        }
+    }
+
+    // Create new object
+    if (type->flags & TYPE_EXTERNAL)
+    {
+        gen_char(mod, BC_CREATE_OBJECT_MOD);
+        gen_int(mod, type->id);
+        gen_int(mod, type->module);
+    }
+    else
+    {
+        gen_char(mod, BC_CREATE_OBJECT);
+        gen_int(mod, type->id);
+    }
+    
+    // Compile constructor
     constructor = lookup_attr(type, type->name);
     if (constructor.location != -1)
     {
@@ -188,18 +278,25 @@ static struct SymbolType *compile_name(struct Module *mod, struct Node *node, ch
 {
     const char *name;
     struct Symbol symb;
-    struct SymbolType *type;
+    struct SubModule *sub;
 
     name = node->s;
     symb = lookup(&mod->table, name);
-    type = lookup_type(&mod->table, name);
     if (symb.location == -1)
     {
-        if (type != NULL)
-            return compile_create_object(mod, node, type);
-        
         F_ERROR(mod->tk, "Could not find symbol '%s'", name);
         return NULL;
+    }
+
+    // If the type has not yet been determined
+    if (symb.flags & SYMBOL_UNKOWN)
+    {
+        // The unkown must be a function
+        sub = &mod->mods[symb.module];
+        symb.flags |= SYMBOL_FUNCTION;
+        symb.flags ^= SYMBOL_UNKOWN;
+        strcpy(sub->func_names[sub->func_size++], symb.name);
+        LOG("External '%s' is a funtion\n", symb.name);
     }
 
     // If the symbol is a funtion
@@ -252,9 +349,27 @@ static struct SymbolType *compile_term(struct Module *mod, struct Node *node, ch
         case TK_CHAR: gen_char(mod, BC_PUSH_CHAR); gen_char(mod, node->c); break;
         case TK_BOOL: gen_char(mod, BC_PUSH_BOOL); gen_char(mod, node->b); break;
         case TK_STRING: gen_char(mod, BC_PUSH_STRING); gen_string(mod, node->s); break;
-        case TK_NAME: return compile_name(mod, node, addr_mode);
+        case TK_NAME: return compile_name(mod, node, addr_mode); break;
+        case TK_NEW: return compile_create_object(mod, node); break;
     }
     return NULL;
+}
+
+void check_static_node(struct Module *mod, struct Symbol *symb, struct Node *node)
+{
+    // Set static type, if exists
+    if (node->has_from)
+    {
+        symb->type = lookup_type(&mod->table, node->mod_func);
+
+        LOG("Assigned static type '%s'\n", node->mod_func);
+        if (symb->type == NULL)
+        {
+            symb->type = check_external_type(mod, node->mod_func);
+            if (symb->type == NULL)
+                printf("Error: Type '%s' could not be found\n", node->mod_func);
+        }
+    }
 }
 
 static void check_var_exists(struct Module *mod, struct Node *node)
@@ -270,15 +385,7 @@ static void check_var_exists(struct Module *mod, struct Node *node)
         {
             // Create new local var
             symb = create_symbol(&mod->table, name, mod->loc++, 0);
-
-            // Set static type, if exists
-            if (node->has_from)
-            {
-                symb->type = lookup_type(&mod->table, type_name);
-                LOG("Assigned static type '%s'\n", type_name);
-                if (symb->type == NULL)
-                    printf("Error: Type '%s' could not be found\n", type_name);
-            }
+            check_static_node(mod, symb, node);            
         }
     }
 }
@@ -288,7 +395,8 @@ static struct Symbol find_attr(struct Module *mod, struct SymbolType *stype, str
     char *type_name = node->s;
     char *attr_name = node->mod_func;
     struct SymbolType *type;
-    struct Symbol attr;
+    struct Symbol attr, *method;
+    struct SubModule *sub;
     attr.location = -1;
 
     // Find type
@@ -308,7 +416,8 @@ static struct Symbol find_attr(struct Module *mod, struct SymbolType *stype, str
         type_name = type->name;
         if (type == NULL)
         {
-            printf("Error: Symbol does not have a static type");
+            printf("Error: Symbol '%s' does not have a static type\n", 
+                attr_name);
             return attr;
         }
     }
@@ -317,6 +426,21 @@ static struct Symbol find_attr(struct Module *mod, struct SymbolType *stype, str
     attr = lookup_attr(type, attr_name);
     if (attr.location == -1)
     {
+        // If the type is external, then link the method from the sub module
+        if (type->flags & TYPE_EXTERNAL)
+        {
+            // Create new method attr
+            sub = &mod->mods[type->module];
+            method = create_atrr(type, attr_name, sub->func_size, 
+                SYMBOL_FUNCTION | SYMBOL_EXTERNAL);
+            method->module = type->module;
+
+            // Register the external funciton
+            copy_method_name(sub->func_names[sub->func_size++], 
+                type->name, attr_name);
+            return *method;
+        }
+
         printf("Error: No member '%s' in type '%s'\n", 
             attr_name, type_name);
         return attr;

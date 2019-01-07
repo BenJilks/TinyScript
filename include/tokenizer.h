@@ -10,7 +10,7 @@ enum TokenType
 	TK_CLASS,
     TK_RETURN,
     TK_IMPORT,
-    TK_WITHIN,
+    TK_FROM,
 	TK_IF,
     TK_ELSE,
     TK_ELSE_IF,
@@ -20,6 +20,8 @@ enum TokenType
     TK_CONTINUE,
     TK_TO,
     TK_OF,
+    TK_IS,
+    TK_NEW,
 
 	TK_INT,
 	TK_FLOAT,

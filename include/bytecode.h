@@ -10,6 +10,7 @@ enum Bytecode
     BC_PUSH_STRING,
     BC_PUSH_ARG,
     BC_CREATE_OBJECT,
+    BC_CREATE_OBJECT_MOD,
     BC_PUSH_LOC,
     BC_PUSH_ATTR,
     BC_ASSIGN_LOC,

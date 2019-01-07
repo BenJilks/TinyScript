@@ -1,21 +1,7 @@
-within io import log
-
-class Vec2
-{
-    x y
-
-    func Vec2(x, y)
-    {
-        self.x = x
-        self.y = y
-    }
-
-    func Print()
-        log(self.x, ", ", self.y)
-}
+import io, maths
 
 func main()
 {
-    vec : Vec2 = Vec2(1, 2)
-    vec.Print()
+	vec = new maths:Vec2(1, 2)
+	io:log(vec)
 }

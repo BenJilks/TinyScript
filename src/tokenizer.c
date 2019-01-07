@@ -36,7 +36,7 @@ static int check_keyword(char *data)
 	else if(!strcmp(data, "class")) return TK_CLASS;
     else if(!strcmp(data, "return")) return TK_RETURN;
     else if(!strcmp(data, "import")) return TK_IMPORT;
-    else if(!strcmp(data, "within")) return TK_WITHIN;
+    else if(!strcmp(data, "from")) return TK_FROM;
 	else if(!strcmp(data, "if")) return TK_IF;
     else if(!strcmp(data, "else")) return TK_ELSE;
     else if(!strcmp(data, "elif")) return TK_ELSE_IF;
@@ -45,6 +45,8 @@ static int check_keyword(char *data)
     else if(!strcmp(data, "break")) return TK_BREAK;
     else if(!strcmp(data, "continue")) return TK_CONTINUE;
     else if(!strcmp(data, "to")) return TK_TO;
+    else if(!strcmp(data, "is")) return TK_IS;
+    else if(!strcmp(data, "new")) return TK_NEW;
 	else if(!strcmp(data, "true")) return TK_BOOL;
 	else if(!strcmp(data, "false")) return TK_BOOL;
 	return TK_NAME;

@@ -1,3 +1,18 @@
+from io import log
+
+class Vec2
+{
+    x y
+
+    func Vec2(x, y)
+    {
+        self.x = x
+        self.y = y
+    }
+
+    func Print()
+        log(self.x, ", ", self.y)
+}
 
 func fib(i)
 {

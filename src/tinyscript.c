@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include "compiler.h"
@@ -6,7 +7,7 @@
 #include "io.h"
 #include "flags.h"
 
-static struct Module mods[80];
+static struct Module *mods;
 static int mod_size;
 
 int LoadFile(const char *file_name)
@@ -17,6 +18,7 @@ int LoadFile(const char *file_name)
     int mod_name_len = strchr(file_name, '.') - file_name;
     memcpy(mod_name, file_name, mod_name_len);
     mod_name[mod_name_len] = '\0';
+    LOG("Compiling file '%s'\n", file_name);
 
     tk = open_tokenizer(file_name);
 	mod = create_module(mod_name, &tk);
@@ -33,18 +35,24 @@ int LoadFile(const char *file_name)
 
 int main(int argc, char **argv)
 {
+    VM_Init();
+    mod_size = 0;
+    mods = malloc(sizeof(struct Module) * 80);
+
     int i, has_error = 0;
     for (i = 1; i < argc; i++)
         if(LoadFile(argv[i]))
             has_error = 1;
-    
+
     if (!has_error)
     {
         VM_Load_IO();
         if (!VM_Link())
 	        VM_CallFuncName("main");
-    }
+     }
     
     for (i = 0; i < mod_size; i++)
         delete_module(mods[i]);
+    free(mods);
+    VM_Close();
 }

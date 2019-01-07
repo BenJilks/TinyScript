@@ -13,11 +13,19 @@ struct Function
     int size;
 };
 
+struct SubType
+{
+    char name[80];
+    char attr_names[80][80];
+    int attr_size;
+};
+
 struct SubModule
 {
     char name[80];
     char func_names[80][80];
-    int func_size;
+    struct SubType types[80];
+    int func_size, type_size;
 };
 
 struct Label
@@ -35,7 +43,7 @@ struct Module
     struct Tokenizer *tk;
 
     // Current function
-    struct Label labels[MAX_LABELS];
+    struct Label *labels;
     int label_counter;
     int loc, param, start_addr;
 
@@ -45,12 +53,13 @@ struct Module
     int cp, cbuffer;
     
     // Module data
-    struct Function funcs[80];
-    struct SubModule mods[80];
+    struct Function *funcs;
+    struct SubModule *mods;
     int func_size, mod_size;
 };
 
 struct Module create_module(const char *name, struct Tokenizer *tk);
+struct SubType create_sub_type(const char *name);
 int find_mod_func_location(struct SubModule *sub, const char *func_name);
 void delete_module(struct Module mod);
 

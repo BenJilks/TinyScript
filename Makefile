@@ -1,4 +1,4 @@
 
 all:
-	gcc src/*.c -Iinclude -O3 -o TinyScript
+	gcc src/*.c -Iinclude -o TinyScript
 

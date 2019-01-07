@@ -23,6 +23,8 @@ struct Node
     int arg_size, has_from;
 };
 
+void copy_method_name(char *to, char *type_name, char *method);
+void check_static_node(struct Module *mod, struct Symbol *symb, struct Node *node);
 struct Node *parse_expression(struct Tokenizer *tk);
 struct SymbolType *compile_node(struct Module *mod, struct Node *node, char addr_mode);
 void compile_expression(struct Module *mod, struct Node *node);

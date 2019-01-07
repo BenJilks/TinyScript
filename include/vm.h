@@ -65,6 +65,7 @@ struct VMSubMod
 {
     char name[80];
     char func_names[80][80];
+    char type_names[80][80];
     struct VMFunc *funcs[80];
     struct VMType *types[80];
     int func_size, type_size;
@@ -80,12 +81,15 @@ struct VMMod
     char *data;
 };
 
+void VM_Init();
 struct VMMod *VM_LoadMod(char *header, char *data);
 struct VMMod *VM_CreateSysMod(const char *name);
 void VM_LoadSysFunc(struct VMMod *mod, SysFunc func, const char *name);
 struct VMType *VM_PrimType(int prim);
 struct VMHeap VM_CreateHeap(int start_size);
 int VM_Link();
+void VM_Close();
+void VM_DeleteHeap(struct VMHeap heap);
 
 struct VMObject VM_CallFunc(struct VMFunc *func, int arg_loc, 
     int arg_size, struct VMObject *stack, struct VMHeap *heap);

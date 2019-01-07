@@ -20,8 +20,19 @@ static struct VMType dt_string = {"String", PRIM_STRING, 1};
     str[l] = '\0'; p += l; }
 
 // Currently loaded mods and heap data
-static struct VMMod mods[80];
-static int mod_size = 0;
+static struct VMMod *mods;
+static int mod_size;
+
+void VM_Init()
+{
+    mods = malloc(sizeof(struct VMMod) * 80);
+    mod_size = 0;
+}
+
+void VM_Close()
+{
+    free(mods);
+}
 
 static struct VMMod *FindMod(const char *name)
 {
@@ -101,6 +112,14 @@ struct VMMod *VM_LoadMod(char *header, char *data)
             STRING(sub.func_names[j], header, pc);
             LOG("       - Loaded sub func '%s'\n", sub.func_names[j]);
         }
+
+        // Load types in sub mod
+        sub.type_size = INT(header, pc); NEXT_INT(pc);
+        for (j = 0; j < sub.type_size; j++)
+        {
+            STRING(sub.type_names[j], header, pc);
+            LOG("       - Loaded sub type '%s'\n", sub.type_names[j]);
+        }
         mod->sub_mods[i] = sub;
     }
     LOG("Finished loading mod\n\n");
@@ -151,14 +170,27 @@ static struct VMFunc *FindFuncInMod(struct VMMod *mod, const char *name)
     return NULL;
 }
 
+// Find a type of a name within a module
+static struct VMType *FindTypeInMod(struct VMMod *mod, const char *name)
+{
+    int i;
+    for (i = 0; i < mod->type_size; i++)
+        if (!strcmp(mod->types[i].name, name))
+            return &mod->types[i];
+    return NULL;
+}
+
 // Find all the function pointer within a sub mod from the real mod
 static int LinkSubMod(struct VMSubMod *sub, struct VMMod *other)
 {
-    int has_error = 0;
-    int i;
+    int i, has_error = 0;
+    struct VMFunc *func;
+    struct VMType *type;
+
+    // Link functions
     for (i = 0; i < sub->func_size; i++)
     {
-        struct VMFunc *func = FindFuncInMod(other, sub->func_names[i]);
+        func = FindFuncInMod(other, sub->func_names[i]);
         if (func == NULL)
         {
             printf("Error: no function called '%s' in module '%s'\n", 
@@ -169,6 +201,21 @@ static int LinkSubMod(struct VMSubMod *sub, struct VMMod *other)
         sub->funcs[i] = func;
     }
 
+    // Link types
+    for (i = 0; i < sub->type_size; i++)
+    {
+        type = FindTypeInMod(other, sub->type_names[i]);
+        if (type == NULL)
+        {
+            printf("Error: no type called '%s' in module '%s'\n", 
+                sub->type_names[i], sub->name);
+            has_error = 1;
+            continue;
+        }
+        sub->types[i] = type;
+    }
+
+    // Return if an error occured
     return has_error;
 }
 
@@ -260,6 +307,11 @@ struct VMHeap VM_CreateHeap(int start_size)
     heap.mem = malloc(sizeof(struct VMPointer) * start_size);
     heap.mem_size = 0;
     return heap;
+}
+
+void VM_DeleteHeap(struct VMHeap heap)
+{
+    free(heap.mem);
 }
 
 #define CREATE_OBJECT(dtype, data, value) \
@@ -477,6 +529,18 @@ struct VMObject VM_CallFunc(struct VMFunc *func, int arg_loc,
                 break;
             }
 
+            // CREATE_OBJECT_MOD <id> <mod>
+            case BC_CREATE_OBJECT_MOD:
+            {
+                struct VMType *type = func->mod->sub_mods[INT(code, pc)].types[INT(code, pc+4)];
+                LOG("Create new object '%s' of size %i\n", type->name, type->size);
+                
+                void *data = malloc(sizeof(struct VMObject) * type->size);
+                CREATE_OBJECT(type, p, VM_Alloc(heap, data));
+                pc += 8;
+                break;
+            }
+
             // ASSIGN_LOC <loc>
             case BC_ASSIGN_LOC:
                 locs[INT(code, pc)] = stack[--sp];
@@ -623,6 +687,7 @@ struct VMObject VM_CallFuncName(const char *func_name)
     struct VMHeap heap = VM_CreateHeap(100);
     struct VMObject out = VM_CallFunc(func, 0, 0, stack, &heap);
     VM_CleanUp(&heap, stack, 0);
+    VM_DeleteHeap(heap);
     free(stack);
     return out;
 }
