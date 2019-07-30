@@ -1,7 +1,0 @@
-import io, maths
-
-func main()
-{
-	vec = new maths:Vec2(1, 2)
-	io:log(vec)
-}

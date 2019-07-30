@@ -1,0 +1,69 @@
+# Import an external module
+import io
+
+# All prim datatypes
+let i as int
+let s as short
+let b as byte
+let f as float
+let f as int array[10]
+
+# All builtin class utils
+let str as string
+let lst as list of int
+let bx as box of int
+let f as file
+
+# Create a new class
+class Cat
+{
+	# Give it attribs
+	public readonly name as string
+	public weight as int
+
+	# Define the constructor
+	constructor(string name, int weight)
+	{
+		self.name = name
+		self.weight = weight
+	}
+
+	# Define a method
+	public method print()
+	{
+		io.log("Cat")
+		io.log("Name: ", name)
+		io.log("Weight: ", weight)
+	}
+}
+
+# Template class
+class Template of T
+{
+	x 	as T array[10]
+	index 	as int
+}
+
+# Defining return types
+func add(int a, int b) -> int
+{
+	return a + b
+}
+
+func set_cat_weight(Cat ref cat)
+{
+	cat.weight = 69
+}
+
+# Main function is where things start
+func main()
+{
+	# Let will make a new variable and auto it's type
+	let x = "testing"
+	io.log(x)
+
+	# Create a new object
+	cat = new Cat("Bob", 21)
+	set_cat_weight(ref cat)
+	cat.print()
+}
