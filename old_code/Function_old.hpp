@@ -12,14 +12,18 @@ namespace TinyScript
     class Function
     {
     public:
-        Function(string name, const DebugInfo start, Symbol func_symb,
+        Function(string name, const DebugInfo start, const DebugInfo return_code, Symbol func_symb,
             vector<Symbol> params, DataType return_type, Tokenizer *tk);
         
+        inline const Symbol &get_symbol() const { return func_symb; }
+        void add_prefix(string prefix);
         CodeGen compile(SymbolTable &table);
 
     private:
-        const string name;
+        string name;
+        Symbol func_symb;
         const DebugInfo start;
+        const DebugInfo return_code;
         const vector<Symbol> params;
         const DataType return_type;
         int return_size, arg_size;

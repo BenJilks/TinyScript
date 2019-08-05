@@ -20,6 +20,7 @@ namespace TinyScript
         Bool,
         Char,
         String,
+        Auto,
 
         // Operations
         Add,
@@ -63,6 +64,7 @@ namespace TinyScript
         // Compiler functions
         TypeName,
         TypeSize,
+        TypeOf,
 
         // Misc
         Eof,

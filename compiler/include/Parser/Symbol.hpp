@@ -9,16 +9,18 @@ using std::shared_ptr;
 
 #define DATATYPE_REF    0b100
 #define DATATYPE_ARRAY  0b010
+#define DATATYPE_AUTO   0b001
 
-#define SYMBOL_FUNCTION 0b100000000
-#define SYMBOL_LOCAL    0b010000000
-#define SYMBOL_ARG      0b001000000
-#define SYMBOL_GLOBAL   0b000100000
-#define SYMBOL_CONST    0b000010000
-#define SYMBOL_PRIVATE  0b000001000
-#define SYMBOL_READONLY 0b000000100
-#define SYMBOL_EXTERNAL 0b000000010
-#define SYMBOL_NULL     0b000000001
+#define SYMBOL_FUNCTION             0b1000000000
+#define SYMBOL_LOCAL                0b0100000000
+#define SYMBOL_ARG                  0b0010000000
+#define SYMBOL_GLOBAL               0b0001000000
+#define SYMBOL_CONST                0b0000100000
+#define SYMBOL_PRIVATE              0b0000010000
+#define SYMBOL_READONLY             0b0000001000
+#define SYMBOL_EXTERNAL             0b0000000100
+#define SYMBOL_TEMPLATE_FUNCTION    0b0000000010
+#define SYMBOL_NULL                 0b0000000001
 
 namespace TinyScript
 {
@@ -63,23 +65,15 @@ namespace TinyScript
         void push(Symbol symb);
         void push_all(vector<Symbol> symbs);
         
-        vector<Symbol> lookup_all(const DebugInfo &debug_info, 
-            string name) const;
-
-        const Symbol &lookup(const DebugInfo &debug_info, 
-            string name) const;
-        
-        const Symbol &lookup(const DebugInfo &debug_info, 
-            string name, vector<DataType> params, bool suppress_errors = false) const;
+        vector<Symbol> lookup_all(string name) const;
+        const Symbol &lookup(string name) const;
+        const Symbol &lookup(string name, vector<DataType> params) const;
         
         vector<Symbol> find_externals() const;
-
         DataConstruct *find_construct(string name);
         DataConstruct *create_construct(string name);
 
         void new_allocation_space();
-        void start_scope();
-        void end_scope();
         int allocate(int size);
         int get_scope_size();
 
@@ -88,7 +82,6 @@ namespace TinyScript
 
     private:
         vector<Symbol> symbols;
-        vector<std::pair<int, int>> scopes;
         vector<DataConstruct> constructs;
         int scope_size;
         int allocator;

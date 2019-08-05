@@ -1,6 +1,7 @@
 #include "Std.hpp"
 using namespace TinyScript;
 
+#if 0
 Module *Std::load_io()
 {
     Module *io = new Module("io");
@@ -39,3 +40,4 @@ Module *Std::load_io()
 
     return io;
 }
+#endif

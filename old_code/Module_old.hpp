@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include "Node.hpp"
 #include "Tokenizer.hpp"
 #include "Function.hpp"
 #include "Symbol.hpp"
@@ -10,7 +11,7 @@ namespace TinyScript
 {
 
     class ModuleLibrary;
-    class Module
+    class Module : public NodeBlock
     {
     public:
         Module(string name, Tokenizer tk);
@@ -26,6 +27,7 @@ namespace TinyScript
     private:
         const string name;
         vector<Function> funcs;
+        vector<Function> template_funcs;
         map<Module*, vector<string>> imports;
         SymbolTable table;
         Tokenizer tk;
@@ -35,8 +37,10 @@ namespace TinyScript
 
         CodeGen compile_external();
         void parse_import_from(ModuleLibrary *library);
+        void parse_method(DataConstruct *construct);
         void parse_class();
         void parse_func();
+        Function parse_func_data();
         vector<Symbol> parse_params();
         DataType parse_return_type();
 

@@ -5,16 +5,22 @@ extern "C"
 }
 using namespace TinyScript;
 
-Function::Function(string name, const DebugInfo start, Symbol func_symb,
+Function::Function(string name, const DebugInfo start, const DebugInfo return_code, Symbol func_symb,
     vector<Symbol> params, DataType return_type, Tokenizer *tk) :
-    name(name), start(start), params(params), return_type(return_type),
-    tk(tk), exp(tk), arg_size(0)
+    name(name), start(start), return_code(return_code), params(params), return_type(return_type),
+    func_symb(func_symb), tk(tk), exp(tk), arg_size(0)
 {
     code.register_func(func_symb);
 
     for (Symbol &symb : params)
         arg_size += DataType::find_size(symb.type);
     return_size = DataType::find_size(return_type);
+}
+
+void Function::add_prefix(string prefix)
+{
+    name = prefix + ":" + name;
+    func_symb.name = name;
 }
 
 CodeGen Function::compile(SymbolTable &table)

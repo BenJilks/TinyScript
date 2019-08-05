@@ -1,4 +1,4 @@
-#include "Symbol.hpp"
+#include "Parser/Symbol.hpp"
 using namespace TinyScript;
 
 #define REF_SIZE 4
@@ -60,6 +60,9 @@ void SymbolTable::push_all(vector<Symbol> symbs)
 
 string DataType::printout(const DataType &type)
 {
+    if (type.flags & DATATYPE_AUTO)
+        return "auto";
+    
     string type_name = type.construct->name;
     if (type.flags & DATATYPE_ARRAY)
     {
@@ -139,8 +142,7 @@ string Symbol::printout(const Symbol &symb)
     return str;
 }
 
-vector<Symbol> SymbolTable::lookup_all(const DebugInfo &debug_info, 
-    string name) const
+vector<Symbol> SymbolTable::lookup_all(string name) const
 {
     vector<Symbol> out;
     for (const Symbol &symb : symbols)
@@ -152,19 +154,16 @@ vector<Symbol> SymbolTable::lookup_all(const DebugInfo &debug_info,
     return out;
 }
 
-const Symbol &SymbolTable::lookup(const DebugInfo &debug_info, 
-    string name) const
+const Symbol &SymbolTable::lookup(string name) const
 {
     for (const Symbol &symb : symbols)
         if (symb.name == name)
             return symb;
-    
-    Logger::error(debug_info, "Could not find symbol '" + name + "'");
+
     return null_symbol;
 }
 
-const Symbol &SymbolTable::lookup(const DebugInfo &debug_info, 
-    string name, vector<DataType> params, bool suppress_errors) const
+const Symbol &SymbolTable::lookup(string name, vector<DataType> params) const
 {
     for (const Symbol &symb : symbols)
     {
@@ -183,12 +182,7 @@ const Symbol &SymbolTable::lookup(const DebugInfo &debug_info,
                 return symb;
         }
     }
-
-    if (!suppress_errors)
-    {
-        Logger::error(debug_info, "Could not find symbol '" + 
-            name + param_printout(params) + "'");
-    }
+    
     return null_symbol;
 }
 
@@ -235,24 +229,6 @@ void SymbolTable::new_allocation_space()
 {
     allocator = 0;
     scope_size = 0;
-}
-
-void SymbolTable::start_scope()
-{
-    scopes.push_back(std::make_pair(
-        symbols.size(), allocator));
-}
-
-void SymbolTable::end_scope()
-{
-    auto start = scopes.back();
-    int size = symbols.size() - start.first;
-    for (int i = 0; i < size; i++)
-        symbols.pop_back();
-    scopes.pop_back();
-
-    scope_size = std::max(allocator, scope_size);
-    allocator = start.second;
 }
 
 int SymbolTable::allocate(int size)

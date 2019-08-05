@@ -1,9 +1,9 @@
 #pragma once
-#include "Module.hpp"
+//#include "Module.hpp"
 
 namespace TinyScript::Std
 {
 
-    Module *load_io();
+    //Module *load_io();
 
 }

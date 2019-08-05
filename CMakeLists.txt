@@ -10,6 +10,8 @@ include_directories(${PROJECT_SOURCE_DIR}/vm/include)
 
 file(GLOB all_SRCS
         "${PROJECT_SOURCE_DIR}/compiler/src/*.cpp"
+        "${PROJECT_SOURCE_DIR}/compiler/src/Parser/*.cpp"
+        "${PROJECT_SOURCE_DIR}/compiler/src/CodeGen/TinyVM/*.cpp"
         "${PROJECT_SOURCE_DIR}/vm/src/*.c"
         "${PROJECT_SOURCE_DIR}/TinyScript.cpp"
 )

@@ -19,7 +19,9 @@ static map<string, TokenType> keywords =
     std::make_pair("true", TokenType::Bool),
     std::make_pair("false", TokenType::Bool),
     std::make_pair("typename", TokenType::TypeName),
-    std::make_pair("typesize", TokenType::TypeSize)
+    std::make_pair("typesize", TokenType::TypeSize),
+    std::make_pair("typeof", TokenType::TypeOf),
+    std::make_pair("auto", TokenType::Auto)
 };
 
 static map<char, TokenType> sub = { std::make_pair('>', TokenType::Gives) };

@@ -32,6 +32,7 @@
     GEN(BC_LOCAL_REF, 1) \
     GEN(BC_COPY, 1) \
     GEN(BC_GET_ARRAY_INDEX, 8) \
+    GEN(BC_GET_ATTR, 12) \
     GEN(BC_ASSIGN_REF_X, 4) \
      \
     GEN(BC_CREATE_FRAME, 1) \

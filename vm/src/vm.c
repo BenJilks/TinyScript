@@ -232,6 +232,17 @@ int vm_run(char *data, int start, char *return_value)
                 break;
             }
 
+            case BC_GET_ATTR:
+            {
+                LOG("Get attr at %i of size %ib (type size %ib)\n", INT, *(int*)(code + s.pc + 4), *(int*)(code + s.pc + 8));
+                int offset = INT; s.pc += 4;
+                int size = INT; s.pc += 4;
+                int type_size = INT; s.pc += 4;
+                memcpy(s.stack + s.sp - type_size, s.stack + s.sp - type_size + offset, size);
+                s.sp -= type_size - size;
+                break;
+            }
+
             case BC_ASSIGN_REF_X:
             {
                 LOG("Assign ref %ib\n", INT);

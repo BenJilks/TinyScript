@@ -31,7 +31,24 @@ DataType Expression::parse_array_type(SymbolTable &table, DataType of)
 
 DataType Expression::parse_type(SymbolTable &table)
 {
-    DataType type = { nullptr, 0 };
+    DataType type = { PrimTypes::type_null(), 0 };
+
+    // Parse special types
+    ExpNode *temp;
+    switch (tk->get_look().type)
+    {
+        case TokenType::Auto: 
+            type.flags = DATATYPE_AUTO;
+            tk->skip_token(); 
+            return type;
+        
+        case TokenType::TypeOf: 
+            tk->skip_token();
+            temp = parse(table);
+            type = temp->type;
+            free_node(temp);
+            return type;
+    }
 
     while (!tk->is_eof())
     {
@@ -146,9 +163,26 @@ ExpNode *Expression::parse_cast(SymbolTable &table, ExpNode *node)
 
 ExpNode *Expression::parse_in(SymbolTable &table, ExpNode *node)
 {
+    // Find operation info
     Token in = tk->match(TokenType::In, "in");
     Token attr = tk->match(TokenType::Name, "Name");
+    SymbolTable &attrs = node->symb.type.construct->attrs;
     
+    // Create the right hand node
+    ExpNode *attr_node = new ExpNode { nullptr, nullptr };
+    parse_args(table, attr_node);
+    attr_node->token = attr;
+    attr_node->symb = find_symbol(attrs, attr_node);
+    attr_node->type = attr_node->symb.type;
+
+    // Create operation node
+    ExpNode *operation = new ExpNode;
+    operation->left = node;
+    operation->right = attr_node;
+    operation->token = in;
+    operation->flags = NODE_IN;
+    operation->type = attr_node->symb.type;
+    return operation;
 }
 
 ExpNode *Expression::parse_transforms(SymbolTable &table, ExpNode *node)
@@ -216,13 +250,10 @@ const Symbol &Expression::find_alternet_overload(SymbolTable &table, ExpNode *no
     return SymbolTable::get_null();
 }
 
-void Expression::parse_name(SymbolTable &table, ExpNode *node)
+Symbol Expression::find_symbol(SymbolTable &table, ExpNode *node)
 {
-    // Find the tokens name and parse args if there is any
-    Token name = node->token;
-    parse_args(table, node);
-
     // Find the names symbol in the table
+    Token name = node->token;
     Symbol symb = const_cast<Symbol&>(table.lookup(name.debug_info, name.data));
     if (node->args.size() > 0)
     {
@@ -238,6 +269,15 @@ void Expression::parse_name(SymbolTable &table, ExpNode *node)
         if (symb.flags & SYMBOL_NULL)
             symb = find_alternet_overload(table, node, name, params);
     }
+
+    return symb;
+}
+
+void Expression::parse_name(SymbolTable &table, ExpNode *node)
+{
+    // Find the tokens name and parse args if there is any
+    parse_args(table, node);
+    Symbol symb = find_symbol(table, node);
 
     // Copy the symbols type data to the node
     node->type = symb.type;
@@ -649,6 +689,36 @@ static void compile_index(ExpNode *node, CodeGen &code, SymbolTable &table)
     }
 }
 
+static void compile_rin(ExpNode *node, CodeGen &code, SymbolTable &table)
+{
+    Symbol symb = node->right->symb;
+    if (symb.flags & SYMBOL_FUNCTION)
+    {
+        compile_call(symb, node->right, code, table);
+        return;
+    }
+    Expression::compile_rvalue(node->left, code, table);
+
+    int offset = symb.location;
+    int size = DataType::find_size(node->right->type);
+    int type_size = DataType::find_size(node->left->type);
+    if (node->left->type.flags & DATATYPE_REF)
+    {
+        code.write_byte(BC_PUSH_4);
+        code.write_int(offset);
+        code.write_byte(BC_ADD_INT_INT);
+        code.write_byte(BC_COPY);
+        code.write_byte(size);
+    }
+    else
+    {
+        code.write_byte(BC_GET_ATTR);
+        code.write_int(offset);
+        code.write_int(size);
+        code.write_int(type_size);
+    }
+}
+
 void Expression::compile_rvalue(ExpNode *node, CodeGen &code, SymbolTable &table)
 {
     // Compile the code for pushing the value on to the stack
@@ -662,6 +732,10 @@ void Expression::compile_rvalue(ExpNode *node, CodeGen &code, SymbolTable &table
     else if (node->flags & NODE_INDEX)
     {
         compile_index(node, code, table);
+    }
+    else if (node->flags & NODE_IN)
+    {
+        compile_rin(node, code, table);
     }
     else
     {
@@ -737,26 +811,22 @@ static void compile_lterm(ExpNode *node, CodeGen &code, SymbolTable &table)
 
 static void compile_lin(ExpNode *node, CodeGen &code, SymbolTable &table)
 {
+    Symbol attr = node->right->symb;
+    
     Expression::compile_lvalue(node->left, code, table);
-    Token attr = node->right->token;
-
+    code.write_byte(BC_PUSH_4);
+    code.write_int(attr.location);
+    code.write_byte(BC_ADD_INT_INT);
 }
 
 void Expression::compile_lvalue(ExpNode *node, CodeGen &code, SymbolTable &table)
 {
     if (node->flags & NODE_OPERATION)
     {
-        switch(node->token.type)
-        {
-            case TokenType::In: compile_lin(node, code, table); break;
-            
-            default:
-                compile_lvalue(node->left, code, table);
-                compile_lvalue(node->right, code, table);
-                compile_operation(node->token, node->left->type, 
-                    node->right->type, code, table);
-                break;
-        }
+        compile_lvalue(node->left, code, table);
+        compile_lvalue(node->right, code, table);
+        compile_operation(node->token, node->left->type, 
+            node->right->type, code, table);
         return;
     }
 
@@ -770,6 +840,12 @@ void Expression::compile_lvalue(ExpNode *node, CodeGen &code, SymbolTable &table
         code.write_int(element_size);
         code.write_byte(BC_MUL_INT_INT);
         code.write_byte(BC_ADD_INT_INT);
+        return;
+    }
+
+    if (node->flags & NODE_IN)
+    {
+        compile_lin(node, code, table);
         return;
     }
 

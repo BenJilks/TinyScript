@@ -80,10 +80,12 @@ vector<Symbol> Module::parse_params()
         Token name = tk.match(TokenType::Name, "Param Name");
         
         allocator -= DataType::find_size(type);
-        params.push_back(Symbol(name.data, type, SYMBOL_LOCAL | SYMBOL_ARG, allocator));
+        Symbol symb(name.data, type, SYMBOL_LOCAL | SYMBOL_ARG, allocator);
+        params.push_back(symb);
+        table.push(symb);
 
         Logger::log(tk.get_debug_info(), "Found param '" + name.data + 
-            "' of type " + type.construct->name);
+            "' of type " + DataType::printout(type));
 
         if (tk.get_look().type != TokenType::CloseArg)
             tk.match(TokenType::Next, ",");
@@ -129,6 +131,14 @@ void Module::parse_import_from(ModuleLibrary *library)
     imports[module].push_back(attr_name.data);
 }
 
+void Module::parse_method(DataConstruct *construct)
+{
+    Function func = parse_func_data();
+    func.add_prefix(construct->name);
+    construct->attrs.push(func.get_symbol());
+    funcs.push_back(func);
+}
+
 void Module::parse_class()
 {
     tk.match(TokenType::Class, "class");
@@ -140,6 +150,12 @@ void Module::parse_class()
     DataConstruct *construct = table.create_construct(class_name.data);
     while (tk.get_look().type != TokenType::CloseBlock && !tk.is_eof())
     {
+        if (tk.get_look().type == TokenType::Func)
+        {
+            parse_method(construct);
+            continue;
+        }
+
         DataType type = exp.parse_type(table);
         Token name = tk.match(TokenType::Name, "Name");
         DataConstruct::add_symbol(construct, name.data, type);
@@ -153,26 +169,44 @@ void Module::parse_class()
     tk.match(TokenType::CloseBlock, "}");
 }
 
-void Module::parse_func()
+static bool find_is_template(vector<Symbol> params)
+{
+    for (Symbol symb : params)
+        if (symb.type.flags & DATATYPE_AUTO)
+            return true;
+    return false;
+}
+
+Function Module::parse_func_data()
 {
     tk.match(TokenType::Func, "func");
     Token name = tk.match(TokenType::Name, "Function Name");
+    Logger::log(tk.get_debug_info(), "Found function '" + name.data + "'");
 
+    table.start_scope();
     vector<Symbol> params = parse_params();
+    DebugInfo return_code = tk.get_debug_info();
     DataType return_type = parse_return_type();
     DebugInfo start = tk.get_debug_info();
     tk.skip_scope();
+    table.end_scope();
 
     // Create function symbol
+    bool is_template = find_is_template(params);
     Symbol symb = Symbol(name.data, return_type, 
-        SYMBOL_FUNCTION | SYMBOL_GLOBAL, 
+        is_template ? SYMBOL_TEMPLATE_FUNCTION : SYMBOL_FUNCTION | SYMBOL_GLOBAL, 
         funcs.size());
     symb.params = to_type_list(params);
-    table.push(symb);
-    
-    // Register function position
-    funcs.emplace_back(name.data, start, symb, params, return_type, &tk);
-    Logger::log(tk.get_debug_info(), "Found function '" + name.data + "'");
+
+    Function func(name.data, start, return_code, symb, params, return_type, &tk);
+    return func;
+}
+
+void Module::parse_func()
+{
+    Function func = parse_func_data();
+    table.push(func.get_symbol());
+    funcs.push_back(func);
 }
 
 void Module::add_external_func(string name, DataType type, vector<DataType> params)
