@@ -309,7 +309,7 @@ int vm_run(char *data, int start, char *return_value)
             }
 
             case BC_JUMP_IF_NOT:
-                LOG("Jump if %i to %i\n", s.stack[s.sp-1], INT);
+                LOG("Jump if not %s to %i\n", s.stack[s.sp-1] ? "true" : "false", INT);
                 if (!s.stack[--s.sp])
                     s.pc = INT;
                 else

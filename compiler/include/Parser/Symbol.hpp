@@ -75,7 +75,7 @@ namespace TinyScript
 
         void new_allocation_space();
         int allocate(int size);
-        int get_scope_size();
+        int get_scope_size() const;
 
         static bool is_null(const Symbol &symb);
         static const Symbol &get_null() { return null_symbol; }

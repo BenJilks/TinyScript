@@ -238,7 +238,7 @@ int SymbolTable::allocate(int size)
     return start;
 }
 
-int SymbolTable::get_scope_size()
+int SymbolTable::get_scope_size() const
 {
     return std::max(allocator, scope_size);
 }

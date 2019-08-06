@@ -1,6 +1,9 @@
 #pragma once
 #include "Parser/Expression.hpp"
 #include "Parser/Function.hpp"
+#include "Parser/Module.hpp"
+#include <tuple>
+using std::tuple;
 
 namespace TinyScript::TinyVM
 {
@@ -17,6 +20,10 @@ namespace TinyScript::TinyVM
         void write_int(int i);
         void write_float(float f);
         void write_string(string str);
+        void write_label(string label);
+        void assign_label(string label);
+        int find_funcion(string name);
+        string gen_label();
 
         // Compiler functions
         void compile_rexpression(NodeExpression *node);
@@ -25,6 +32,9 @@ namespace TinyScript::TinyVM
         void compile_block(NodeBlock *node);
         void compile_let(NodeLet *node);
         void compile_assign(NodeAssign *node);
+        void compile_return(NodeReturn *node);
+        void compile_if(NodeIf *node);
+        void compile_module(NodeModule *node);
 
     private:
 
@@ -49,6 +59,8 @@ namespace TinyScript::TinyVM
 
         // Code data
         vector<char> code;
+        map<string, tuple<vector<int>, int>> labels;
+        vector<int> used_labels;
 
     };
 

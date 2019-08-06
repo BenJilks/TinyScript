@@ -15,17 +15,18 @@ int main()
     Tokenizer tk("../test_scripts/test.tiny");
     TinyVM::Code code;
 
-    NodeFunction func(nullptr);
-    func.parse(tk);
-    code.compile_function(&func);
+    NodeModule mod;
+    mod.parse(tk);
+    code.compile_module(&mod);
 
     if (!Logger::has_error())
     {
         vector<char> bytecode = code.link();
-        disassemble(&bytecode[0], bytecode.size());
-        
-        //vm_init();
-        //register_std();
-        //vm_run(&bytecode[0], code.find_func_loc("main"), NULL);
+        vm_init();
+        register_std();
+
+        int i;
+        vm_run(&bytecode[0], code.find_funcion("main"), (char*)&i);
+        printf("%i\n", i);
     }
 }

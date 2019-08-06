@@ -12,7 +12,7 @@ void NodeLet::parse(Tokenizer &tk)
 
     // Create new var symbol
     int size = DataType::find_size(type);
-    int location = table.allocate(size);
+    int location = allocate(size);
     symb = Symbol(name.data, type, SYMBOL_LOCAL, location);
     get_parent()->push_symbol(symb);
 
@@ -31,14 +31,42 @@ void NodeAssign::parse(Tokenizer &tk)
     Logger::log(tk.get_debug_info(), "Parsing assign statement");
 
     left = parse_node<NodeExpression>(tk);
-    tk.match(TokenType::Assign, "=");
-    right = parse_node<NodeExpression>(tk);
+    right = nullptr;
+    if (tk.get_look().type == TokenType::Assign)
+    {
+        tk.match(TokenType::Assign, "=");
+        right = parse_node<NodeExpression>(tk);
+    }
 }
 
 NodeAssign::~NodeAssign()
 {
     delete left;
-    delete right;
+    if (right != nullptr)
+        delete right;
+}
+
+void NodeReturn::parse(Tokenizer &tk)
+{
+    tk.match(TokenType::Return, "return");
+    value = parse_node<NodeExpression>(tk);
+}
+
+NodeReturn::~NodeReturn()
+{
+    delete value;
+}
+
+void NodeIf::parse(Tokenizer &tk)
+{
+    tk.match(TokenType::If, "if");
+    condition = parse_node<NodeExpression>(tk);
+    parse_block(tk);
+}
+
+NodeIf::~NodeIf()
+{
+    delete condition;
 }
 
 void NodeCodeBlock::parse_statement(Tokenizer &tk)
@@ -46,6 +74,8 @@ void NodeCodeBlock::parse_statement(Tokenizer &tk)
     switch (tk.get_look().type)
     {
         case TokenType::Let: parse_child<NodeLet>(tk); break;
+        case TokenType::Return: parse_child<NodeReturn>(tk); break;
+        case TokenType::If: parse_child<NodeIf>(tk); break;
         default: parse_child<NodeAssign>(tk); break;
     }
 }
@@ -75,7 +105,7 @@ void NodeFunction::parse(Tokenizer &tk)
     DataType return_type = parse_return_type(tk);
 
     // Create function symbol
-    Symbol symb(name.data, return_type, SYMBOL_FUNCTION, 0);
+    symb = Symbol(name.data, return_type, SYMBOL_FUNCTION, 0);
     symb.params = params;
     if (get_parent() != nullptr)
         get_parent()->push_symbol(symb);
@@ -89,7 +119,7 @@ void NodeFunction::parse(Tokenizer &tk)
 vector<DataType> NodeFunction::parse_params(Tokenizer &tk)
 {
     vector<DataType> params;
-    int allocator = -4;
+    int allocator = -8;
 
     tk.match(TokenType::OpenArg, "(");
     while(tk.get_look().type != TokenType::CloseArg && !tk.is_eof())
@@ -101,8 +131,9 @@ vector<DataType> NodeFunction::parse_params(Tokenizer &tk)
 
         // Create and allocate new symbol
         int size = DataType::find_size(type);
-        push_symbol(Symbol(name.data, type, SYMBOL_LOCAL, allocator));
         allocator -= size;
+        arg_size += size;
+        push_symbol(Symbol(name.data, type, SYMBOL_LOCAL, allocator));
 
         Logger::log(name.debug_info, "Found param '" + 
             name.data + "' of type '" + 

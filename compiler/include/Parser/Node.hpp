@@ -13,16 +13,19 @@ namespace TinyScript
         Function,
         Let,
         Assign,
+        Return,
+        If,
         Expression,
     };
 
     class Node
     {
     public:
-        Node(Node *parent) :
-            parent(parent) {}
+        Node(Node *parent, bool is_allocator = false) :
+            parent(parent), is_allocator(is_allocator) {}
 
         Node *get_parent() const { return parent; }
+        Node *get_parent(NodeType type);
         virtual NodeType get_type() = 0;
         virtual void parse(Tokenizer &tk) = 0;
 
@@ -31,7 +34,9 @@ namespace TinyScript
         const Symbol &lookup(string name) const;
         const Symbol &lookup(string name, vector<DataType> params) const;
         DataConstruct *find_construct(string name);
-        void push_symbol(Symbol symb) { table.push(symb); }
+        int allocate(int size);
+        inline void push_symbol(Symbol symb) { table.push(symb); }
+        inline int get_scope_size() const { return table.get_scope_size(); }
 
     protected:
         SymbolTable table;
@@ -49,14 +54,15 @@ namespace TinyScript
         DataType parse_array_type(Tokenizer &tk, DataType of);
 
         Node *parent;
+        bool is_allocator;
 
     };
 
     class NodeBlock : public Node
     {
     public:
-        NodeBlock(Node *parent) :
-            Node(parent) {}
+        NodeBlock(Node *parent, bool is_allocator = false) :
+            Node(parent, is_allocator) {}
         
         ~NodeBlock();
 

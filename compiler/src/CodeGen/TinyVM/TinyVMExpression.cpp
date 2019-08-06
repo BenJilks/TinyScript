@@ -83,7 +83,7 @@ void Code::compile_call(const Symbol &symb, ExpDataNode *node)
     {
         // Call local tinyscript function
         write_byte(BC_CALL);
-//        write_call_loc(symb);
+        write_label(Symbol::printout(symb));
     }
 }
 

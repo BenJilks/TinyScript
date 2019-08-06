@@ -2,6 +2,14 @@
 #include "Parser/Expression.hpp"
 using namespace TinyScript;
 
+Node *Node::get_parent(NodeType type)
+{
+    if (parent == nullptr || get_type() == type)
+        return this;
+    
+    return parent->get_parent(type);
+}
+
 vector<Symbol> Node::lookup_all(string name) const
 {
     vector<Symbol> out = table.lookup_all(name);
@@ -114,4 +122,13 @@ DataType Node::parse_type(Tokenizer &tk)
     }
 
     return type;
+}
+
+int Node::allocate(int size)
+{
+    if (is_allocator)
+        return table.allocate(size);
+    
+    if (parent != nullptr)
+        return parent->allocate(size);
 }
