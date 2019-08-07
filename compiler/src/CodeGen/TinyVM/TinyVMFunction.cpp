@@ -67,13 +67,18 @@ void Code::compile_let(NodeLet *node)
     Symbol symb;
     int size;
 
-    compile_rexpression(value);
-    node->symbolize();
-    symb = node->get_symb();
-    size = DataType::find_size(value->get_data_type());
-    write_byte(BC_STORE_LOCAL_X);
-    write_int(size);
-    write_byte(symb.location);
+    if (value != nullptr)
+    {
+        compile_rexpression(value);
+        node->symbolize();
+        symb = node->get_symb();
+        size = DataType::find_size(symb.type);
+        write_byte(BC_STORE_LOCAL_X);
+        write_int(size);
+        write_byte(symb.location);
+    }
+    else
+        node->symbolize();
 }
 
 void Code::compile_assign(NodeAssign *node)

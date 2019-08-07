@@ -37,6 +37,9 @@ namespace TinyScript
         Token name;
         Symbol symb;
         NodeExpression *value;
+
+        DataType static_type;
+        bool use_static_type;
         
     };
 

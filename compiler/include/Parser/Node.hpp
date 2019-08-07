@@ -41,6 +41,7 @@ namespace TinyScript
         int allocate(int size);
         inline void push_symbol(Symbol symb) { table.push(symb); }
         inline int get_scope_size() const { return table.get_scope_size(); }
+        inline DataConstruct *create_construct(string name) { return table.create_construct(name); }
 
     protected:
         SymbolTable table;

@@ -94,14 +94,11 @@ ExpDataNode *NodeExpression::parse_in(Tokenizer &tk, ExpDataNode *node)
     // Find operation info
     Token in = tk.match(TokenType::In, "in");
     Token attr = tk.match(TokenType::Name, "Name");
-    SymbolTable &attrs = node->symb.type.construct->attrs;
     
     // Create the right hand node
     ExpDataNode *attr_node = new ExpDataNode { nullptr, nullptr };
     parse_args(tk, attr_node);
     attr_node->token = attr;
-    //attr_node->symb = find_symbol(attrs, attr_node);
-    attr_node->type = attr_node->symb.type;
 
     // Create operation node
     ExpDataNode *operation = new ExpDataNode;
@@ -430,6 +427,17 @@ int NodeExpression::get_int_value() const
 
 void NodeExpression::symbolize_node(ExpDataNode *node)
 {
+    if (node->flags & NODE_IN)
+    {
+        symbolize_node(node->left);
+        const SymbolTable &attrs = node->left->type.construct->attrs;
+        Symbol symb = attrs.lookup(node->right->token.data);
+        node->right->symb = symb;
+        node->right->type = symb.type;
+        node->type = symb.type;
+        return;
+    }
+
     // Symbolize left an right nodes
     if (node->left != nullptr)
         symbolize_node(node->left);

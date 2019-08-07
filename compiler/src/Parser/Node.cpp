@@ -38,7 +38,7 @@ const Symbol &Node::lookup(string name, vector<DataType> params) const
 DataConstruct *Node::find_construct(string name)
 {
     auto construct = table.find_construct(name);
-    if (construct == nullptr && parent != nullptr)
+    if (construct == PrimTypes::type_null() && parent != nullptr)
         return parent->find_construct(name);
     return construct;
 }

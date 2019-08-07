@@ -4,11 +4,11 @@
 namespace TinyScript
 {
 
-    class NodeClass : NodeBlock
+    class NodeClass : public NodeBlock
     {
     public:
         NodeClass(Node *parent) :
-            NodeBlock(parent) {}
+            NodeBlock(parent, true) {}
         
         virtual NodeType get_type() { return NodeType::Class; }
         virtual void parse(Tokenizer &tk);
@@ -17,6 +17,7 @@ namespace TinyScript
         void parse_attr(Tokenizer &tk);
 
         Token name;
+        DataConstruct *construct;
 
     };
 

@@ -1,5 +1,6 @@
 #include "Parser/Module.hpp"
 #include "Parser/Function.hpp"
+#include "Parser/Class.hpp"
 #include "Parser/Program.hpp"
 using namespace TinyScript;
 
@@ -75,6 +76,7 @@ void NodeModule::parse(Tokenizer &tk)
             case TokenType::Func: parse_child<NodeFunction>(tk); break;
             case TokenType::From: parse_child<NodeImport>(tk); break;
             case TokenType::Extern: parse_child<NodeExtern>(tk); break;
+            case TokenType::Class: parse_child<NodeClass>(tk); break;
             default:
             {
                 Token error = tk.skip_token();

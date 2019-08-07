@@ -6,8 +6,21 @@ void NodeLet::parse(Tokenizer &tk)
     // Parse let
     tk.match(TokenType::Let, "let");
     name = tk.match(TokenType::Name, "name");
-    tk.match(TokenType::Assign, "=");
-    value = parse_node<NodeExpression>(tk);
+    use_static_type = false;
+    value = nullptr;
+
+    if (tk.get_look().type == TokenType::Of)
+    {
+        tk.match(TokenType::Of, ":");
+        static_type = parse_type(tk);
+        use_static_type = true;
+    }
+
+    if (!use_static_type || tk.get_look().type == TokenType::Assign)
+    {
+        tk.match(TokenType::Assign, "=");
+        value = parse_node<NodeExpression>(tk);
+    }
 
     Logger::log(name.debug_info, "Created new var '" + 
         name.data + "'");
@@ -16,10 +29,21 @@ void NodeLet::parse(Tokenizer &tk)
 void NodeLet::symbolize()
 {
     // Create new var symbol
-    DataType type = value->get_data_type();
+    DataType type = use_static_type ? 
+        static_type : value->get_data_type();
     int size = DataType::find_size(type);
     int location = allocate(size);
     
+    if (use_static_type && value != nullptr)
+    {
+        if (!DataType::equal(type, value->get_data_type()))
+        {
+            Logger::error(value->get_data()->token.debug_info, 
+                "Cannot assign '" + DataType::printout(value->get_data_type()) + 
+                "' to '" + DataType::printout(type) + "'");
+        }
+    }
+
     symb = Symbol(name.data, type, SYMBOL_LOCAL, location);
         get_parent()->push_symbol(symb);
 }
