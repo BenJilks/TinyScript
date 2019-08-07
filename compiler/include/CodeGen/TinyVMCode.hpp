@@ -2,6 +2,7 @@
 #include "Parser/Expression.hpp"
 #include "Parser/Function.hpp"
 #include "Parser/Module.hpp"
+#include "Parser/Program.hpp"
 #include <tuple>
 using std::tuple;
 
@@ -25,7 +26,7 @@ namespace TinyScript::TinyVM
         int find_funcion(string name);
         string gen_label();
 
-        // Compiler functions
+        // Compile nodes
         void compile_rexpression(NodeExpression *node);
         void compile_lexpression(NodeExpression *node);
         void compile_function(NodeFunction *node);
@@ -34,7 +35,11 @@ namespace TinyScript::TinyVM
         void compile_assign(NodeAssign *node);
         void compile_return(NodeReturn *node);
         void compile_if(NodeIf *node);
+        void compile_import(NodeImport *node);
+        void compile_external(NodeExtern *node);
         void compile_module(NodeModule *node);
+        void compile_program(NodeProgram &node);
+
 
     private:
 
@@ -54,11 +59,13 @@ namespace TinyScript::TinyVM
         void compile_lname(ExpDataNode *node);
         void compile_lterm(ExpDataNode *node);
         void compile_lin(ExpDataNode *node);
+        void compile_typesize(ExpDataNode *node);
         void compile_rvalue(ExpDataNode *node);
         void compile_lvalue(ExpDataNode *node);
 
         // Code data
         vector<char> code;
+        vector<Symbol> externals;
         map<string, tuple<vector<int>, int>> labels;
         vector<int> used_labels;
 

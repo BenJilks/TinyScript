@@ -76,7 +76,7 @@ string DataType::printout(const DataType &type)
     return type_name;
 }
 
-bool DataType::can_cast_to(const DataType &from, const DataType &to)
+bool DataType::can_cast_to(const DataType &from, const DataType &to, bool &warning)
 {
     // If an array is in the process, it cannot be casted
     if (from.flags & DATATYPE_ARRAY || to.flags & DATATYPE_ARRAY)
@@ -94,11 +94,12 @@ bool DataType::can_cast_to(const DataType &from, const DataType &to)
     {
         if (to.construct == PrimTypes::type_int()) return true;
         if (to.construct == PrimTypes::type_float()) return true;
-        if (to.construct == PrimTypes::type_char()) return true;
+        if (to.construct == PrimTypes::type_char()) { warning = true; return true; }
         if (to.construct == PrimTypes::type_bool()) return true;
     }
     else if (from.construct == PrimTypes::type_float())
     {
+        warning = true;
         if (to.construct == PrimTypes::type_int()) return true;
         if (to.construct == PrimTypes::type_float()) return true;
         if (to.construct == PrimTypes::type_char()) return true;

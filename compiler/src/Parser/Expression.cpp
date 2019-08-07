@@ -35,7 +35,6 @@ ExpDataNode *NodeExpression::parse_indies(Tokenizer &tk, ExpDataNode *node)
     ExpDataNode *operation = new ExpDataNode;
     operation->left = node;
     operation->right = index;
-    operation->type = *node->type.array_type;
     operation->flags = NODE_INDEX;
     operation->token = open;
     tk.match(TokenType::CloseIndex, "]");
@@ -72,9 +71,17 @@ ExpDataNode *NodeExpression::parse_cast(Tokenizer &tk, ExpDataNode *node)
 
     Token as = tk.match(TokenType::As, "as");
     DataType type = parse_type(tk);
-    if (!DataType::can_cast_to(node->type, type))
+    bool warning = false;
+    if (!DataType::can_cast_to(node->type, type, warning))
     {
         Logger::error(as.debug_info, "Cannot cast from '" + 
+            DataType::printout(node->type) + "' to '" + 
+            DataType::printout(type) + "'");
+    }
+
+    if (warning)
+    {
+        Logger::warning(as.debug_info, "Possible loss of data casting from '" + 
             DataType::printout(node->type) + "' to '" + 
             DataType::printout(type) + "'");
     }
@@ -125,8 +132,8 @@ ExpDataNode *NodeExpression::parse_transforms(Tokenizer &tk, ExpDataNode *node)
     return node;
 }
 
-const Symbol &NodeExpression::find_alternet_overload(Tokenizer &tk, 
-    ExpDataNode *node, Token name, vector<DataType> params)
+const Symbol &NodeExpression::find_alternet_overload(ExpDataNode *node, 
+    Token name, vector<DataType> params)
 {
     vector<Symbol> overloads = lookup_all(name.data);
     for (Symbol overload : overloads)
@@ -137,16 +144,19 @@ const Symbol &NodeExpression::find_alternet_overload(Tokenizer &tk,
 
         // Find if all params can be casted to the target ones
         bool can_cast = true;
+        vector<bool> warnings;
         for (int i = 0; i < overload.params.size(); i++)
         {
             DataType param = params[i];
             DataType target = overload.params[i];
+            bool warning = false;
             if (!DataType::equal(param, target) && 
-                !DataType::can_cast_to(param, target))
+                !DataType::can_cast_to(param, target, warning))
             {
                 can_cast = false;
                 break;
             }
+            warnings.push_back(warning);
         }
 
         if (can_cast)
@@ -156,6 +166,14 @@ const Symbol &NodeExpression::find_alternet_overload(Tokenizer &tk,
             {
                 DataType param = params[i];
                 DataType target = overload.params[i];
+                if (warnings[i])
+                {
+                    Logger::warning(node->args[i]->token.debug_info, 
+                        "Possible loss of data casting from '" + 
+                        DataType::printout(param) + "' to '" + 
+                        DataType::printout(target) + "'");
+                }
+
                 if (!DataType::equal(param, target))
                     node->args[i] = cast(node->args[i], target);
             }
@@ -171,7 +189,7 @@ const Symbol &NodeExpression::find_alternet_overload(Tokenizer &tk,
     return SymbolTable::get_null();
 }
 
-Symbol NodeExpression::find_symbol(Tokenizer &tk, ExpDataNode *node)
+const Symbol &NodeExpression::find_symbol(ExpDataNode *node)
 {
     // Find the names symbol in the table
     Token name = node->token;
@@ -187,15 +205,15 @@ Symbol NodeExpression::find_symbol(Tokenizer &tk, ExpDataNode *node)
 
         // If the symbol could not be found, search of an overload
         if (symb.flags & SYMBOL_NULL)
-            return find_alternet_overload(tk, node, name, params);
+            return find_alternet_overload(node, name, params);
         
         return symb;
     }
 
-    Symbol symb = lookup(name.data);
+    const Symbol &symb = lookup(name.data);
     if (symb.flags & SYMBOL_NULL)
     {
-        Logger::log(name.debug_info, 
+        Logger::error(name.debug_info, 
             "Could not find symbol '" + 
             name.data + "'");
     }
@@ -206,15 +224,6 @@ void NodeExpression::parse_name(Tokenizer &tk, ExpDataNode *node)
 {
     // Find the tokens name and parse args if there is any
     parse_args(tk, node);
-    Symbol symb = find_symbol(tk, node);
-
-    // Copy the symbols type data to the node
-    node->type = symb.type;
-    node->symb = symb;
-
-    // If the symbol is a function call, mark the node as one
-    if (symb.flags & SYMBOL_FUNCTION)
-        node->flags |= NODE_CALL;
 }
 
 ExpDataNode *NodeExpression::parse_sub_expression(Tokenizer &tk, ExpDataNode *node)
@@ -231,14 +240,6 @@ void NodeExpression::parse_ref(Tokenizer &tk, ExpDataNode *node)
     // Parse the value to take a ref of
     ExpDataNode *lnode = parse_expression(tk);
     node->left = lnode;
-
-    // Create the new ref
-    if (lnode->type.flags & DATATYPE_ARRAY)
-        node->type = *lnode->type.array_type;
-    else
-        node->type = lnode->type;
-    node->type.array_type = shared_ptr<DataType>(new DataType(node->type));
-    node->type.flags |= DATATYPE_REF;
 }
 
 void NodeExpression::parse_copy(Tokenizer &tk, ExpDataNode *node)
@@ -268,7 +269,6 @@ void NodeExpression::parse_array(Tokenizer &tk, ExpDataNode *node)
     // Make this an array node
     node->flags = NODE_ARRAY;
     DataType arr_type;
-    bool type_found = false;
 
     // Read all array items
     while (!tk.is_eof() && tk.get_look().type != TokenType::CloseIndex)
@@ -276,27 +276,11 @@ void NodeExpression::parse_array(Tokenizer &tk, ExpDataNode *node)
         ExpDataNode *item = parse_expression(tk);
         node->args.push_back(item);
 
-        // If a type has not been set, do so
-        if (!type_found)
-        {
-            arr_type = item->type;
-            type_found = true;
-        }
-
-        // Check type is consitant 
-        if (!DataType::equal(arr_type, item->type))
-        {
-            Logger::error(tk.get_debug_info(), 
-                "Arrays must contain only the same type");
-        }
-
         // If there's more items, then match a next token
         if (tk.get_look().type != TokenType::CloseIndex)
             tk.match(TokenType::Next, ",");
     }
 
-    node->type = DataType { PrimTypes::type_null(), DATATYPE_ARRAY, 
-        node->args.size(), shared_ptr<DataType>(new DataType(arr_type)) };
     tk.match(TokenType::CloseIndex, "]");
 }
 
@@ -314,10 +298,7 @@ ExpDataNode *NodeExpression::parse_type_name(Tokenizer &tk, ExpDataNode *node)
 ExpDataNode *NodeExpression::parse_type_size(Tokenizer &tk, ExpDataNode *node)
 {
     ExpDataNode *arg = parse_expression(tk);
-    int size = DataType::find_size(arg->type);
-    node->token = { std::to_string(size), TokenType::Int };
-    node->type = { PrimTypes::type_int(), 0 };
-    free_node(arg);
+    node->left = arg;
     return node;
 }
 
@@ -445,4 +426,88 @@ bool NodeExpression::is_static_value() const
 int NodeExpression::get_int_value() const
 {
     return std::atoi(exp->token.data.c_str());
+}
+
+void NodeExpression::symbolize_node(ExpDataNode *node)
+{
+    // Symbolize left an right nodes
+    if (node->left != nullptr)
+        symbolize_node(node->left);
+    if (node->right != nullptr)
+        symbolize_node(node->right);
+
+    // Symbolize arguments
+    for (ExpDataNode *arg : node->args)
+        symbolize_node(arg);
+
+    // Find operation type
+    if (node->flags & NODE_OPERATION)
+    {
+        node->type = parse_operation_type(node->left, 
+            node->right, node->token);
+        return;
+    }
+
+    // Find symbol
+    if (node->token.type == TokenType::Name)
+    {
+        Symbol symb = find_symbol(node);
+
+        // Copy the symbols type data to the node
+        node->type = symb.type;
+        node->symb = symb;
+
+        // If the symbol is a function call, mark the node as one
+        if (symb.flags & SYMBOL_FUNCTION)
+            node->flags |= NODE_CALL;
+    }
+
+    if (node->token.type == TokenType::Ref)
+    {
+        // Create the new ref
+        ExpDataNode *lnode = node->left;
+        if (lnode->type.flags & DATATYPE_ARRAY)
+            node->type = *lnode->type.array_type;
+        else
+            node->type = lnode->type;
+        node->type.array_type = shared_ptr<DataType>(new DataType(node->type));
+        node->type.flags |= DATATYPE_REF;
+    }
+
+    if (node->token.type == TokenType::TypeSize)
+        node->type = DataType { PrimTypes::type_int(), 0 };
+
+    if (node->flags & NODE_INDEX)
+    {
+        symbolize_node(node->left);
+        symbolize_node(node->right);
+        node->type = *node->left->type.array_type;
+    }
+    else if (node->token.type == TokenType::OpenIndex)
+    {
+        DataType arr_type;
+        bool found_type = false;
+        for (ExpDataNode *node : node->args)
+        {
+            if (!found_type)
+            {
+                arr_type = node->type;
+                found_type = true;
+            }
+
+            if (!DataType::equal(arr_type, node->type))
+            {
+                Logger::error(node->token.debug_info, 
+                    "Arrays must contain only the same type");
+            }
+        }
+
+        node->type = DataType { PrimTypes::type_null(), DATATYPE_ARRAY, 
+            node->args.size(), shared_ptr<DataType>(new DataType(arr_type)) };
+    }
+}
+
+void NodeExpression::symbolize()
+{
+    symbolize_node(exp);
 }

@@ -16,6 +16,7 @@ static map<string, TokenType> keywords =
     std::make_pair("if", TokenType::If),
     std::make_pair("from", TokenType::From),
     std::make_pair("import", TokenType::Import),
+    std::make_pair("extern", TokenType::Extern),
     std::make_pair("true", TokenType::Bool),
     std::make_pair("false", TokenType::Bool),
     std::make_pair("typename", TokenType::TypeName),

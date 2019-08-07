@@ -1,7 +1,6 @@
 #include <iostream>
-#include "Parser/Module.hpp"
+#include "Parser/Program.hpp"
 #include "CodeGen/TinyVMCode.hpp"
-#include "Std.hpp"
 extern "C"
 {
 #include "vm.h"
@@ -10,23 +9,27 @@ extern "C"
 }
 using namespace TinyScript;
 
+void import_std(NodeProgram &prog)
+{
+    prog.add_src("../std/io.tiny");
+}
+
 int main()
 {
-    Tokenizer tk("../test_scripts/test.tiny");
     TinyVM::Code code;
+    NodeProgram prog;
 
-    NodeModule mod;
-    mod.parse(tk);
-    code.compile_module(&mod);
+    import_std(prog);
+    prog.add_src("../test_scripts/maths.tiny");
+    prog.add_src("../test_scripts/test.tiny");
+    prog.parse();
+    code.compile_program(prog);
 
     if (!Logger::has_error())
     {
         vector<char> bytecode = code.link();
         vm_init();
         register_std();
-
-        int i;
-        vm_run(&bytecode[0], code.find_funcion("main"), (char*)&i);
-        printf("%i\n", i);
+        vm_run(&bytecode[0], code.find_funcion("main"), NULL);
     }
 }

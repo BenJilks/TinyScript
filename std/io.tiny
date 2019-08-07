@@ -1,0 +1,6 @@
+
+extern log(int)
+extern log(float)
+extern log(char)
+extern log(bool)
+extern log(char ref)

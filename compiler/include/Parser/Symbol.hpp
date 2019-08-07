@@ -36,7 +36,7 @@ namespace TinyScript
 
         static int find_size(const DataType &type);
         static bool equal(const DataType &a, const DataType &b);
-        static bool can_cast_to(const DataType &from, const DataType &to);
+        static bool can_cast_to(const DataType &from, const DataType &to, bool &warning);
         static string printout(const DataType &type);
     };
 

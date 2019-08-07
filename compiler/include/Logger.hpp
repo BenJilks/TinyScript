@@ -22,6 +22,7 @@ namespace TinyScript
 
         void log(const DebugInfo &debug_info, string msg);
 
+        void warning(const DebugInfo &debug_info, string msg);
         void error(const DebugInfo &debug_info, string msg);
         bool has_error();
 

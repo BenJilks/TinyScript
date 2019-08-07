@@ -9,6 +9,7 @@ static bool has_error_flag = false;
 static int scope = 0;
 
 #define RED     "\033[1;31m"
+#define ORANGE  "\033[01;33m"
 #define RESET   "\033[0m"
 
 void Logger::reset()
@@ -32,12 +33,8 @@ static void log_info(const DebugInfo &debug_info)
         std::cout << " ";
 }
 
-void Logger::error(const DebugInfo &debug_info, string msg)
+static void log_location(const DebugInfo &debug_info)
 {
-    std::cout << RED << "Error: ";
-    log_info(debug_info);
-    std::cout << msg << std::endl;
-    
     string line;
     std::ifstream file(debug_info.file_name);
     for(int i = 0; i < debug_info.line_no; ++i)
@@ -47,8 +44,26 @@ void Logger::error(const DebugInfo &debug_info, string msg)
     std::cout << line << std::endl;
     for (int i = 0; i < debug_info.char_no - 1; i++)
         std::cout << " ";
-    std::cout << "^^^^\n" << RESET << std::endl;
+    std::cout << "^^^^\n" << std::endl;
+}
 
+void Logger::warning(const DebugInfo &debug_info, string msg)
+{
+    std::cout << ORANGE << "Warning: ";
+    log_info(debug_info);
+    std::cout << msg << std::endl;
+    log_location(debug_info);
+    std::cout << RESET;
+}
+
+void Logger::error(const DebugInfo &debug_info, string msg)
+{
+    std::cout << RED << "Error: ";
+    log_info(debug_info);
+    std::cout << msg << std::endl;
+    log_location(debug_info);
+    std::cout << RESET;
+    
     has_error_flag = true;
 }
 

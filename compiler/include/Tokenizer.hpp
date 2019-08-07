@@ -60,6 +60,7 @@ namespace TinyScript
         If,
         From,
         Import,
+        Extern,
 
         // Compiler functions
         TypeName,

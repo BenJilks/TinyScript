@@ -27,6 +27,8 @@ namespace TinyScript
 
         virtual NodeType get_type() { return NodeType::Let; }
         virtual void parse(Tokenizer &tk);
+        void symbolize();
+        
         inline Token get_name() const { return name; }
         inline Symbol get_symb() const { return symb; }
         inline NodeExpression *get_value() const { return value; }

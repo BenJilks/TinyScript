@@ -1,5 +1,6 @@
 #include "CodeGen/TinyVMCode.hpp"
 #include "memory.h"
+#include "flags.h"
 #include <algorithm>
 using namespace TinyScript::TinyVM;
 
@@ -21,7 +22,18 @@ vector<char> Code::link()
     }
 
     vector<char> header;
-    header.push_back(0);
+    header.push_back(externals.size());
+    for (Symbol symb : externals)
+    {
+        string name = Symbol::printout(symb);
+        int id = symb.location;
+
+        int start = header.size();
+        header.resize(start + 4 + 1 + name.length());
+        memcpy(&header[start], &id, sizeof(int));
+        memcpy(&header[start + 5], name.c_str(), name.length());
+        header[start + 4] = name.length();
+    }
 
     vector<char> out;
     out.insert(out.end(), header.begin(), header.end());
@@ -57,7 +69,9 @@ void Code::write_string(string str)
 
 void Code::write_label(string label)
 {
+#if DEBUG_LINK
     printf("Call %s\n", label.c_str());
+#endif
 
     if (labels.find(label) == labels.end())
         labels[label] = std::make_tuple(vector<int>(), -1);
@@ -67,7 +81,9 @@ void Code::write_label(string label)
 
 void Code::assign_label(string label)
 {
+#if DEBUG_LINK
     printf("Assign %s\n", label.c_str());
+#endif
 
     int location = code.size();
     if (labels.find(label) == labels.end())

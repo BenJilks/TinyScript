@@ -9,7 +9,11 @@ namespace TinyScript
 
     enum class NodeType
     {
+        Program,
         Module,
+        Import,
+        Extern,
+        Class,
         Function,
         Let,
         Assign,
@@ -71,15 +75,13 @@ namespace TinyScript
 
     protected:
         inline void add_child(Node *child) { children.push_back(child); }
+        vector<Node*> children;
 
         template<typename T>
         void parse_child(Tokenizer &tk)
         {
             add_child(parse_node<T>(tk));
         }
-
-    private:
-        vector<Node*> children;
 
     };
 

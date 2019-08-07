@@ -8,17 +8,20 @@ void NodeLet::parse(Tokenizer &tk)
     name = tk.match(TokenType::Name, "name");
     tk.match(TokenType::Assign, "=");
     value = parse_node<NodeExpression>(tk);
-    DataType type = value->get_data_type();
-
-    // Create new var symbol
-    int size = DataType::find_size(type);
-    int location = allocate(size);
-    symb = Symbol(name.data, type, SYMBOL_LOCAL, location);
-    get_parent()->push_symbol(symb);
 
     Logger::log(name.debug_info, "Created new var '" + 
-        name.data + "' of type '" + 
-        DataType::printout(type) + "'");
+        name.data + "'");
+}
+
+void NodeLet::symbolize()
+{
+    // Create new var symbol
+    DataType type = value->get_data_type();
+    int size = DataType::find_size(type);
+    int location = allocate(size);
+    
+    symb = Symbol(name.data, type, SYMBOL_LOCAL, location);
+        get_parent()->push_symbol(symb);
 }
 
 NodeLet::~NodeLet()

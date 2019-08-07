@@ -148,6 +148,15 @@ void Code::compile_cast(ExpDataNode *node)
     }
 }
 
+void Code::compile_typesize(ExpDataNode *node)
+{
+    DataType type = node->left->type;
+    int size = DataType::find_size(type);
+
+    write_byte(BC_PUSH_4);
+    write_int(size);
+}
+
 void Code::compile_rterm(ExpDataNode *node)
 {
     Token value = node->token;
@@ -166,6 +175,7 @@ void Code::compile_rterm(ExpDataNode *node)
         case TokenType::As: compile_cast(node); break;
         case TokenType::Copy: compile_copy(node); break;
         case TokenType::OpenIndex: compile_array(node); break;
+        case TokenType::TypeSize: compile_typesize(node); break;
     }
 }
 
@@ -337,10 +347,12 @@ void Code::compile_lvalue(ExpDataNode *node)
 
 void Code::compile_rexpression(NodeExpression *node)
 {
+    node->symbolize();
     compile_rvalue(node->get_data());
 }
 
 void Code::compile_lexpression(NodeExpression *node)
 {
+    node->symbolize();
     compile_lvalue(node->get_data());
 }
