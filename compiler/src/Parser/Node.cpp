@@ -106,7 +106,11 @@ DataType Node::parse_type(Tokenizer &tk)
             bool is_data_mod = true;
             switch (name.type)
             {
-                case TokenType::Ref: type.array_type = shared_ptr<DataType>(new DataType(type)); type.flags |= DATATYPE_REF; break;
+                case TokenType::Ref:
+                    type = { PrimTypes::type_null(), DATATYPE_REF, 
+                        0, std::make_shared<DataType>(type) }; 
+                    break;
+                
                 case TokenType::Array: type = parse_array_type(tk, type); break;
                 default: is_data_mod = false; break;
             }

@@ -75,6 +75,14 @@ namespace TinyScript
         ExpDataNode *parse_expression(Tokenizer &tk);
         void free_node(ExpDataNode *node);
         void symbolize_node(ExpDataNode *node);
+
+        // Symbolizer
+        void symbolize_name(ExpDataNode *node);
+        void symbolize_ref(ExpDataNode *node);
+        void symbolize_copy(ExpDataNode *node);
+        void symbolize_typesize(ExpDataNode *node);
+        void symbolize_typename(ExpDataNode *node);
+        void symbolize_array(ExpDataNode *node);
         
         // Expression data
         ExpDataNode *exp;

@@ -7,9 +7,10 @@ using std::string;
 using std::vector;
 using std::shared_ptr;
 
-#define DATATYPE_REF    0b100
-#define DATATYPE_ARRAY  0b010
-#define DATATYPE_AUTO   0b001
+#define DATATYPE_REF    0b1000
+#define DATATYPE_ARRAY  0b0100
+#define DATATYPE_AUTO   0b0010
+#define DATATYPE_NULL   0b0001
 
 #define SYMBOL_FUNCTION             0b1000000000
 #define SYMBOL_LOCAL                0b0100000000
@@ -32,7 +33,7 @@ namespace TinyScript
         int flags;
 
         int array_size;
-        shared_ptr<DataType> array_type;
+        shared_ptr<DataType> sub_type;
 
         static int find_size(const DataType &type);
         static bool equal(const DataType &a, const DataType &b);

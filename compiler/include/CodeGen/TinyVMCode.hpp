@@ -60,6 +60,7 @@ namespace TinyScript::TinyVM
         void compile_lterm(ExpDataNode *node);
         void compile_lin(ExpDataNode *node);
         void compile_typesize(ExpDataNode *node);
+        void compile_typename(ExpDataNode *node);
         void compile_rvalue(ExpDataNode *node);
         void compile_lvalue(ExpDataNode *node);
 

@@ -20,28 +20,31 @@ int DataType::find_size(const DataType &type)
     
     // If it's an array, then return the total array size
     if (type.flags & DATATYPE_ARRAY)
-        return find_size(*type.array_type) * type.array_size;
+        return find_size(*type.sub_type) * type.array_size;
     
     // Otherwise, return the type size
     return type.construct->size;
 }
 
+#include <iostream>
+
 bool DataType::equal(const DataType &a, const DataType &b)
 {
     if (a.construct == b.construct && a.flags == b.flags)
     {
-        if (a.flags & DATATYPE_ARRAY)
+        if (a.flags & DATATYPE_ARRAY && 
+            a.array_size != b.array_size)
         {
-            if (a.array_size == b.array_size && 
-                equal(*a.array_type, *b.array_type))
-            {
-                return true;
-            }
+            return false;
         }
-        else
+        
+        if (a.flags & (DATATYPE_REF | DATATYPE_ARRAY) && 
+            !DataType::equal(*a.sub_type, *b.sub_type))
         {
-            return true;
+            return false;
         }
+        
+        return true;
     }
 
     return false;
@@ -66,30 +69,21 @@ string DataType::printout(const DataType &type)
     string type_name = type.construct->name;
     if (type.flags & DATATYPE_ARRAY)
     {
-        type_name = printout(*type.array_type) + 
+        type_name = printout(*type.sub_type) + 
             " array[" + std::to_string(type.array_size) + "]";
     }
 
     if (type.flags & DATATYPE_REF)
-        type_name += " ref";
+    {
+        type_name = printout(*type.sub_type) + 
+            " ref";
+    }
     
     return type_name;
 }
 
 bool DataType::can_cast_to(const DataType &from, const DataType &to, bool &warning)
 {
-    // If an array is in the process, it cannot be casted
-    if (from.flags & DATATYPE_ARRAY || to.flags & DATATYPE_ARRAY)
-    {
-        // Unless it's from an array to a ref of the same type, 
-        // temp refs can then be used
-        DataType to_non_ref = to;
-        to_non_ref.flags ^= DATATYPE_REF;
-        if (DataType::equal(*from.array_type, to_non_ref))
-            return true;
-        return false;
-    }
-
     if (from.construct == PrimTypes::type_int())
     {
         if (to.construct == PrimTypes::type_int()) return true;

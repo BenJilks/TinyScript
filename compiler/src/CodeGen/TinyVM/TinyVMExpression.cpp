@@ -157,6 +157,15 @@ void Code::compile_typesize(ExpDataNode *node)
     write_int(size);
 }
 
+void Code::compile_typename(ExpDataNode *node)
+{
+    DataType type = node->left->type;
+    string name = DataType::printout(type);
+
+    write_byte(BC_PUSH_X);
+    write_string(name);
+}
+
 void Code::compile_rterm(ExpDataNode *node)
 {
     Token value = node->token;
@@ -176,6 +185,7 @@ void Code::compile_rterm(ExpDataNode *node)
         case TokenType::Copy: compile_copy(node); break;
         case TokenType::OpenIndex: compile_array(node); break;
         case TokenType::TypeSize: compile_typesize(node); break;
+        case TokenType::TypeName: compile_typename(node); break;
     }
 }
 
@@ -184,7 +194,7 @@ void Code::compile_index(ExpDataNode *node)
     compile_rvalue(node->left);
     compile_rvalue(node->right);
 
-    int element_size = DataType::find_size(*node->left->type.array_type);
+    int element_size = DataType::find_size(*node->left->type.sub_type);
     if (node->left->type.flags & DATATYPE_REF)
     {
         write_byte(BC_PUSH_4);
@@ -328,7 +338,7 @@ void Code::compile_lvalue(ExpDataNode *node)
         compile_lvalue(node->left);
         compile_rvalue(node->right);
 
-        int element_size = DataType::find_size(*node->left->type.array_type);
+        int element_size = DataType::find_size(*node->left->type.sub_type);
         write_byte(BC_PUSH_4);
         write_int(element_size);
         write_byte(BC_MUL_INT_INT);

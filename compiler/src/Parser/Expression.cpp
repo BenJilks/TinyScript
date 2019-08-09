@@ -49,7 +49,7 @@ static ExpDataNode *cast(ExpDataNode *node, DataType to)
     {
         DataType original = node->type;
         node->type = to;
-        node->type.array_type = shared_ptr<DataType>(new DataType(original));
+        node->type.sub_type = std::make_shared<DataType>(original);
         node->flags |= NODE_TEMP_REF;
         return node;
     }
@@ -106,7 +106,6 @@ ExpDataNode *NodeExpression::parse_in(Tokenizer &tk, ExpDataNode *node)
     operation->right = attr_node;
     operation->token = in;
     operation->flags = NODE_IN;
-    operation->type = attr_node->symb.type;
     return operation;
 }
 
@@ -242,12 +241,7 @@ void NodeExpression::parse_ref(Tokenizer &tk, ExpDataNode *node)
 void NodeExpression::parse_copy(Tokenizer &tk, ExpDataNode *node)
 {
     ExpDataNode *lnode = parse_expression(tk);
-    if (!(lnode->type.flags & DATATYPE_REF))
-        Logger::error(node->token.debug_info, "Only a ref value can be copied");
-
     node->left = lnode;
-    node->type = lnode->type;
-    node->type.flags ^= DATATYPE_REF;
 }
 
 void NodeExpression::parse_negate(Tokenizer &tk, ExpDataNode *node)
@@ -284,11 +278,7 @@ void NodeExpression::parse_array(Tokenizer &tk, ExpDataNode *node)
 ExpDataNode *NodeExpression::parse_type_name(Tokenizer &tk, ExpDataNode *node)
 {
     ExpDataNode *arg = parse_expression(tk);
-    string name = DataType::printout(arg->type);
-    node->token = { name, TokenType::String };
-    node->type = { PrimTypes::type_null(), DATATYPE_ARRAY, name.length() + 1, 
-            shared_ptr<DataType>(new DataType { PrimTypes::type_char(), 0 }) };
-    free_node(arg);
+    node->left = arg;
     return node;
 }
 
@@ -425,6 +415,78 @@ int NodeExpression::get_int_value() const
     return std::atoi(exp->token.data.c_str());
 }
 
+void NodeExpression::symbolize_name(ExpDataNode *node)
+{
+    Symbol symb = find_symbol(node);
+
+    // Copy the symbols type data to the node
+    node->type = symb.type;
+    node->symb = symb;
+
+    // If the symbol is a function call, mark the node as one
+    if (symb.flags & SYMBOL_FUNCTION)
+        node->flags |= NODE_CALL;
+}
+
+void NodeExpression::symbolize_ref(ExpDataNode *node)
+{
+    // Create the new ref
+    ExpDataNode *lnode = node->left;
+    DataType type;
+    if (lnode->type.flags & DATATYPE_ARRAY)
+        type = *lnode->type.sub_type;
+    else
+        type = lnode->type;
+
+    node->type = DataType { PrimTypes::type_null(), DATATYPE_REF, 
+        0, std::make_shared<DataType>(type) };
+}
+
+void NodeExpression::symbolize_copy(ExpDataNode *node)
+{
+    ExpDataNode *lnode = node->left;
+    if (!(lnode->type.flags & DATATYPE_REF))
+        Logger::error(node->token.debug_info, "Only a ref value can be copied");
+
+    node->type = *lnode->type.sub_type;
+}
+
+void NodeExpression::symbolize_typesize(ExpDataNode *node)
+{
+    node->type = DataType { PrimTypes::type_int(), 0 };
+}
+
+void NodeExpression::symbolize_typename(ExpDataNode *node)
+{
+    string name = DataType::printout(node->left->type);
+
+    node->type = DataType { PrimTypes::type_null(), DATATYPE_ARRAY, name.length()+1, 
+        std::make_shared<DataType>(DataType { PrimTypes::type_char(), 0 }) };
+}
+
+void NodeExpression::symbolize_array(ExpDataNode *node)
+{
+    DataType arr_type;
+    bool found_type = false;
+    for (ExpDataNode *node : node->args)
+    {
+        if (!found_type)
+        {
+            arr_type = node->type;
+            found_type = true;
+        }
+
+        if (!DataType::equal(arr_type, node->type))
+        {
+            Logger::error(node->token.debug_info, 
+                "Arrays must contain only the same type");
+        }
+    }
+
+    node->type = DataType { PrimTypes::type_null(), DATATYPE_ARRAY, 
+        node->args.size(), std::make_shared<DataType>(arr_type) };
+}
+
 void NodeExpression::symbolize_node(ExpDataNode *node)
 {
     if (node->flags & NODE_IN)
@@ -453,65 +515,24 @@ void NodeExpression::symbolize_node(ExpDataNode *node)
     {
         node->type = parse_operation_type(node->left, 
             node->right, node->token);
-        return;
     }
-
-    // Find symbol
-    if (node->token.type == TokenType::Name)
-    {
-        Symbol symb = find_symbol(node);
-
-        // Copy the symbols type data to the node
-        node->type = symb.type;
-        node->symb = symb;
-
-        // If the symbol is a function call, mark the node as one
-        if (symb.flags & SYMBOL_FUNCTION)
-            node->flags |= NODE_CALL;
-    }
-
-    if (node->token.type == TokenType::Ref)
-    {
-        // Create the new ref
-        ExpDataNode *lnode = node->left;
-        if (lnode->type.flags & DATATYPE_ARRAY)
-            node->type = *lnode->type.array_type;
-        else
-            node->type = lnode->type;
-        node->type.array_type = shared_ptr<DataType>(new DataType(node->type));
-        node->type.flags |= DATATYPE_REF;
-    }
-
-    if (node->token.type == TokenType::TypeSize)
-        node->type = DataType { PrimTypes::type_int(), 0 };
 
     if (node->flags & NODE_INDEX)
     {
         symbolize_node(node->left);
         symbolize_node(node->right);
-        node->type = *node->left->type.array_type;
+        node->type = *node->left->type.sub_type;
+        return;
     }
-    else if (node->token.type == TokenType::OpenIndex)
+
+    switch (node->token.type)
     {
-        DataType arr_type;
-        bool found_type = false;
-        for (ExpDataNode *node : node->args)
-        {
-            if (!found_type)
-            {
-                arr_type = node->type;
-                found_type = true;
-            }
-
-            if (!DataType::equal(arr_type, node->type))
-            {
-                Logger::error(node->token.debug_info, 
-                    "Arrays must contain only the same type");
-            }
-        }
-
-        node->type = DataType { PrimTypes::type_null(), DATATYPE_ARRAY, 
-            node->args.size(), shared_ptr<DataType>(new DataType(arr_type)) };
+        case TokenType::Name: symbolize_name(node); break;
+        case TokenType::Ref: symbolize_ref(node); break;
+        case TokenType::Copy: symbolize_copy(node); break;
+        case TokenType::TypeSize: symbolize_typesize(node); break;
+        case TokenType::TypeName: symbolize_typename(node); break;
+        case TokenType::OpenIndex: symbolize_array(node); break;
     }
 }
 
