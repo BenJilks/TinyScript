@@ -1,3 +1,4 @@
+#include <memory.h>
 #include "CodeGen/TinyVMCode.hpp"
 extern "C"
 {
@@ -7,14 +8,19 @@ using namespace TinyScript::TinyVM;
 
 void Code::compile_function(NodeFunction *node)
 {
+    // Don't compile tempate functions
+    if (node->is_template() || node->is_compiled())
+        return;
+
     Token name = node->get_name();
     Logger::log(name.debug_info, "Compiling function '" + name.data + "'");
+    node->symbolize();
 
     // Create stack frame
     assign_label(Symbol::printout(node->get_symb()));
     write_byte(BC_CREATE_FRAME);
     int scope_size_loc = code.size();
-    write_byte(0);
+    write_int(0);
 
     // Compile body
     compile_block((NodeBlock*)node);
@@ -24,7 +30,9 @@ void Code::compile_function(NodeFunction *node)
     write_byte(0);
     write_byte(node->get_arg_size());
 
-    code[scope_size_loc] = node->get_scope_size();
+    int scope_size = node->get_scope_size();
+    memcpy(&code[scope_size_loc], &scope_size, sizeof(int));
+    node->set_compiled();
 }
 
 void Code::compile_return(NodeReturn *node)
@@ -54,6 +62,8 @@ void Code::compile_block(NodeBlock *node)
             case NodeType::Assign: compile_assign((NodeAssign*)child); break;
             case NodeType::Return: compile_return((NodeReturn*)child); break;
             case NodeType::If: compile_if((NodeIf*)child); break;
+            case NodeType::For: compile_for((NodeFor*)child); break;
+            case NodeType::While: compile_while((NodeWhile*)child); break;
         }
     }
     Logger::end_scope();
@@ -118,5 +128,64 @@ void Code::compile_if(NodeIf *node)
     write_byte(BC_JUMP_IF_NOT);
     write_label(end);
     compile_block((NodeBlock*)node);
+    assign_label(end);
+}
+
+void Code::compile_for(NodeFor *node)
+{
+    string start = gen_label();
+    string end = gen_label();
+
+    // Assign initial value
+    NodeExpression *from = node->get_from();
+    compile_rexpression(from);
+    compile_lexpression(node->get_left());
+    
+    int size = DataType::find_size(from->get_data_type());
+    write_byte(BC_ASSIGN_REF_X);
+    write_int(size);
+
+    // Check to see if within loop
+    assign_label(start);
+    compile_rexpression(node->get_to());
+    compile_rexpression(node->get_left());
+    write_byte(BC_MORE_THAN_INT_INT);
+    write_byte(BC_JUMP_IF_NOT);
+    write_label(end);
+
+    compile_block((NodeCodeBlock*)node);
+
+    // Increment by 1
+    compile_rexpression(node->get_left());
+    write_byte(BC_PUSH_4);
+    write_int(1);
+    write_byte(BC_ADD_INT_INT);
+    compile_lexpression(node->get_left());
+    write_byte(BC_ASSIGN_REF_X);
+    write_int(size);
+
+    // Jump to the start
+    write_byte(BC_JUMP);
+    write_label(start);
+    assign_label(end);
+}
+
+void Code::compile_while(NodeWhile *node)
+{
+    string start = gen_label();
+    string end = gen_label();
+
+    // Exit loop if condition is not met
+    assign_label(start);
+    compile_rexpression(node->get_condition());
+    write_byte(BC_JUMP_IF_NOT);
+    write_label(end);
+
+    // Compile main code
+    compile_block((NodeCodeBlock*)node);
+    
+    // Jump to the start of the loop
+    write_byte(BC_JUMP);
+    write_label(start);
     assign_label(end);
 }

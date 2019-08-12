@@ -12,6 +12,7 @@ namespace TinyScript
         
         virtual NodeType get_type() { return NodeType::Class; }
         virtual void parse(Tokenizer &tk);
+        virtual Node *copy(Node *parent);
 
     private:
         void parse_attr(Tokenizer &tk);

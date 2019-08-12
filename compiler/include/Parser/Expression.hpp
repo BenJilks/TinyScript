@@ -36,6 +36,7 @@ namespace TinyScript
 
         virtual NodeType get_type() { return NodeType::Expression; }
         virtual void parse(Tokenizer &tk);
+        virtual Node *copy(Node *parent);
         void symbolize();
 
         inline DataType get_data_type() const { return exp->type; }
@@ -49,6 +50,7 @@ namespace TinyScript
         // Compiler functions
         ExpDataNode *parse_type_name(Tokenizer &tk, ExpDataNode *node);
         ExpDataNode *parse_type_size(Tokenizer &tk, ExpDataNode *node);
+        ExpDataNode *parse_array_size(Tokenizer &tk, ExpDataNode *node);
         ExpDataNode *parse_in(Tokenizer &tk, ExpDataNode *node);
         ExpDataNode *parse_cast(Tokenizer &tk, ExpDataNode *node);
         ExpDataNode *parse_indies(Tokenizer &tk, ExpDataNode *node);
@@ -56,6 +58,10 @@ namespace TinyScript
 
         const Symbol &find_alternet_overload(ExpDataNode *node, 
             Token name, vector<DataType> params);
+
+        const Symbol &mold_function_call(ExpDataNode *node, 
+            Symbol overload, vector<bool> warnings, vector<DataType> params);
+        
         const Symbol &find_symbol(ExpDataNode *node);
         DataType parse_array_type(Tokenizer &tk, DataType of);
         ExpDataNode *parse_term(Tokenizer &tk);
@@ -82,6 +88,7 @@ namespace TinyScript
         void symbolize_copy(ExpDataNode *node);
         void symbolize_typesize(ExpDataNode *node);
         void symbolize_typename(ExpDataNode *node);
+        void symbolize_arraysize(ExpDataNode *node);
         void symbolize_array(ExpDataNode *node);
         
         // Expression data

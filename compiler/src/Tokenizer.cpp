@@ -14,13 +14,17 @@ static map<string, TokenType> keywords =
     std::make_pair("let", TokenType::Let),
     std::make_pair("return", TokenType::Return),
     std::make_pair("if", TokenType::If),
+    std::make_pair("for", TokenType::For),
+    std::make_pair("while", TokenType::While),
     std::make_pair("from", TokenType::From),
+    std::make_pair("to", TokenType::To),
     std::make_pair("import", TokenType::Import),
     std::make_pair("extern", TokenType::Extern),
     std::make_pair("true", TokenType::Bool),
     std::make_pair("false", TokenType::Bool),
     std::make_pair("typename", TokenType::TypeName),
     std::make_pair("typesize", TokenType::TypeSize),
+    std::make_pair("arraysize", TokenType::ArraySize),
     std::make_pair("typeof", TokenType::TypeOf),
     std::make_pair("auto", TokenType::Auto)
 };
@@ -243,7 +247,7 @@ void Tokenizer::skip_whitespace()
 // Fetch the next char to be parsed
 char Tokenizer::next_char()
 {
-    char c;
+    char c = '\0';
     if (back_buffer.size() > 0)
     {
         c = back_buffer.back();

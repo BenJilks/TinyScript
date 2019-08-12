@@ -36,3 +36,12 @@ void NodeClass::parse(Tokenizer &tk)
     tk.match(TokenType::CloseBlock, "}");
     Logger::end_scope();
 }
+
+Node *NodeClass::copy(Node *parent)
+{
+    NodeClass *other = new NodeClass(parent);
+    copy_block(other);
+    other->name = name;
+    other->construct = construct;
+    return other;
+}

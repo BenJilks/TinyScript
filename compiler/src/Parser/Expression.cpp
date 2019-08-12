@@ -1,4 +1,5 @@
 #include "Parser/Expression.hpp"
+#include "Parser/Function.hpp"
 #include <algorithm>
 #include <string.h>
 #include <ctype.h>
@@ -128,10 +129,50 @@ ExpDataNode *NodeExpression::parse_transforms(Tokenizer &tk, ExpDataNode *node)
     return node;
 }
 
+const Symbol &NodeExpression::mold_function_call(ExpDataNode *node, Symbol overload, 
+    vector<bool> warnings, vector<DataType> params)
+{
+    // If they can be, modify the args to do so
+    for (int i = 0; i < overload.params.size(); i++)
+    {
+        DataType param = params[i];
+        DataType target = overload.params[i];
+        if (warnings[i])
+        {
+            Logger::warning(node->args[i]->token.debug_info, 
+                "Possible loss of data casting from '" + 
+                DataType::printout(param) + "' to '" + 
+                DataType::printout(target) + "'");
+        }
+
+        // Cast the argument if need be, or ignore if auto type, 
+        // as autos do not need to be casted
+        if (!DataType::equal(param, target) && 
+            !(target.flags & DATATYPE_AUTO))
+        {
+            node->args[i] = cast(node->args[i], target);
+        }
+    }
+
+    // If the function is a template, create this new implementations
+    if (overload.flags & SYMBOL_TEMPLATE)
+    {
+        NodeFunction *template_func = (NodeFunction*)overload.parent;
+        const Symbol &symb = template_func->implement(params);
+        get_parent(NodeType::Module)->push_symbol(symb);
+        return symb;
+    }
+    return lookup(overload.name, overload.params);
+}
+
 const Symbol &NodeExpression::find_alternet_overload(ExpDataNode *node, 
     Token name, vector<DataType> params)
 {
     vector<Symbol> overloads = lookup_all(name.data);
+    Symbol best_fit;
+    vector<bool> best_warnings;
+    bool has_best_fit = false;
+
     for (Symbol overload : overloads)
     {
         // Param size must be the same
@@ -145,6 +186,13 @@ const Symbol &NodeExpression::find_alternet_overload(ExpDataNode *node,
         {
             DataType param = params[i];
             DataType target = overload.params[i];
+            if (target.flags & DATATYPE_AUTO)
+            {
+                // Ignore auto types
+                warnings.push_back(false);
+                continue;
+            }
+
             bool warning = false;
             if (!DataType::equal(param, target) && 
                 !DataType::can_cast_to(param, target, warning))
@@ -157,26 +205,27 @@ const Symbol &NodeExpression::find_alternet_overload(ExpDataNode *node,
 
         if (can_cast)
         {
-            // If they can be, modify the args to do so
-            for (int i = 0; i < overload.params.size(); i++)
-            {
-                DataType param = params[i];
-                DataType target = overload.params[i];
-                if (warnings[i])
-                {
-                    Logger::warning(node->args[i]->token.debug_info, 
-                        "Possible loss of data casting from '" + 
-                        DataType::printout(param) + "' to '" + 
-                        DataType::printout(target) + "'");
-                }
+            // Set the new best fit
+            best_fit = overload;
+            best_warnings = warnings;
+            has_best_fit = true;
 
-                if (!DataType::equal(param, target))
-                    node->args[i] = cast(node->args[i], target);
-            }
-            return lookup(name.data, overload.params);
+            // If a best fit was found that is not a template, 
+            // no need to continue searching
+            if (best_fit.flags & SYMBOL_TEMPLATE)
+                break;
         }
     }
 
+    // If an appropriate overload was found, mold the call 
+    // to fit that function
+    if (has_best_fit)
+    {
+        return mold_function_call(node, best_fit, 
+            best_warnings, params);
+    }
+
+    // Otherwise, throw an error
     Symbol temp;
     temp.name = name.data;
     temp.params = params;
@@ -289,6 +338,13 @@ ExpDataNode *NodeExpression::parse_type_size(Tokenizer &tk, ExpDataNode *node)
     return node;
 }
 
+ExpDataNode *NodeExpression::parse_array_size(Tokenizer &tk, ExpDataNode *node)
+{
+    ExpDataNode *arg = parse_expression(tk);
+    node->left = arg;
+    return node;
+}
+
 ExpDataNode *NodeExpression::parse_term(Tokenizer &tk)
 {
     // Create a basic term node
@@ -307,7 +363,7 @@ ExpDataNode *NodeExpression::parse_term(Tokenizer &tk)
         case TokenType::Float: node->type = { PrimTypes::type_float(), 0 }; break;
         case TokenType::Bool: node->type = { PrimTypes::type_bool(), 0 }; break;
         case TokenType::Char: node->type = { PrimTypes::type_char(), 0 }; break;
-        case TokenType::String: node->type = { PrimTypes::type_null(), DATATYPE_ARRAY, term.data.length() + 1, 
+        case TokenType::String: node->type = { PrimTypes::type_null(), DATATYPE_ARRAY, (int)term.data.length() + 1, 
             shared_ptr<DataType>(new DataType { PrimTypes::type_char(), 0 }) }; break;
         case TokenType::Name: parse_name(tk, node); break;
         case TokenType::OpenArg: node = parse_sub_expression(tk, node); break;
@@ -317,6 +373,7 @@ ExpDataNode *NodeExpression::parse_term(Tokenizer &tk)
         case TokenType::Copy: parse_copy(tk, node); break;
         case TokenType::TypeName: node = parse_type_name(tk, node); break;
         case TokenType::TypeSize: node = parse_type_size(tk, node); break;
+        case TokenType::ArraySize: node = parse_array_size(tk, node); break;
         default: Logger::error(term.debug_info, "Unexpected token '" + term.data + "', expected NodeExpression");
     }
 
@@ -460,8 +517,20 @@ void NodeExpression::symbolize_typename(ExpDataNode *node)
 {
     string name = DataType::printout(node->left->type);
 
-    node->type = DataType { PrimTypes::type_null(), DATATYPE_ARRAY, name.length()+1, 
+    node->type = DataType { PrimTypes::type_null(), DATATYPE_ARRAY, (int)name.length()+1, 
         std::make_shared<DataType>(DataType { PrimTypes::type_char(), 0 }) };
+}
+
+void NodeExpression::symbolize_arraysize(ExpDataNode *node)
+{
+    DataType type = node->left->type;
+    if (!(type.flags & DATATYPE_ARRAY))
+    {
+        Logger::error(node->left->token.debug_info, 
+            "Must be an array type to find the size");
+    }
+
+    node->type = DataType { PrimTypes::type_int(), 0 };
 }
 
 void NodeExpression::symbolize_array(ExpDataNode *node)
@@ -484,7 +553,7 @@ void NodeExpression::symbolize_array(ExpDataNode *node)
     }
 
     node->type = DataType { PrimTypes::type_null(), DATATYPE_ARRAY, 
-        node->args.size(), std::make_shared<DataType>(arr_type) };
+        (int)node->args.size(), std::make_shared<DataType>(arr_type) };
 }
 
 void NodeExpression::symbolize_node(ExpDataNode *node)
@@ -532,6 +601,7 @@ void NodeExpression::symbolize_node(ExpDataNode *node)
         case TokenType::Copy: symbolize_copy(node); break;
         case TokenType::TypeSize: symbolize_typesize(node); break;
         case TokenType::TypeName: symbolize_typename(node); break;
+        case TokenType::ArraySize: symbolize_arraysize(node); break;
         case TokenType::OpenIndex: symbolize_array(node); break;
     }
 }
@@ -539,4 +609,24 @@ void NodeExpression::symbolize_node(ExpDataNode *node)
 void NodeExpression::symbolize()
 {
     symbolize_node(exp);
+}
+
+static ExpDataNode *copy_data_node(ExpDataNode *other)
+{
+    ExpDataNode *node = new ExpDataNode;
+    node->left = other->left ? copy_data_node(other->left) : nullptr;
+    node->right = other->right ? copy_data_node(other->right) : nullptr;
+    node->flags = other->flags;
+    node->args = other->args;
+    node->symb = other->symb;
+    node->token = other->token;
+    node->type = other->type;
+    return node;
+}
+
+Node *NodeExpression::copy(Node *parent)
+{
+    NodeExpression *other = new NodeExpression(parent);
+    other->exp = copy_data_node(exp);
+    return other;
 }

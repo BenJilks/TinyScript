@@ -24,6 +24,7 @@ namespace TinyScript
 
         void warning(const DebugInfo &debug_info, string msg);
         void error(const DebugInfo &debug_info, string msg);
+        void link_error(string msg);
         bool has_error();
 
     }

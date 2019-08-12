@@ -12,16 +12,17 @@ using std::shared_ptr;
 #define DATATYPE_AUTO   0b0010
 #define DATATYPE_NULL   0b0001
 
-#define SYMBOL_FUNCTION             0b1000000000
-#define SYMBOL_LOCAL                0b0100000000
-#define SYMBOL_ARG                  0b0010000000
-#define SYMBOL_GLOBAL               0b0001000000
-#define SYMBOL_CONST                0b0000100000
-#define SYMBOL_PRIVATE              0b0000010000
-#define SYMBOL_READONLY             0b0000001000
-#define SYMBOL_EXTERNAL             0b0000000100
-#define SYMBOL_TEMPLATE_FUNCTION    0b0000000010
-#define SYMBOL_NULL                 0b0000000001
+#define SYMBOL_FUNCTION             0b10000000000
+#define SYMBOL_LOCAL                0b01000000000
+#define SYMBOL_ARG                  0b00100000000
+#define SYMBOL_GLOBAL               0b00010000000
+#define SYMBOL_CONST                0b00001000000
+#define SYMBOL_PRIVATE              0b00000100000
+#define SYMBOL_READONLY             0b00000010000
+#define SYMBOL_EXTERNAL             0b00000001000
+#define SYMBOL_TEMPLATE             0b00000000100
+#define SYMBOL_MODULE               0b00000000010
+#define SYMBOL_NULL                 0b00000000001
 
 namespace TinyScript
 {
@@ -41,6 +42,7 @@ namespace TinyScript
         static string printout(const DataType &type);
     };
 
+    class Node;
     struct Symbol
     {
         Symbol() {}
@@ -56,15 +58,19 @@ namespace TinyScript
 
         vector<DataType> params;
         int location;
+        Node *parent;
     };
 
     class SymbolTable
     {
     public:
-        SymbolTable() {}
+        SymbolTable() :
+            allocator(0),
+            scope_size(0) {}
         
         void push(Symbol symb);
         void push_all(vector<Symbol> symbs);
+        void patch_params(vector<DataType> params);
         
         vector<Symbol> lookup_all(string name) const;
         const Symbol &lookup(string name) const;

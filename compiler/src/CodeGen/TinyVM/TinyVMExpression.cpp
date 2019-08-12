@@ -166,6 +166,15 @@ void Code::compile_typename(ExpDataNode *node)
     write_string(name);
 }
 
+void Code::compile_arraysize(ExpDataNode *node)
+{
+    DataType type = node->left->type;
+    int size = type.array_size;
+
+    write_byte(BC_PUSH_4);
+    write_int(size);
+}
+
 void Code::compile_rterm(ExpDataNode *node)
 {
     Token value = node->token;
@@ -186,6 +195,7 @@ void Code::compile_rterm(ExpDataNode *node)
         case TokenType::OpenIndex: compile_array(node); break;
         case TokenType::TypeSize: compile_typesize(node); break;
         case TokenType::TypeName: compile_typename(node); break;
+        case TokenType::ArraySize: compile_arraysize(node); break;
     }
 }
 

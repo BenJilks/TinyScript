@@ -82,7 +82,7 @@ void register_external(const char *name, VMFunc func)
     CAST(CHAR_##name, char, to) \
     CAST(BOOL_##name, char, to) \
 
-int decode_header(char *data, VMLink **links, int *link_size)
+static int decode_header(char *data, VMLink **links, int *link_size)
 {
     int pc = 0, i, j;
     int external_count = data[pc++];
@@ -253,10 +253,11 @@ int vm_run(char *data, int start, char *return_value)
             }
 
             case BC_CREATE_FRAME:
-                LOG("create stack frame of size %i\n", BYTE);
+                LOG("create stack frame of size %i\n", INT);
                 memcpy(s.stack + s.sp, &s.bp, 4); s.sp += 4;
                 s.bp = s.sp;
-                s.sp += NBYTE;
+                s.sp += INT;
+                s.pc += 4;
                 break;
             
             case BC_CALL:
@@ -308,6 +309,11 @@ int vm_run(char *data, int start, char *return_value)
                 break;
             }
 
+            case BC_JUMP:
+                LOG("Jump to %i\n", INT);
+                s.pc = INT;
+                break;
+
             case BC_JUMP_IF_NOT:
                 LOG("Jump if not %s to %i\n", s.stack[s.sp-1] ? "true" : "false", INT);
                 if (!s.stack[--s.sp])
@@ -318,8 +324,13 @@ int vm_run(char *data, int start, char *return_value)
 
             OPERATION_SET(INT_INT, int, int, int)
             OPERATION_SET(INT_FLOAT, int, float, float)
-            OPERATION_SET(FLOAT_FLOAT, float, float, float)
+            OPERATION_SET(INT_CHAR, int, char, int)
             OPERATION_SET(FLOAT_INT, float, int, float)
+            OPERATION_SET(FLOAT_FLOAT, float, float, float)
+            OPERATION_SET(FLOAT_CHAR, float, char, float)
+            OPERATION_SET(CHAR_INT, char, int, int)
+            OPERATION_SET(CHAR_FLOAT, char, float, float)
+            OPERATION_SET(CHAR_CHAR, char, char, char)
             CAST_SET(INT, int)
             CAST_SET(FLOAT, float)
             CAST_SET(CHAR, char)

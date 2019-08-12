@@ -3,4 +3,11 @@ extern log(int)
 extern log(float)
 extern log(char)
 extern log(bool)
-extern log(char ref)
+extern log(int ref, int)
+extern log(float ref, int)
+extern log(char ref, int)
+extern log(bool ref, int)
+
+# Auto ref
+func log(auto obj)
+    log(ref obj, arraysize obj)

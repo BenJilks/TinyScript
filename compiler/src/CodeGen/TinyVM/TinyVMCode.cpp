@@ -14,8 +14,10 @@ vector<char> Code::link()
         int location = std::get<1>(label_info);
         
         if (location == -1)
-            printf("\33[1;31mLink Error: Label '%s' was referenced but never assigned\n\33[0m", 
-                label.first.c_str());
+        {
+            Logger::link_error("Label '" + label.first + 
+                "' was referenced but never assigned");
+        }
 
         for (int addr : addrs)
             memcpy(&code_out[addr], &location, sizeof(int));
@@ -96,8 +98,7 @@ int Code::find_funcion(string name)
 {
     if (labels.find(name) == labels.end())
     {
-        printf("\33[1;31mLink Error: Could not find function '%s'\33[0m\n", 
-            name.c_str());
+        Logger::link_error("Could not find function '" + name + "'");
         return -1;
     }
 

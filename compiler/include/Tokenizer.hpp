@@ -58,13 +58,17 @@ namespace TinyScript
         Let,
         Return,
         If,
+        For,
+        While,
         From,
+        To,
         Import,
         Extern,
 
         // Compiler functions
         TypeName,
         TypeSize,
+        ArraySize,
         TypeOf,
 
         // Misc

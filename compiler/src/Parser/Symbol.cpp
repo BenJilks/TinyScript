@@ -242,3 +242,15 @@ bool SymbolTable::is_null(const Symbol &symb)
 {
     return symb.flags & SYMBOL_NULL;
 }
+
+void SymbolTable::patch_params(vector<DataType> params)
+{
+    int allocator = -8;
+
+    for (int i = 0; i < params.size(); i++)
+    {
+        allocator -= DataType::find_size(params[i]);
+        symbols[i].type = params[i];
+        symbols[i].location = allocator;
+    }
+}

@@ -67,6 +67,13 @@ void Logger::error(const DebugInfo &debug_info, string msg)
     has_error_flag = true;
 }
 
+void Logger::link_error(string msg)
+{
+    std::cout << RED << "Link Error: " << 
+        msg << std::endl << RESET;
+    has_error_flag = true;
+}
+
 bool Logger::has_error()
 {
     return has_error_flag;

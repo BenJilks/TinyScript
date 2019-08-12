@@ -35,7 +35,10 @@ namespace TinyScript::TinyVM
         void compile_assign(NodeAssign *node);
         void compile_return(NodeReturn *node);
         void compile_if(NodeIf *node);
+        void compile_for(NodeFor *node);
+        void compile_while(NodeWhile *node);
         void compile_import(NodeImport *node);
+        void compile_import_from(NodeImportFrom *node);
         void compile_external(NodeExtern *node);
         void compile_module(NodeModule *node);
         void compile_program(NodeProgram &node);
@@ -61,6 +64,7 @@ namespace TinyScript::TinyVM
         void compile_lin(ExpDataNode *node);
         void compile_typesize(ExpDataNode *node);
         void compile_typename(ExpDataNode *node);
+        void compile_arraysize(ExpDataNode *node);
         void compile_rvalue(ExpDataNode *node);
         void compile_lvalue(ExpDataNode *node);
 
