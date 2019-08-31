@@ -60,7 +60,7 @@ DataConstruct *Node::find_construct(string name)
 
 NodeBlock::~NodeBlock()
 {
-    for (Node * child : children)
+    for (Node *child : children)
         delete child;
 }
 

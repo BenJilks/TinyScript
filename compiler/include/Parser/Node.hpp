@@ -32,6 +32,8 @@ namespace TinyScript
         Node(Node *parent, bool is_allocator = false) :
             parent(parent), is_allocator(is_allocator) {}
 
+        virtual ~Node() {}
+
         Node *get_parent() const { return parent; }
         Node *get_parent(NodeType type);
         string get_prefix() const;
@@ -77,7 +79,7 @@ namespace TinyScript
         NodeBlock(Node *parent, bool is_allocator = false) :
             Node(parent, is_allocator) {}
 
-        ~NodeBlock();
+        virtual ~NodeBlock();
 
         inline int get_child_size() const { return children.size(); }
         inline void add_child(Node *child) { children.push_back(child); }
