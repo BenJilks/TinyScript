@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
     NodeProgram prog;
     string output = "";
     string bin = "";
-    import_std(prog);
+    //import_std(prog);
 
     // Include all files parsed into compiler
     for (int i = 1; i < argc; i++)
@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
     prog.parse();
     code.compile_program(prog);
     vector<char> bytecode = code.link();
-    int main_func = code.find_funcion("main");
+    int main_func = code.find_funcion("test.main");
 
     char *raw_code = (char*)malloc(bytecode.size());
     memcpy(raw_code, &bytecode[0], bytecode.size());

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.6)
 project(TinyScript)
 
 set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_FLAGS "-O3")
+set(CMAKE_CXX_FLAGS "-O")
 set(CMAKE_C_FLAGS "-O3")
 include_directories(${PROJECT_SOURCE_DIR})
 include_directories(${PROJECT_SOURCE_DIR}/compiler/include)

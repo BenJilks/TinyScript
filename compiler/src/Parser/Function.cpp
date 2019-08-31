@@ -13,7 +13,7 @@ void NodeLet::parse(Tokenizer &tk)
     if (tk.get_look().type == TokenType::Of)
     {
         tk.match(TokenType::Of, ":");
-        static_type = parse_type(tk);
+        static_type = parse_node<NodeDataType>(tk);
         use_static_type = true;
     }
 
@@ -31,7 +31,7 @@ void NodeLet::symbolize()
 {
     // Create new var symbol
     DataType type = use_static_type ? 
-        static_type : value->get_data_type();
+        static_type->compile() : value->get_data_type();
     int size = DataType::find_size(type);
     int location = allocate(size);
     
@@ -45,8 +45,8 @@ void NodeLet::symbolize()
         }
     }
 
-    symb = Symbol(name.data, type, SYMBOL_LOCAL, location);
-        get_parent()->push_symbol(symb);
+    symb = Symbol(name.data, type, SYMBOL_LOCAL, location, this);
+    get_parent()->push_symbol(symb);
 }
 
 Node *NodeLet::copy(Node *parent)
@@ -63,6 +63,8 @@ Node *NodeLet::copy(Node *parent)
 NodeLet::~NodeLet()
 {
     delete value;
+    if (use_static_type)
+        delete static_type;
 }
 
 void NodeAssign::parse(Tokenizer &tk)
@@ -219,18 +221,8 @@ void NodeFunction::parse(Tokenizer &tk)
     Logger::log(name.debug_info, "Parsing function '" + name.data + "'");
 
     is_template_flag = false;
-    vector<DataType> params = parse_params(tk);
-    DataType return_type = parse_return_type(tk);
-
-    // Create function symbol
-    int flags = SYMBOL_FUNCTION;
-    if (is_template_flag)
-        flags |= SYMBOL_TEMPLATE;
-    symb = Symbol(name.data, return_type, flags, 0);
-    symb.params = params;
-    symb.parent = this;
-    if (get_parent() != nullptr)
-        get_parent()->push_symbol(symb);
+    parse_params(tk);
+    parse_return_type(tk);
 
     // Parse function body
     Logger::start_scope();
@@ -238,46 +230,37 @@ void NodeFunction::parse(Tokenizer &tk)
     Logger::end_scope();
 }
 
-vector<DataType> NodeFunction::parse_params(Tokenizer &tk)
+void NodeFunction::parse_params(Tokenizer &tk)
 {
-    vector<DataType> param_types;
-
     tk.match(TokenType::OpenArg, "(");
     while(tk.get_look().type != TokenType::CloseArg && !tk.is_eof())
     {
         // Parse param info
-        DataType type = parse_type(tk);
+        NodeDataType *type = parse_node<NodeDataType>(tk);
         Token name = tk.match(TokenType::Name, "name");
-        param_types.push_back(type);
-        if (type.flags & DATATYPE_AUTO)
-            is_template_flag = true;
-
-        // Create and allocate new symbol
-        int size = DataType::find_size(type);
-        Symbol symb(name.data, type, SYMBOL_LOCAL, 0);
-        params.push_back(symb);
+        params.push_back(std::make_pair(name, type));
+//        if (type.flags & DATATYPE_AUTO)
+//            is_template_flag = true;
 
         Logger::log(name.debug_info, "Found param '" + 
-            name.data + "' of type '" + 
-            DataType::printout(type) + "'");
+            name.data + "'");
 
         if (tk.get_look().type != TokenType::CloseArg)
             tk.match(TokenType::Next, ",");
     }
 
     tk.match(TokenType::CloseArg, ")");
-    return param_types;
 }
 
-DataType NodeFunction::parse_return_type(Tokenizer &tk)
+void NodeFunction::parse_return_type(Tokenizer &tk)
 {
+    return_type_node = nullptr;
+
     if (tk.get_look().type == TokenType::Gives)
     {
         tk.match(TokenType::Gives, "->");
-        return parse_type(tk);
+        return_type_node = parse_node<NodeDataType>(tk);
     }
-
-    return { PrimTypes::type_null(), 0 };
 }
 
 const Symbol &NodeFunction::implement(vector<DataType> params)
@@ -285,10 +268,10 @@ const Symbol &NodeFunction::implement(vector<DataType> params)
     NodeModule *mod = (NodeModule*)get_parent(NodeType::Module);
     NodeFunction *imp = (NodeFunction*)copy(mod);
 
-    imp->symb = Symbol(imp->name.data, symb.type, SYMBOL_FUNCTION, 0);
+    imp->symb = Symbol(imp->name.data, symb.type, SYMBOL_FUNCTION, 0, imp);
     imp->symb.params = params;
-    for (int i = 0; i < params.size(); i++)
-        imp->params[i].type = params[i];
+    //for (int i = 0; i < params.size(); i++)
+    //    imp->params[i].type = params[i];
     imp->is_template_flag = false;
     Logger::log(name.debug_info, "implementing '" + 
         Symbol::printout(imp->symb) + "'");
@@ -310,15 +293,47 @@ Node *NodeFunction::copy(Node *parent)
     return other;
 }
 
-void NodeFunction::symbolize()
+void NodeFunction::register_func()
 {
+    Logger::log({}, "Regestering function '" + name.data + "'");
+
+    vector<DataType> param_types;
     int allocator = -8;
-    for (Symbol &symb : params)
+    for (auto param : params)
     {
-        int size = DataType::find_size(symb.type);
+        Token name = param.first;
+        NodeDataType *type_node = param.second;
+        DataType type = type_node->compile();
+        param_types.push_back(type);
+
+        int size = DataType::find_size(type);
         allocator -= size;
         arg_size += size;
-        symb.location = allocator;
-        push_symbol(symb);
+        push_symbol(Symbol(name.data, type, 
+            SYMBOL_LOCAL, allocator, this));
     }
+
+    // Find return type
+    DataType return_type = { PrimTypes::type_null(), 0 };
+    if (return_type_node != nullptr)
+        return_type = return_type_node->compile();
+
+    // Create function symbol
+    int flags = SYMBOL_FUNCTION;
+    if (is_template_flag)
+        flags |= SYMBOL_TEMPLATE;
+    symb = Symbol(name.data, return_type, flags, 0, this);
+    symb.params = param_types;
+
+    if (get_parent() != nullptr)
+        get_parent()->push_symbol(symb);
+}
+
+NodeFunction::~NodeFunction()
+{
+    for (auto param : params)
+        delete param.second;
+    
+    if (return_type_node != nullptr)
+        delete return_type_node;
 }

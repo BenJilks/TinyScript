@@ -93,6 +93,7 @@ void Code::compile_rname(ExpDataNode *node)
     Symbol symb = node->symb;
 
     // Compile function call
+
     if (node->flags & NODE_CALL)
     {
         compile_call(symb, node);

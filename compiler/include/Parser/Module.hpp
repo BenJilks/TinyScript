@@ -4,6 +4,7 @@
 namespace TinyScript
 {
 
+    class NodeModule;
     class NodeImportFrom : public Node
     {
     public:
@@ -14,10 +15,12 @@ namespace TinyScript
         virtual void parse(Tokenizer &tk);
         virtual Node *copy(Node *parent);
         void symbolize();
-
+        void register_types();
+    
     private:
         Token module;
         Token attr;
+        NodeModule *mod;
 
     };
 
@@ -65,13 +68,16 @@ namespace TinyScript
         virtual void parse(Tokenizer &tk);
         virtual Node *copy(Node *parent);
 
-        inline void set_name(string name) { this->name = name; }
-        inline string get_name() const { return name; }
+        void set_name(Token name);
+        inline Token get_name() const { return name; }
         inline void flag_compiled() { is_compiled_flag = true; }
         bool is_compiled() const;
 
+        void register_types();
+        void register_functions();
+
     private:
-        string name;
+        Token name;
         bool is_compiled_flag;
 
     };

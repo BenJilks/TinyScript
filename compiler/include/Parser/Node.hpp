@@ -23,6 +23,7 @@ namespace TinyScript
         For,
         While,
         Expression,
+        DataType,
     };
 
     class Node
@@ -33,6 +34,7 @@ namespace TinyScript
 
         Node *get_parent() const { return parent; }
         Node *get_parent(NodeType type);
+        string get_prefix() const;
         virtual NodeType get_type() = 0;
         virtual void parse(Tokenizer &tk) = 0;
         virtual Node *copy(Node *parent) = 0;
@@ -46,10 +48,12 @@ namespace TinyScript
         void push_symbol(Symbol symb);
         inline int get_scope_size() const { return table.get_scope_size(); }
         inline DataConstruct *create_construct(string name) { return table.create_construct(name); }
+        inline void add_construct(DataConstruct *construct) { table.add_construct(construct); }
 
     protected:
         void copy_node(Node *other);
         SymbolTable table;
+        string prefix;
 
         template<typename T>
         T *parse_node(Tokenizer &tk)

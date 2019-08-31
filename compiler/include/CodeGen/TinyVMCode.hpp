@@ -1,6 +1,7 @@
 #pragma once
 #include "Parser/Expression.hpp"
 #include "Parser/Function.hpp"
+#include "Parser/Class.hpp"
 #include "Parser/Module.hpp"
 #include "Parser/Program.hpp"
 #include <tuple>
@@ -40,9 +41,10 @@ namespace TinyScript::TinyVM
         void compile_import(NodeImport *node);
         void compile_import_from(NodeImportFrom *node);
         void compile_external(NodeExtern *node);
+        void compile_class(NodeClass *node);
         void compile_module(NodeModule *node);
+        void pre_proccess_program(NodeProgram &node);
         void compile_program(NodeProgram &node);
-
 
     private:
 

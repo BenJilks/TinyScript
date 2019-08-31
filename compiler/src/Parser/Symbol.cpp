@@ -1,16 +1,17 @@
 #include "Parser/Symbol.hpp"
+#include "Parser/Node.hpp"
 using namespace TinyScript;
 
 #define REF_SIZE 4
 
 // Define prim type info
-DataConstruct PrimTypes::dt_int = { "int", 4, SymbolTable() };
-DataConstruct PrimTypes::dt_float = { "float", 4, SymbolTable() };
-DataConstruct PrimTypes::dt_char = { "char", 1, SymbolTable() };
-DataConstruct PrimTypes::dt_bool = { "bool", 1, SymbolTable() };
-DataConstruct PrimTypes::dt_null = { "null", 0, SymbolTable() };
+DataConstruct PrimTypes::dt_int = { "int", 4, nullptr };
+DataConstruct PrimTypes::dt_float = { "float", 4, nullptr };
+DataConstruct PrimTypes::dt_char = { "char", 1, nullptr };
+DataConstruct PrimTypes::dt_bool = { "bool", 1, nullptr };
+DataConstruct PrimTypes::dt_null = { "null", 0, nullptr };
 
-Symbol SymbolTable::null_symbol = Symbol("null", { PrimTypes::type_null(), 0, 0 }, SYMBOL_NULL, 0);
+Symbol SymbolTable::null_symbol = Symbol("null", { PrimTypes::type_null(), 0, 0 }, SYMBOL_NULL, 0, nullptr);
 
 int DataType::find_size(const DataType &type)
 {
@@ -23,6 +24,8 @@ int DataType::find_size(const DataType &type)
         return find_size(*type.sub_type) * type.array_size;
     
     // Otherwise, return the type size
+    if (type.construct == nullptr)
+        return 0;
     return type.construct->size;
 }
 
@@ -131,7 +134,11 @@ static string param_printout(const vector<DataType> &params)
 
 string Symbol::printout(const Symbol &symb)
 {
-    string str = symb.name;
+    string prefix = "";
+    if (symb.parent != nullptr)
+        prefix = symb.parent->get_prefix();
+    
+    string str = prefix + symb.name;
     if (symb.params.size() > 0)
         str += param_printout(symb.params);
     return str;
@@ -192,32 +199,32 @@ vector<Symbol> SymbolTable::find_externals() const
 
 DataConstruct *SymbolTable::find_construct(string name)
 {
+    // Search built in constructs
     if (name == "int") return PrimTypes::type_int();
     else if (name == "float") return PrimTypes::type_float();
     else if (name == "char") return PrimTypes::type_char();
     else if (name == "bool") return PrimTypes::type_bool();
 
+    // Search internal constructs
     for (int i = 0; i < constructs.size(); i++)
         if (constructs[i].name == name)
             return &constructs[i];
+
+    // Search external constructs
+    for (DataConstruct *construct : external_constructs)
+        if (construct->name == name)
+            return construct;
+    
+    // Could not be found
     return PrimTypes::type_null();
 }
 
 DataConstruct *SymbolTable::create_construct(string name)
 {
-    DataConstruct construct = { name, 0, SymbolTable() };
-    construct.attrs.new_allocation_space();
+    DataConstruct construct = { name, 0, nullptr };
+    construct.is_complete = false;
     constructs.push_back(construct);
     return &constructs[constructs.size() - 1];
-}
-
-void DataConstruct::add_symbol(DataConstruct *construct, 
-    string name, DataType type)
-{
-    int size = DataType::find_size(type);
-    int location = construct->attrs.allocate(size);
-    construct->size += size;
-    construct->attrs.push(Symbol(name, type, SYMBOL_LOCAL, location));
 }
 
 void SymbolTable::new_allocation_space()

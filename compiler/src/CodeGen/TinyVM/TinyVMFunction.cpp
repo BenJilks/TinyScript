@@ -14,7 +14,6 @@ void Code::compile_function(NodeFunction *node)
 
     Token name = node->get_name();
     Logger::log(name.debug_info, "Compiling function '" + name.data + "'");
-    node->symbolize();
 
     // Create stack frame
     assign_label(Symbol::printout(node->get_symb()));
@@ -82,6 +81,7 @@ void Code::compile_let(NodeLet *node)
         compile_rexpression(value);
         node->symbolize();
         symb = node->get_symb();
+
         size = DataType::find_size(symb.type);
         write_byte(BC_STORE_LOCAL_X);
         write_int(size);
@@ -93,7 +93,7 @@ void Code::compile_let(NodeLet *node)
 
 void Code::compile_assign(NodeAssign *node)
 {
-    Logger::log(node->get_left()->get_data()->token.debug_info, "Compile let");
+    Logger::log(node->get_left()->get_data()->token.debug_info, "Compile assign");
 
     NodeExpression *left = node->get_left();
     NodeExpression *right = node->get_right();

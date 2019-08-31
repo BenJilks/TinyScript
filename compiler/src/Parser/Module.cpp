@@ -12,6 +12,10 @@ void NodeImportFrom::parse(Tokenizer &tk)
     tk.match(TokenType::Import, "import");
     attr = tk.match(TokenType::Name, "Attr Name");
 
+    // Load module
+    NodeProgram *program = (NodeProgram*)get_parent(NodeType::Program);
+    mod = program->load_module(module.data);
+
     Logger::log(module.debug_info, "Parsing import '" + 
         attr.data + "' from '" + module.data + "'");
 }
@@ -26,18 +30,30 @@ Node *NodeImportFrom::copy(Node *parent)
 
 void NodeImportFrom::symbolize()
 {
-    NodeProgram *program = (NodeProgram*)get_parent(NodeType::Program);
-    NodeModule *mod = program->load_module(module.data);
     if (mod == nullptr)
         return;
 
     vector<Symbol> attrs = mod->lookup_all(attr.data);
-    if (attrs.size() == 0)
+    DataConstruct *construct = mod->find_construct(attr.data);
+    if (attrs.size() == 0 && construct == PrimTypes::type_null())
+    {
         Logger::error(attr.debug_info, "Could not find symbol '" + 
             attr.data + "'");
-    
+    }
+
     for (Symbol symb : attrs)
         get_parent(NodeType::Module)->push_symbol(symb);
+}
+
+void NodeImportFrom::register_types()
+{
+    if (mod == nullptr)
+        return;
+    
+    DataConstruct *construct = mod->find_construct(attr.data);
+    if (construct != PrimTypes::type_null())
+        get_parent(NodeType::Module)->add_construct(construct);
+    Logger::log({}, "Importing types from '" + mod->get_name().data + "'");
 }
 
 void NodeImport::parse(Tokenizer &tk)
@@ -60,7 +76,7 @@ void NodeImport::symbolize()
     if (mod == nullptr)
         return;
 
-    Symbol symb(module.data, {}, SYMBOL_MODULE, 0);
+    Symbol symb(module.data, {}, SYMBOL_MODULE, 0, this);
     symb.parent = mod;
     get_parent(NodeType::Module)->push_symbol(symb);
 }
@@ -88,7 +104,7 @@ void NodeExtern::parse(Tokenizer &tk)
     }
 
     // Create external symbol
-    symb = Symbol(name.data, return_type, SYMBOL_FUNCTION | SYMBOL_EXTERNAL, rand());
+    symb = Symbol(name.data, return_type, SYMBOL_FUNCTION | SYMBOL_EXTERNAL, rand(), this);
     symb.params = params;
     get_parent(NodeType::Module)->push_symbol(symb);
 
@@ -131,7 +147,7 @@ Node *NodeModule::copy(Node *parent)
 {
     NodeModule *other = new NodeModule(parent);
     copy_block(other);
-    other->name = name;
+    other->set_name(name);
     return other;
 }
 
@@ -151,4 +167,45 @@ bool NodeModule::is_compiled() const
     }
 
     return true;
+}
+
+void NodeModule::set_name(Token name)
+{
+    this->name = name;
+    prefix = name.data + ".";
+}
+
+void NodeModule::register_types()
+{
+    Logger::log({}, "Registering types in '" + name.data + "' module");
+    Logger::start_scope();
+
+    for (Node *child : children)
+    {
+        switch (child->get_type())
+        {
+            case NodeType::ImportFrom: ((NodeImportFrom*)child)->register_types(); break;
+            case NodeType::Class: ((NodeClass*)child)->register_class(); break;
+            default: break;
+        }
+    }
+
+    Logger::end_scope();
+}
+
+void NodeModule::register_functions()
+{
+    Logger::log({}, "Registering functions in '" + name.data + "' module");
+    Logger::start_scope();
+
+    for (Node *child : children)
+    {
+        switch (child->get_type())
+        {
+            case NodeType::Function: ((NodeFunction*)child)->register_func(); break;
+            default: break;
+        }
+    }
+
+    Logger::end_scope();
 }

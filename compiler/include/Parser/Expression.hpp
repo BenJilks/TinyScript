@@ -56,13 +56,6 @@ namespace TinyScript
         ExpDataNode *parse_indies(Tokenizer &tk, ExpDataNode *node);
         ExpDataNode *parse_transforms(Tokenizer &tk, ExpDataNode *node);
 
-        const Symbol &find_alternet_overload(ExpDataNode *node, 
-            Token name, vector<DataType> params);
-
-        const Symbol &mold_function_call(ExpDataNode *node, 
-            Symbol overload, vector<bool> warnings, vector<DataType> params);
-        
-        const Symbol &find_symbol(ExpDataNode *node);
         DataType parse_array_type(Tokenizer &tk, DataType of);
         ExpDataNode *parse_term(Tokenizer &tk);
         void parse_array(Tokenizer &tk, ExpDataNode *node);
@@ -83,13 +76,14 @@ namespace TinyScript
         void symbolize_node(ExpDataNode *node);
 
         // Symbolizer
-        void symbolize_name(ExpDataNode *node);
+        void symbolize_module_attr(ExpDataNode *node, const Symbol &left_symb);
         void symbolize_ref(ExpDataNode *node);
         void symbolize_copy(ExpDataNode *node);
         void symbolize_typesize(ExpDataNode *node);
         void symbolize_typename(ExpDataNode *node);
         void symbolize_arraysize(ExpDataNode *node);
         void symbolize_array(ExpDataNode *node);
+        bool symbolize_special(ExpDataNode *node);
         
         // Expression data
         ExpDataNode *exp;

@@ -56,12 +56,12 @@ LOG_ARRAY_FUNC(log_bool_array, char, "%i")
 
 void register_io()
 {
-    register_external("log(int)", log_int);
-    register_external("log(float)", log_float);
-    register_external("log(char)", log_char);
-    register_external("log(bool)", log_bool);
-    register_external("log(int ref, int)", log_int_array);
-    register_external("log(float ref, int)", log_float_array);
-    register_external("log(char ref, int)", log_raw_string);
-    register_external("log(bool ref, int)", log_bool_array);
+    register_external("io.log(int)", log_int);
+    register_external("io.log(float)", log_float);
+    register_external("io.log(char)", log_char);
+    register_external("io.log(bool)", log_bool);
+    register_external("io.log(int ref, int)", log_int_array);
+    register_external("io.log(float ref, int)", log_float_array);
+    register_external("io.log(char ref, int)", log_raw_string);
+    register_external("io.log(bool ref, int)", log_bool_array);
 }

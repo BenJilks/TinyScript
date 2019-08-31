@@ -1,6 +1,7 @@
 #pragma once
 #include "Node.hpp"
 #include "Expression.hpp"
+#include "DataType.hpp"
 
 namespace TinyScript
 {
@@ -43,7 +44,7 @@ namespace TinyScript
         Symbol symb;
         NodeExpression *value;
 
-        DataType static_type;
+        NodeDataType *static_type;
         bool use_static_type;
         
     };
@@ -149,7 +150,8 @@ namespace TinyScript
     public:
         NodeFunction(Node *parent) :
             NodeCodeBlock(parent, true),
-            is_compiled_flag(false) {}
+            is_compiled_flag(false),
+            arg_size(0) {}
         
         // Copy constructor
         NodeFunction(NodeFunction *other) :
@@ -159,13 +161,15 @@ namespace TinyScript
             arg_size(other->arg_size),
             is_template_flag(other->is_template_flag) {}
 
+        ~NodeFunction();
+
         virtual NodeType get_type() { return NodeType::Function; }
         virtual void parse(Tokenizer &tk);
-        void symbolize();
         virtual Node *copy(Node *parent);
         inline Token get_name() const { return name; }
         inline Symbol get_symb() const { return symb; }
         inline int get_arg_size() const { return arg_size; }
+        void register_func();
 
         const Symbol &implement(vector<DataType> params);
         inline bool is_template() const { return is_template_flag; }
@@ -173,12 +177,13 @@ namespace TinyScript
         inline void set_compiled() { is_compiled_flag = true; }
     
     private:
-        vector<DataType> parse_params(Tokenizer &tk);
-        DataType parse_return_type(Tokenizer &tk);
+        void parse_params(Tokenizer &tk);
+        void parse_return_type(Tokenizer &tk);
 
         Token name;
         Symbol symb;
-        vector<Symbol> params;
+        vector<std::pair<Token, NodeDataType*>> params;
+        NodeDataType *return_type_node;
 
         int arg_size;
         bool is_template_flag;

@@ -1,5 +1,6 @@
 #include "Parser/Expression.hpp"
 #include "Parser/Function.hpp"
+#include "Parser/Class.hpp"
 #include <algorithm>
 #include <string.h>
 #include <ctype.h>
@@ -129,7 +130,7 @@ ExpDataNode *NodeExpression::parse_transforms(Tokenizer &tk, ExpDataNode *node)
     return node;
 }
 
-const Symbol &NodeExpression::mold_function_call(ExpDataNode *node, Symbol overload, 
+static const Symbol &mold_function_call(Node *parent, ExpDataNode *node, Symbol overload, 
     vector<bool> warnings, vector<DataType> params)
 {
     // If they can be, modify the args to do so
@@ -159,16 +160,16 @@ const Symbol &NodeExpression::mold_function_call(ExpDataNode *node, Symbol overl
     {
         NodeFunction *template_func = (NodeFunction*)overload.parent;
         const Symbol &symb = template_func->implement(params);
-        get_parent(NodeType::Module)->push_symbol(symb);
+        parent->get_parent(NodeType::Module)->push_symbol(symb);
         return symb;
     }
-    return lookup(overload.name, overload.params);
+    return parent->lookup(overload.name, overload.params);
 }
 
-const Symbol &NodeExpression::find_alternet_overload(ExpDataNode *node, 
+static const Symbol &find_alternet_overload(Node *parent, ExpDataNode *node, 
     Token name, vector<DataType> params)
 {
-    vector<Symbol> overloads = lookup_all(name.data);
+    vector<Symbol> overloads = parent->lookup_all(name.data);
     Symbol best_fit;
     vector<bool> best_warnings;
     bool has_best_fit = false;
@@ -221,7 +222,7 @@ const Symbol &NodeExpression::find_alternet_overload(ExpDataNode *node,
     // to fit that function
     if (has_best_fit)
     {
-        return mold_function_call(node, best_fit, 
+        return mold_function_call(parent, node, best_fit, 
             best_warnings, params);
     }
 
@@ -234,8 +235,10 @@ const Symbol &NodeExpression::find_alternet_overload(ExpDataNode *node,
     return SymbolTable::get_null();
 }
 
-const Symbol &NodeExpression::find_symbol(ExpDataNode *node)
+static const Symbol &find_symbol(Node *parent, ExpDataNode *node)
 {
+    Logger::log(node->token.debug_info, "Fiding symbol '" + node->token.data + "'");
+
     // Find the names symbol in the table
     Token name = node->token;
     if (node->args.size() > 0)
@@ -246,16 +249,16 @@ const Symbol &NodeExpression::find_symbol(ExpDataNode *node)
         
         for (ExpDataNode *arg : node->args)
             params.push_back(arg->type);
-        const Symbol &symb = lookup(name.data, params);
+        const Symbol &symb = parent->lookup(name.data, params);
 
         // If the symbol could not be found, search of an overload
         if (symb.flags & SYMBOL_NULL)
-            return find_alternet_overload(node, name, params);
+            return find_alternet_overload(parent, node, name, params);
         
         return symb;
     }
 
-    const Symbol &symb = lookup(name.data);
+    const Symbol &symb = parent->lookup(name.data);
     if (symb.flags & SYMBOL_NULL)
     {
         Logger::error(name.debug_info, 
@@ -472,9 +475,12 @@ int NodeExpression::get_int_value() const
     return std::atoi(exp->token.data.c_str());
 }
 
-void NodeExpression::symbolize_name(ExpDataNode *node)
+static void symbolize_name(Node *parent, ExpDataNode *node)
 {
-    Symbol symb = find_symbol(node);
+    if (parent == nullptr)
+        return;
+    
+    Symbol symb = find_symbol(parent, node);
 
     // Copy the symbols type data to the node
     node->type = symb.type;
@@ -556,34 +562,49 @@ void NodeExpression::symbolize_array(ExpDataNode *node)
         (int)node->args.size(), std::make_shared<DataType>(arr_type) };
 }
 
-void NodeExpression::symbolize_node(ExpDataNode *node)
+void NodeExpression::symbolize_module_attr(ExpDataNode *node, const Symbol &left_symb)
+{
+    Node *attrs = left_symb.parent;
+    ExpDataNode *right = node->right;
+    for (ExpDataNode *arg : right->args)
+        symbolize_node(arg);
+    symbolize_name(attrs, right);
+
+    node->symb = right->symb;
+    node->type = right->type;
+    node->flags = right->flags;
+    node->left = right->left;
+    node->right = right->right;
+    node->token = right->token;
+    node->args = right->args;
+    delete right;
+}
+
+bool NodeExpression::symbolize_special(ExpDataNode *node)
 {
     if (node->flags & NODE_IN)
     {
         symbolize_node(node->left);
-        const SymbolTable &attrs = node->left->type.construct->attrs;
-        Symbol symb = attrs.lookup(node->right->token.data);
-        node->right->symb = symb;
-        node->right->type = symb.type;
-        node->type = symb.type;
-        return;
-    }
 
-    // Symbolize left an right nodes
-    if (node->left != nullptr)
-        symbolize_node(node->left);
-    if (node->right != nullptr)
-        symbolize_node(node->right);
+        const Symbol &left_symb = node->left->symb;
+        if (left_symb.flags & SYMBOL_MODULE)
+        {
+            symbolize_module_attr(node, left_symb);
+            return true;
+        }
+        
+        // Find attr container
+        DataType type = node->left->type;
+        while (type.flags & DATATYPE_REF)
+            type = *type.sub_type;
+        Node *attrs = type.construct->parent;
 
-    // Symbolize arguments
-    for (ExpDataNode *arg : node->args)
-        symbolize_node(arg);
-
-    // Find operation type
-    if (node->flags & NODE_OPERATION)
-    {
-        node->type = parse_operation_type(node->left, 
-            node->right, node->token);
+        // Find the symbol within that container
+        for (ExpDataNode *arg : node->right->args)
+            symbolize_node(arg);
+        symbolize_name(attrs, node->right);
+        node->type = node->right->type;
+        return true;
     }
 
     if (node->flags & NODE_INDEX)
@@ -591,24 +612,51 @@ void NodeExpression::symbolize_node(ExpDataNode *node)
         symbolize_node(node->left);
         symbolize_node(node->right);
         node->type = *node->left->type.sub_type;
-        return;
+        return true;
     }
 
-    switch (node->token.type)
+    return false;
+}
+
+void NodeExpression::symbolize_node(ExpDataNode *node)
+{
+    // Symbolize arguments
+    for (ExpDataNode *arg : node->args)
+        symbolize_node(arg);
+
+    if (!symbolize_special(node))
     {
-        case TokenType::Name: symbolize_name(node); break;
-        case TokenType::Ref: symbolize_ref(node); break;
-        case TokenType::Copy: symbolize_copy(node); break;
-        case TokenType::TypeSize: symbolize_typesize(node); break;
-        case TokenType::TypeName: symbolize_typename(node); break;
-        case TokenType::ArraySize: symbolize_arraysize(node); break;
-        case TokenType::OpenIndex: symbolize_array(node); break;
+        // Symbolize left an right nodes
+        if (node->left != nullptr)
+            symbolize_node(node->left);
+        if (node->right != nullptr)
+            symbolize_node(node->right);
+
+        // Find operation type
+        if (node->flags & NODE_OPERATION)
+        {
+            node->type = parse_operation_type(node->left, 
+                node->right, node->token);
+        }
+
+        switch (node->token.type)
+        {
+            case TokenType::Name: symbolize_name(this, node); break;
+            case TokenType::Ref: symbolize_ref(node); break;
+            case TokenType::Copy: symbolize_copy(node); break;
+            case TokenType::TypeSize: symbolize_typesize(node); break;
+            case TokenType::TypeName: symbolize_typename(node); break;
+            case TokenType::ArraySize: symbolize_arraysize(node); break;
+            case TokenType::OpenIndex: symbolize_array(node); break;
+        }
     }
 }
 
 void NodeExpression::symbolize()
 {
+    Logger::start_scope();
     symbolize_node(exp);
+    Logger::end_scope();
 }
 
 static ExpDataNode *copy_data_node(ExpDataNode *other)

@@ -10,6 +10,15 @@ Node *Node::get_parent(NodeType type)
     return parent->get_parent(type);
 }
 
+string Node::get_prefix() const
+{
+    string out = prefix;
+    if (parent != nullptr)
+        out = parent->get_prefix() + out;
+    
+    return out;
+}
+
 vector<Symbol> Node::lookup_all(string name) const
 {
     vector<Symbol> out = table.lookup_all(name);

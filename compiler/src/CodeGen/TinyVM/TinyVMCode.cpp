@@ -91,7 +91,11 @@ void Code::assign_label(string label)
     if (labels.find(label) == labels.end())
         labels[label] = std::make_tuple(vector<int>(), location);
     else
+    {
+        if (std::get<1>(labels[label]) != -1)
+            Logger::link_error("The symbol '" + label + "' has already been defined");
         std::get<1>(labels[label]) = location;
+    }
 }
 
 int Code::find_funcion(string name)

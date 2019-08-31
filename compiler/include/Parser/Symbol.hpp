@@ -47,8 +47,8 @@ namespace TinyScript
     {
         Symbol() {}
         
-        Symbol(string name, DataType type, int flags, int location) :
-            name(name), type(type), flags(flags), location(location) {}
+        Symbol(string name, DataType type, int flags, int location, Node *parent) :
+            name(name), type(type), flags(flags), location(location), parent(parent) {}
 
         static string printout(const Symbol &symb);
 
@@ -79,6 +79,7 @@ namespace TinyScript
         vector<Symbol> find_externals() const;
         DataConstruct *find_construct(string name);
         DataConstruct *create_construct(string name);
+        inline void add_construct(DataConstruct *construct) { external_constructs.push_back(construct); }
 
         void new_allocation_space();
         int allocate(int size);
@@ -90,6 +91,7 @@ namespace TinyScript
     private:
         vector<Symbol> symbols;
         vector<DataConstruct> constructs;
+        vector<DataConstruct*> external_constructs;
         int scope_size;
         int allocator;
         static Symbol null_symbol;
@@ -100,10 +102,8 @@ namespace TinyScript
     {
         string name;
         int size;
-        SymbolTable attrs;
-
-        static void add_symbol(DataConstruct *construct, 
-            string name, DataType type);
+        Node *parent;
+        bool is_complete;
     };
 
     class PrimTypes

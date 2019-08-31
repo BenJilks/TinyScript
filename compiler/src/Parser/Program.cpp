@@ -13,7 +13,7 @@ NodeModule *NodeProgram::find_module(string name) const
     for (Node *child : children)
     {
         NodeModule *mod = (NodeModule*)child;
-        if (mod->get_name() == name)
+        if (mod->get_name().data == name)
             return mod;
     }
 
@@ -32,9 +32,10 @@ void NodeProgram::parse()
 
         Tokenizer tk(src);
         Logger::log(tk.get_debug_info(), "Parsing module '" + name + "'");
-        NodeModule *mod = parse_node<NodeModule>(tk);
-        mod->set_name(name);
+        NodeModule *mod = new NodeModule(this);
         add_child(mod);
+        mod->set_name({ name, TokenType::Eof, tk.get_debug_info() });
+        mod->parse(tk);
     }
 }
 
@@ -48,8 +49,9 @@ NodeModule *NodeProgram::load_module(string name)
     Tokenizer tk(cwd + src);
     Logger::log(tk.get_debug_info(), "Parsing module '" + name + "'");
 
-    mod = parse_node<NodeModule>(tk);
-    mod->set_name(name);
+    mod = new NodeModule(this);
     add_child(mod);
+    mod->set_name({ name, TokenType::Eof, tk.get_debug_info() });
+    mod->parse(tk);
     return mod;
 }
