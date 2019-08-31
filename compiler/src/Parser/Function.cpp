@@ -299,7 +299,16 @@ Node *NodeFunction::copy(Node *parent)
     other->symb = symb;
     other->arg_size = arg_size;
     other->is_template_flag = is_template_flag;
-    other->params = params;
+    other->return_type_node = nullptr;
+
+    if (return_type_node)
+        other->return_type_node = (NodeDataType*)return_type_node->copy(other);
+    
+    for (auto param : params)
+    {
+        other->params.push_back(std::make_pair(param.first, 
+            (NodeDataType*)param.second->copy(other)));
+    }
     return other;
 }
 

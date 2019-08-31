@@ -666,8 +666,9 @@ static ExpDataNode *copy_data_node(ExpDataNode *other)
     ExpDataNode *node = new ExpDataNode;
     node->left = other->left ? copy_data_node(other->left) : nullptr;
     node->right = other->right ? copy_data_node(other->right) : nullptr;
+    for (ExpDataNode *arg : other->args)
+        node->args.push_back(copy_data_node(arg));
     node->flags = other->flags;
-    node->args = other->args;
     node->symb = other->symb;
     node->token = other->token;
     node->type = other->type;
