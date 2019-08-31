@@ -62,7 +62,6 @@ namespace TinyScript
             node->parse(tk);
             return node;
         }
-        DataType parse_type(Tokenizer &tk);
 
     private:
         DataType parse_array_type(Tokenizer &tk, DataType of);

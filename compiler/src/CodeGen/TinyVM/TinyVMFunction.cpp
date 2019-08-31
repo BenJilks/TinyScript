@@ -13,7 +13,8 @@ void Code::compile_function(NodeFunction *node)
         return;
 
     Token name = node->get_name();
-    Logger::log(name.debug_info, "Compiling function '" + name.data + "'");
+    Logger::log(name.debug_info, "Compiling function '" + 
+        Symbol::printout(node->get_symb()) + "'");
 
     // Create stack frame
     assign_label(Symbol::printout(node->get_symb()));

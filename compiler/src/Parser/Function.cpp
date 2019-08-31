@@ -239,8 +239,8 @@ void NodeFunction::parse_params(Tokenizer &tk)
         NodeDataType *type = parse_node<NodeDataType>(tk);
         Token name = tk.match(TokenType::Name, "name");
         params.push_back(std::make_pair(name, type));
-//        if (type.flags & DATATYPE_AUTO)
-//            is_template_flag = true;
+        if (type->is_auto())
+            is_template_flag = true;
 
         Logger::log(name.debug_info, "Found param '" + 
             name.data + "'");
@@ -263,22 +263,32 @@ void NodeFunction::parse_return_type(Tokenizer &tk)
     }
 }
 
-const Symbol &NodeFunction::implement(vector<DataType> params)
+const Symbol &NodeFunction::implement(vector<DataType> param_types)
 {
     NodeModule *mod = (NodeModule*)get_parent(NodeType::Module);
     NodeFunction *imp = (NodeFunction*)copy(mod);
 
     imp->symb = Symbol(imp->name.data, symb.type, SYMBOL_FUNCTION, 0, imp);
-    imp->symb.params = params;
-    //for (int i = 0; i < params.size(); i++)
-    //    imp->params[i].type = params[i];
+    imp->symb.params = param_types;
     imp->is_template_flag = false;
+    int allocator = -8;
+    for (int i = 0; i < params.size(); i++)
+    {
+        Token name = params[i].first;
+        DataType type = param_types[i];
+
+        int size = DataType::find_size(type);
+        allocator -= size;
+        arg_size += size;
+        imp->push_symbol(Symbol(name.data, type, 
+            SYMBOL_LOCAL, allocator, imp));
+    }
     Logger::log(name.debug_info, "implementing '" + 
         Symbol::printout(imp->symb) + "'");
 
     mod->add_child(imp);
     mod->push_symbol(imp->symb);
-    return mod->lookup(imp->name.data, params);
+    return mod->lookup(imp->name.data, param_types);
 }
 
 Node *NodeFunction::copy(Node *parent)
@@ -297,6 +307,7 @@ void NodeFunction::register_func()
 {
     Logger::log({}, "Regestering function '" + name.data + "'");
 
+    // Don't register template types
     vector<DataType> param_types;
     int allocator = -8;
     for (auto param : params)
@@ -306,11 +317,14 @@ void NodeFunction::register_func()
         DataType type = type_node->compile();
         param_types.push_back(type);
 
-        int size = DataType::find_size(type);
-        allocator -= size;
-        arg_size += size;
-        push_symbol(Symbol(name.data, type, 
-            SYMBOL_LOCAL, allocator, this));
+        if (!is_template_flag)
+        {
+            int size = DataType::find_size(type);
+            allocator -= size;
+            arg_size += size;
+            push_symbol(Symbol(name.data, type, 
+                SYMBOL_LOCAL, allocator, this));
+        }
     }
 
     // Find return type

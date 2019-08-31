@@ -72,7 +72,8 @@ ExpDataNode *NodeExpression::parse_cast(Tokenizer &tk, ExpDataNode *node)
     // right    - new type
 
     Token as = tk.match(TokenType::As, "as");
-    DataType type = parse_type(tk);
+    NodeDataType *type_node = parse_node<NodeDataType>(tk);
+    DataType type = type_node->compile();
     bool warning = false;
     if (!DataType::can_cast_to(node->type, type, warning))
     {
@@ -88,6 +89,7 @@ ExpDataNode *NodeExpression::parse_cast(Tokenizer &tk, ExpDataNode *node)
             DataType::printout(type) + "'");
     }
 
+    delete type_node;
     return cast(node, type);
 }
 

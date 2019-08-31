@@ -84,9 +84,8 @@ void NodeImport::symbolize()
 void NodeExtern::parse(Tokenizer &tk)
 {
     tk.match(TokenType::Extern, "extern");
-    Token name = tk.match(TokenType::Name, "name");
-    vector<DataType> params;
-    DataType return_type = { PrimTypes::type_null(), 0 };
+    name = tk.match(TokenType::Name, "name");
+    return_type_node = nullptr;
 
     // Parse type only params
     if (tk.get_look().type == TokenType::OpenArg)
@@ -94,8 +93,7 @@ void NodeExtern::parse(Tokenizer &tk)
         tk.match(TokenType::OpenArg, "(");
         while (tk.get_look().type != TokenType::CloseArg && !tk.is_eof())
         {
-            DataType param = parse_type(tk);
-            params.push_back(param);
+            param_nodes.push_back(parse_node<NodeDataType>(tk));
 
             if (tk.get_look().type != TokenType::CloseArg)
                 tk.match(TokenType::Next, ",");
@@ -103,12 +101,34 @@ void NodeExtern::parse(Tokenizer &tk)
         tk.match(TokenType::CloseArg, ")");
     }
 
+    Logger::log(name.debug_info, "Parsing extern '" + Symbol::printout(symb) + "'");
+}
+
+void NodeExtern::register_extern()
+{
+    // Compile return type
+    DataType return_type = { PrimTypes::type_null(), 0 };
+    if (return_type_node)
+        return_type = return_type_node->compile();
+
+    // Compile param types
+    vector<DataType> params;
+    for (NodeDataType *type : param_nodes)
+        params.push_back(type->compile());
+
     // Create external symbol
     symb = Symbol(name.data, return_type, SYMBOL_FUNCTION | SYMBOL_EXTERNAL, rand(), this);
     symb.params = params;
     get_parent(NodeType::Module)->push_symbol(symb);
+}
 
-    Logger::log(name.debug_info, "Parsing extern '" + Symbol::printout(symb) + "'");
+NodeExtern::~NodeExtern()
+{
+    if (return_type_node)
+        delete return_type_node;
+
+    for (NodeDataType *type : param_nodes)
+        delete type;
 }
 
 Node *NodeExtern::copy(Node *parent)
@@ -202,6 +222,7 @@ void NodeModule::register_functions()
     {
         switch (child->get_type())
         {
+            case NodeType::Extern: ((NodeExtern*)child)->register_extern(); break;
             case NodeType::Function: ((NodeFunction*)child)->register_func(); break;
             default: break;
         }

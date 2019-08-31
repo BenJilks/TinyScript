@@ -4,6 +4,14 @@ using namespace TinyScript;
 
 void NodeDataType::parse(Tokenizer &tk)
 {
+    // Parse auto type
+    if (tk.get_look().type == TokenType::Auto)
+    {
+        type_name = tk.match(TokenType::Auto, "auto");
+        is_auto_flag = true;
+        return;
+    }
+
     // Parse base type name
     type_name = tk.match(TokenType::Name, "Type name");
     
@@ -52,6 +60,9 @@ Node *NodeDataType::copy(Node *parent)
 
 DataType NodeDataType::compile()
 {
+    if (is_auto_flag)
+        return { PrimTypes::type_null(), DATATYPE_AUTO };
+
     // Find base construct
     DataConstruct *construct = find_construct(type_name.data);
     if (construct == PrimTypes::type_null())

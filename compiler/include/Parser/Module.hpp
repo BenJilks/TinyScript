@@ -1,5 +1,6 @@
 #pragma once
 #include "Node.hpp"
+#include "DataType.hpp"
 
 namespace TinyScript
 {
@@ -46,13 +47,19 @@ namespace TinyScript
         NodeExtern(Node *parent) :
             Node(parent) {}
         
+        ~NodeExtern();
+        
         virtual NodeType get_type() { return NodeType::Extern; }
         virtual void parse(Tokenizer &tk);
         virtual Node *copy(Node *parent);
+        void register_extern();
 
         inline Symbol get_symb() const { return symb; }
 
     private:
+        Token name;
+        vector<NodeDataType*> param_nodes;
+        NodeDataType *return_type_node;
         Symbol symb;
 
     };
