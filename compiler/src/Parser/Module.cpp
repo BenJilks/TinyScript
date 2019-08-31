@@ -101,7 +101,7 @@ void NodeExtern::parse(Tokenizer &tk)
         tk.match(TokenType::CloseArg, ")");
     }
 
-    Logger::log(name.debug_info, "Parsing extern '" + Symbol::printout(symb) + "'");
+    Logger::log(name.debug_info, "Parsing extern '" + name.data + "'");
 }
 
 void NodeExtern::register_extern()
@@ -224,6 +224,7 @@ void NodeModule::register_functions()
         {
             case NodeType::Extern: ((NodeExtern*)child)->register_extern(); break;
             case NodeType::Function: ((NodeFunction*)child)->register_func(); break;
+            case NodeType::Class: ((NodeClass*)child)->register_methods(); break;
             default: break;
         }
     }

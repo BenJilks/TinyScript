@@ -17,6 +17,7 @@ namespace TinyScript
         virtual void parse(Tokenizer &tk);
         virtual Node *copy(Node *parent);
         void register_class();
+        void register_methods();
 
     private:
         void parse_attr(Tokenizer &tk);

@@ -79,6 +79,23 @@ void NodeClass::register_class()
     Logger::end_scope();
 }
 
+void NodeClass::register_methods()
+{
+    Logger::log({}, "Registering methods in class '" + name.data + "'");
+    Logger::start_scope();
+
+    for (Node *child : children)
+    {
+        switch(child->get_type())
+        {
+            case NodeType::Function: ((NodeFunction*)child)->register_func(); break;
+            default: break;
+        }
+    }
+
+    Logger::end_scope();
+}
+
 NodeClass::~NodeClass()
 {
     // Clean up
