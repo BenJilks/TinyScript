@@ -31,10 +31,10 @@ A small lightweight, scripting language. Compiles into low level bytecode and ha
         let arr = [1, 2, 3]
 
         # The type will be 'int array[3]'
-        log(typename arr)
+        io.log(typename arr)
 
         # This will output '[1, 2, 3]'
-        log(arr)
+        io.log(arr)
     }
 
 ## Auto types
