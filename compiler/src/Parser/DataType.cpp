@@ -96,7 +96,7 @@ DataType NodeDataType::compile_ref(DataType base)
 DataType NodeDataType::compile_array(DataType base, DataTypeModifier mod)
 {
     DataType type;
-    type.construct = PrimTypes::type_null();
+    type.construct = base.construct;
     type.flags = DATATYPE_ARRAY;
     type.sub_type = std::make_shared<DataType>(base);
     type.array_size = mod.size;

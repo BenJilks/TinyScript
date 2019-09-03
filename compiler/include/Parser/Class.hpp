@@ -9,7 +9,9 @@ namespace TinyScript
     {
     public:
         NodeClass(Node *parent) :
-            NodeBlock(parent, true) {}
+            NodeBlock(parent, true), 
+            is_complete(false), 
+            being_proccessed(false) {}
 
         ~NodeClass();
 
@@ -21,10 +23,13 @@ namespace TinyScript
 
     private:
         void parse_attr(Tokenizer &tk);
+        void parse_method(Tokenizer &tk);
 
         Token name;
         DataConstruct *construct;
         vector<std::pair<NodeDataType*, Token>> attrs;
+        bool is_complete;
+        bool being_proccessed;
 
     };
 

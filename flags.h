@@ -3,9 +3,9 @@
 
 // Debug output setting
 #define DEBUG_COMPILER  1
-#define DEBUG_VM        0
+#define DEBUG_VM        1
 #define DEBUG_LINK      0
-#define DEBUG_STACK     0
+#define DEBUG_STACK     1
 #define DEBUG_ASSEMBLY  0
 
 // VM settings

@@ -11,6 +11,15 @@ void NodeClass::parse_attr(Tokenizer &tk)
     Logger::log(name.debug_info, "Parsing attr '" + name.data + "'");
 }
 
+void NodeClass::parse_method(Tokenizer &tk)
+{
+    NodeFunction *func = new NodeFunction(get_parent());
+    func->parse(tk);
+    func->make_method(construct);
+
+    add_child(func);
+}
+
 void NodeClass::parse(Tokenizer &tk)
 {
     tk.match(TokenType::Class, "class");
@@ -26,7 +35,7 @@ void NodeClass::parse(Tokenizer &tk)
     {
         switch (tk.get_look().type)
         {
-            case TokenType::Func: parse_child<NodeFunction>(tk); break;
+            case TokenType::Func: parse_method(tk); break;
             default: parse_attr(tk); break;
         }
     }
@@ -45,12 +54,19 @@ Node *NodeClass::copy(Node *parent)
 
 void NodeClass::register_class()
 {
-    if (construct->is_complete)
+    if (is_complete)
         return;
+
+    if (being_proccessed)
+    {
+        Logger::error(name.debug_info, "Type loop detected");
+        return;
+    }
 
     Logger::log({}, "Registering type '" + name.data + "'");
     Logger::start_scope();
-    
+
+    being_proccessed = true;    
     for (auto attr : attrs)
     {
         NodeDataType *type_node = attr.first;
@@ -74,7 +90,8 @@ void NodeClass::register_class()
         Logger::log({}, "Registered attr '" + name.data + "' of type '" + 
             DataType::printout(type) + "' size " + std::to_string(size));
     }
-    construct->is_complete = true;
+    is_complete = true;
+    being_proccessed = false;
 
     Logger::end_scope();
 }

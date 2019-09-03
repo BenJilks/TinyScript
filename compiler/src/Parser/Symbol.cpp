@@ -206,9 +206,9 @@ DataConstruct *SymbolTable::find_construct(string name)
     else if (name == "bool") return PrimTypes::type_bool();
 
     // Search internal constructs
-    for (int i = 0; i < constructs.size(); i++)
-        if (constructs[i].name == name)
-            return &constructs[i];
+    for (DataConstruct *construct : constructs)
+        if (construct->name == name)
+            return construct;
 
     // Search external constructs
     for (DataConstruct *construct : external_constructs)
@@ -221,10 +221,9 @@ DataConstruct *SymbolTable::find_construct(string name)
 
 DataConstruct *SymbolTable::create_construct(string name)
 {
-    DataConstruct construct = { name, 0, nullptr };
-    construct.is_complete = false;
+    DataConstruct *construct = new DataConstruct { name, 0, nullptr };
     constructs.push_back(construct);
-    return &constructs[constructs.size() - 1];
+    return construct;
 }
 
 void SymbolTable::new_allocation_space()
@@ -260,4 +259,10 @@ void SymbolTable::patch_params(vector<DataType> params)
         symbols[i].type = params[i];
         symbols[i].location = allocator;
     }
+}
+
+SymbolTable::~SymbolTable()
+{
+    for (DataConstruct *construct : constructs)
+        delete construct;
 }

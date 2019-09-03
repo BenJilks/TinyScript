@@ -238,7 +238,8 @@ void NodeFunction::parse_params(Tokenizer &tk)
         // Parse param info
         NodeDataType *type = parse_node<NodeDataType>(tk);
         Token name = tk.match(TokenType::Name, "name");
-        params.push_back(std::make_pair(name, type));
+
+        params.push_back({ name, type });
         if (type->is_auto())
             is_template_flag = true;
 
@@ -274,7 +275,7 @@ const Symbol &NodeFunction::implement(vector<DataType> param_types)
     int allocator = -8;
     for (int i = 0; i < params.size(); i++)
     {
-        Token name = params[i].first;
+        Token name = params[i].name;
         DataType type = param_types[i];
 
         int size = DataType::find_size(type);
@@ -306,10 +307,29 @@ Node *NodeFunction::copy(Node *parent)
     
     for (auto param : params)
     {
-        other->params.push_back(std::make_pair(param.first, 
-            (NodeDataType*)param.second->copy(other)));
+        FunctionParam other_param;
+        other_param.name = name;
+        other_param.type_node = param.type_node ? 
+            (NodeDataType*)param.type_node->copy(other) : nullptr;
+        other_param.type = param.type;
+        other->params.push_back(other_param);
     }
     return other;
+}
+
+void NodeFunction::make_method(DataConstruct *construct)
+{
+    // Create self type as 'Self ref self'
+    DataType base_type = { construct, 0 };
+    DataType self_type = { PrimTypes::type_null(), DATATYPE_REF };
+    self_type.sub_type = std::make_shared<DataType>(base_type);
+
+    // Create self param and add it to the begining of the param list
+    FunctionParam self;
+    self.name = { "self", TokenType::Name, name.debug_info };
+    self.type_node = nullptr;
+    self.type = self_type;
+    params.insert(params.begin(), self);
 }
 
 void NodeFunction::register_func()
@@ -321,9 +341,9 @@ void NodeFunction::register_func()
     int allocator = -8;
     for (auto param : params)
     {
-        Token name = param.first;
-        NodeDataType *type_node = param.second;
-        DataType type = type_node->compile();
+        Token name = param.name;
+        NodeDataType *type_node = param.type_node;
+        DataType type = type_node ? type_node->compile() : param.type;
         param_types.push_back(type);
 
         if (!is_template_flag)
@@ -355,7 +375,8 @@ void NodeFunction::register_func()
 NodeFunction::~NodeFunction()
 {
     for (auto param : params)
-        delete param.second;
+        if (param.type_node)
+            delete param.type_node;
     
     if (return_type_node != nullptr)
         delete return_type_node;

@@ -145,6 +145,13 @@ namespace TinyScript
 
     };
 
+    struct FunctionParam
+    {
+        Token name;
+        NodeDataType *type_node;
+        DataType type;
+    };
+
     class NodeFunction : public NodeCodeBlock
     {
     public:
@@ -169,6 +176,7 @@ namespace TinyScript
         inline Token get_name() const { return name; }
         inline Symbol get_symb() const { return symb; }
         inline int get_arg_size() const { return arg_size; }
+        void make_method(DataConstruct *construct);
         void register_func();
 
         const Symbol &implement(vector<DataType> params);
@@ -182,7 +190,7 @@ namespace TinyScript
 
         Token name;
         Symbol symb;
-        vector<std::pair<Token, NodeDataType*>> params;
+        vector<FunctionParam> params;
         NodeDataType *return_type_node;
 
         int arg_size;

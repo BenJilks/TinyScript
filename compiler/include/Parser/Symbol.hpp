@@ -68,6 +68,8 @@ namespace TinyScript
             allocator(0),
             scope_size(0) {}
         
+        ~SymbolTable();
+
         void push(Symbol symb);
         void push_all(vector<Symbol> symbs);
         void patch_params(vector<DataType> params);
@@ -90,7 +92,7 @@ namespace TinyScript
 
     private:
         vector<Symbol> symbols;
-        vector<DataConstruct> constructs;
+        vector<DataConstruct*> constructs;
         vector<DataConstruct*> external_constructs;
         int scope_size;
         int allocator;
@@ -103,7 +105,6 @@ namespace TinyScript
         string name;
         int size;
         Node *parent;
-        bool is_complete;
     };
 
     class PrimTypes
