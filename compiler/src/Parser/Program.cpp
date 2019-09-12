@@ -55,3 +55,18 @@ NodeModule *NodeProgram::load_module(string name)
     mod->parse(tk);
     return mod;
 }
+
+void NodeProgram::pre_process()
+{
+    Logger::log({}, "Preprossing program");
+    Logger::start_scope();
+
+    for (int i = 0; i < get_child_size(); i++)
+    {
+        NodeModule *mod = (NodeModule*)children[i];
+        mod->register_types();
+        mod->register_functions();
+    }
+
+    Logger::end_scope();
+}

@@ -28,6 +28,15 @@ vector<Symbol> Node::lookup_all(string name) const
     return out;
 }
 
+vector<Symbol> Node::lookup_all() const
+{
+    vector<Symbol> out = table.lookup_all();
+    if (parent != nullptr)
+        for (Symbol symb : parent->lookup_all())
+            out.push_back(symb);
+    return out;
+}
+
 const Symbol &Node::lookup(string name) const
 {
     const Symbol &symb = table.lookup(name);
@@ -56,6 +65,20 @@ DataConstruct *Node::find_construct(string name)
     if (construct == PrimTypes::type_null() && parent != nullptr)
         return parent->find_construct(name);
     return construct;
+}
+
+vector<DataConstruct*> Node::find_construct()
+{
+    auto constructs = table.find_construct();
+    if (parent != nullptr)
+    {
+        auto parent_constructs = parent->find_construct();
+        constructs.insert(constructs.end(), 
+            parent_constructs.begin(), 
+            parent_constructs.end());
+    }
+
+    return constructs;
 }
 
 NodeBlock::~NodeBlock()

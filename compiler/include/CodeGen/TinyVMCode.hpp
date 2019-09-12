@@ -43,7 +43,6 @@ namespace TinyScript::TinyVM
         void compile_external(NodeExtern *node);
         void compile_class(NodeClass *node);
         void compile_module(NodeModule *node);
-        void pre_proccess_program(NodeProgram &node);
         void compile_program(NodeProgram &node);
 
     private:

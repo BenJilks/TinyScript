@@ -219,6 +219,14 @@ DataConstruct *SymbolTable::find_construct(string name)
     return PrimTypes::type_null();
 }
 
+vector<DataConstruct*> SymbolTable::find_construct()
+{
+    vector<DataConstruct*> out;
+    out.insert(out.end(), constructs.begin(), constructs.end());
+    out.insert(out.end(), external_constructs.begin(), external_constructs.end());
+    return out;
+}
+
 DataConstruct *SymbolTable::create_construct(string name)
 {
     DataConstruct *construct = new DataConstruct { name, 0, nullptr };

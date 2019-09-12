@@ -183,6 +183,7 @@ namespace TinyScript
         inline bool is_template() const { return is_template_flag; }
         inline bool is_compiled() const { return is_compiled_flag; }
         inline void set_compiled() { is_compiled_flag = true; }
+        inline vector<FunctionParam> get_params() const { return params; }
     
     private:
         void parse_params(Tokenizer &tk);

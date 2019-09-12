@@ -45,26 +45,11 @@ void Code::compile_module(NodeModule *node)
     Logger::end_scope();
 }
 
-void Code::pre_proccess_program(NodeProgram &node)
-{
-    Logger::log({}, "Preprossing program");
-    Logger::start_scope();
-
-    for (int i = 0; i < node.get_child_size(); i++)
-    {
-        NodeModule *mod = (NodeModule*)node[i];
-        mod->register_types();
-        mod->register_functions();
-    }
-
-    Logger::end_scope();
-}
-
 void Code::compile_program(NodeProgram &node)
 {
     Logger::log({}, "Compiling program");
     Logger::start_scope();
-    pre_proccess_program(node);
+    node.pre_process();
 
     bool is_compiled = false;
     while (is_compiled == false)

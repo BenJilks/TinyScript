@@ -2,6 +2,7 @@
 #include <memory.h>
 #include "Parser/Program.hpp"
 #include "CodeGen/TinyVMCode.hpp"
+#include "CodeGen/CCode.hpp"
 #include "flags.h"
 extern "C"
 {
@@ -38,11 +39,11 @@ int run_bin(string path)
 
 int main(int argc, char *argv[])
 {
-    TinyVM::Code code;
+    C::Code code("c_code");
     NodeProgram prog;
     string output = "";
     string bin = "";
-    import_std(prog);
+    //import_std(prog);
 
     // Include all files parsed into compiler
     for (int i = 1; i < argc; i++)
@@ -70,6 +71,7 @@ int main(int argc, char *argv[])
 
     prog.parse();
     code.compile_program(prog);
+/*
     vector<char> bytecode = code.link();
     int main_func = code.find_funcion("test.main");
 
@@ -99,4 +101,5 @@ int main(int argc, char *argv[])
     }
 
     free(raw_code);
+     */
 }

@@ -5,13 +5,14 @@
 #include <functional>
 using std::function;
 
-#define NODE_OPERATION  0b1000000
-#define NODE_CALL       0b0100000
-#define NODE_INDEX      0b0010000
-#define NODE_CAST       0b0001000
-#define NODE_ARRAY      0b0000100
-#define NODE_TEMP_REF   0b0000010
-#define NODE_IN         0b0000001
+#define NODE_OPERATION  0b10000000
+#define NODE_CALL       0b01000000
+#define NODE_INDEX      0b00100000
+#define NODE_CAST       0b00010000
+#define NODE_ARRAY      0b00001000
+#define NODE_TEMP_REF   0b00000100
+#define NODE_IN         0b00000010
+#define NODE_ARGS_LIST  0b00000001
 
 namespace TinyScript
 {

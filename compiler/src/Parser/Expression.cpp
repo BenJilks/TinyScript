@@ -23,6 +23,7 @@ void NodeExpression::parse_args(Tokenizer &tk, ExpDataNode *node)
                 tk.match(TokenType::Next, ",");
         }
         tk.match(TokenType::CloseArg, ")");
+        node->flags |= NODE_ARGS_LIST;
     }
 }
 
@@ -440,10 +441,10 @@ ExpDataNode *NodeExpression::parse_operation(Tokenizer &tk,
 ExpDataNode *NodeExpression::parse_expression(Tokenizer &tk)
 {
     auto term = [this, &tk] { return parse_term(tk); };
-    auto factor = [this, &tk, &term] { return parse_operation(tk, term, add_ops); };
-    auto value = [this, &tk, &factor] { return parse_operation(tk, factor, mul_ops); };
-    auto logic = [this, &tk, &value] { return parse_operation(tk, value, logic_ops); };
-    return logic();
+    auto logic = [this, &tk, &term] { return parse_operation(tk, term, logic_ops); };
+    auto value = [this, &tk, &logic] { return parse_operation(tk, logic, mul_ops); };
+    auto factor = [this, &tk, &value] { return parse_operation(tk, value, add_ops); };
+    return factor();
 }
 
 void NodeExpression::parse(Tokenizer &tk)

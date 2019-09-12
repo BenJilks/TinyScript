@@ -19,6 +19,7 @@ namespace TinyScript
 
         NodeModule *find_module(string name) const;
         NodeModule *load_module(string name);
+        void pre_process();
 
     private:
         vector<string> srcs;

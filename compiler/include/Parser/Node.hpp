@@ -43,9 +43,11 @@ namespace TinyScript
 
         // Symbol table functions
         vector<Symbol> lookup_all(string name) const;
+        vector<Symbol> lookup_all() const;
         const Symbol &lookup(string name) const;
         const Symbol &lookup(string name, vector<DataType> params) const;
         DataConstruct *find_construct(string name);
+        vector<DataConstruct*> find_construct();
         int allocate(int size);
         void push_symbol(Symbol symb);
         inline int get_scope_size() const { return table.get_scope_size(); }

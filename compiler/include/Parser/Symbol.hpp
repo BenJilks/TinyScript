@@ -75,10 +75,12 @@ namespace TinyScript
         void patch_params(vector<DataType> params);
         
         vector<Symbol> lookup_all(string name) const;
+        vector<Symbol> lookup_all() const { return symbols; }
         const Symbol &lookup(string name) const;
         const Symbol &lookup(string name, vector<DataType> params) const;
         
         vector<Symbol> find_externals() const;
+        vector<DataConstruct*> find_construct();
         DataConstruct *find_construct(string name);
         DataConstruct *create_construct(string name);
         inline void add_construct(DataConstruct *construct) { external_constructs.push_back(construct); }
